@@ -1,0 +1,30 @@
+# Nuxt / Node build artefacts
+node_modules
+.nuxt
+.output
+.data
+dist
+
+# Env files (only .env.example is committed)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log*
+logs
+
+# Cache
+.cache
+.temp
+.tmp
+.vite
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel

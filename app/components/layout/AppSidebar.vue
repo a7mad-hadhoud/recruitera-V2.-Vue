@@ -1,0 +1,72 @@
+<script setup lang="ts">
+import { Home, Users, Briefcase, BarChart3, Calendar, TrendingUp, Settings, ChevronsLeft, ChevronsRight } from 'lucide-vue-next'
+import { useSidebarStore } from '~/stores/sidebar.store'
+
+const route = useRoute()
+const sidebar = useSidebarStore()
+
+// Design sidebar (Recruitera Candidates.dc.html) — nav items only, no logo
+const navItems = [
+  { label: 'Home',         to: '/dashboard',    icon: Home },
+  { label: 'Candidates',   to: '/candidates',   icon: Users },
+  { label: 'Jobs',         to: '/jobs',         icon: Briefcase },
+  { label: 'Talent pools', to: '/talent-pools', icon: BarChart3 },
+  { label: 'Calendar',     to: '/interviews',   icon: Calendar },
+  { label: 'Analytics',    to: '/analytics',    icon: TrendingUp },
+]
+const bottomItems = [
+  { label: 'Settings', to: '/settings', icon: Settings },
+]
+
+const isActive = (to: string) => route.path === to || route.path.startsWith(to + '/')
+</script>
+
+<template>
+  <nav
+    class="shrink-0 flex flex-col bg-[var(--brand-canvas)] transition-[width] duration-200 ease-out px-2.5 py-2.5 gap-0.5"
+    :class="sidebar.isOpen ? 'w-[212px]' : 'w-[64px]'"
+  >
+    <!-- Primary nav -->
+    <NuxtLink
+      v-for="item in navItems"
+      :key="item.to"
+      :to="item.to"
+      :title="!sidebar.isOpen ? item.label : undefined"
+      class="flex items-center gap-3 h-9 px-2.5 rounded-lg text-[13.5px] transition-colors whitespace-nowrap overflow-hidden"
+      :class="isActive(item.to)
+        ? 'bg-[var(--brand-lime-active-bg-strong)] text-[var(--brand-olive)] font-bold'
+        : 'text-[var(--brand-nav-text)] font-semibold hover:bg-black/[.05]'"
+    >
+      <component :is="item.icon" class="w-[21px] h-[21px] shrink-0" :stroke-width="isActive(item.to) ? 1.7 : 1.6" />
+      <span v-if="sidebar.isOpen">{{ item.label }}</span>
+    </NuxtLink>
+
+    <!-- Spacer pushes Settings + Hide to bottom -->
+    <div class="flex-1" />
+
+    <!-- Settings -->
+    <NuxtLink
+      v-for="item in bottomItems"
+      :key="item.to"
+      :to="item.to"
+      :title="!sidebar.isOpen ? item.label : undefined"
+      class="flex items-center gap-3 h-9 px-2.5 rounded-lg text-[13.5px] transition-colors whitespace-nowrap overflow-hidden"
+      :class="isActive(item.to)
+        ? 'bg-[var(--brand-lime-active-bg-strong)] text-[var(--brand-olive)] font-bold'
+        : 'text-[var(--brand-nav-text)] font-semibold hover:bg-black/[.05]'"
+    >
+      <component :is="item.icon" class="w-5 h-5 shrink-0" stroke-width="1.6" />
+      <span v-if="sidebar.isOpen">{{ item.label }}</span>
+    </NuxtLink>
+
+    <!-- Hide toggle -->
+    <button
+      class="flex items-center gap-3 h-9 px-2.5 rounded-lg text-[13.5px] font-semibold text-[var(--brand-text-subtle)] hover:bg-black/[.05] transition-colors border-t border-[var(--brand-border-divider)] mt-1 pt-3 whitespace-nowrap overflow-hidden"
+      :title="!sidebar.isOpen ? 'Show sidebar' : 'Hide sidebar'"
+      @click="sidebar.toggle"
+    >
+      <component :is="sidebar.isOpen ? ChevronsLeft : ChevronsRight" class="w-5 h-5 shrink-0" stroke-width="1.7" />
+      <span v-if="sidebar.isOpen">Hide</span>
+    </button>
+  </nav>
+</template>
