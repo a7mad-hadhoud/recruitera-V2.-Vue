@@ -4,6 +4,7 @@ export interface Location {
   country: string
   city: string
   jobCount: number
+  link?: string
 }
 
 export interface LocationsResponse {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { HelpCircle, Bell, Settings as SettingsIcon, Search, ChevronRight } from 'lucide-vue-next'
+import { Search, ChevronRight } from 'lucide-vue-next'
+import { BrandTopbarActions } from '~/components/brand'
 </script>
 
 <template>
@@ -28,17 +29,6 @@ import { HelpCircle, Bell, Settings as SettingsIcon, Search, ChevronRight } from
     </div>
 
     <!-- Right: icon buttons + avatar -->
-    <div class="flex items-center gap-1.5 shrink-0 text-[var(--brand-text-subtle)]">
-      <button class="w-9 h-9 rounded-lg inline-flex items-center justify-center hover:bg-black/[.05] transition-colors" aria-label="Help">
-        <HelpCircle class="w-[19px] h-[19px]" />
-      </button>
-      <button class="w-9 h-9 rounded-lg inline-flex items-center justify-center hover:bg-black/[.05] transition-colors" aria-label="Notifications">
-        <Bell class="w-[19px] h-[19px]" />
-      </button>
-      <button class="w-9 h-9 rounded-lg inline-flex items-center justify-center hover:bg-black/[.05] transition-colors" aria-label="Settings">
-        <SettingsIcon class="w-[19px] h-[19px]" />
-      </button>
-      <button class="w-[34px] h-[34px] rounded-full bg-[var(--brand-teal)] text-white text-[13px] font-bold inline-flex items-center justify-center ml-1" aria-label="Account">MS</button>
-    </div>
+    <BrandTopbarActions />
   </div>
 </template>

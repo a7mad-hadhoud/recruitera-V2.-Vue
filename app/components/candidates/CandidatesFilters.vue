@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useLocalStorage } from '@vueuse/core'
+import { useLocalStorage, useMediaQuery } from '@vueuse/core'
 import { useCandidateFilterCounts, useCandidates } from '~/composables/useCandidates'
 import { useCandidateFilters } from '~/composables/useCandidateFilters'
 import { useFilterRegistry } from '~/composables/useFilterRegistry'
@@ -34,9 +34,29 @@ const activeFilters = useActiveFilters()
 const { clearFilters: clearBuiltInFilters } = useCandidateFilters()
 
 // ─────────── Collapse state ───────────
+// Below this breakpoint there isn't room for a 288px panel to live in normal
+// flex flow alongside the nav rail without pushing the table off-screen — so
+// on narrow viewports the full panel always renders as a floating overlay
+// (never adds to layout width) and opens/closes via tap.
+//
+// On desktop, expanding always docks the panel in normal flex flow (pushing
+// the table right) rather than floating over it — an earlier hover-preview
+// flyout looked identical to the mobile overflow bug (content half-covered,
+// cut off at the edge) and was confusing for the same reason, so it's gone.
+const isMobile = useMediaQuery('(max-width: 900px)')
 const collapsed = useLocalStorage('recruitera:candidates:filter-collapsed', false)
-const hoverOpen = ref(false)
-const showFullPanel = computed(() => !collapsed.value || hoverOpen.value)
+const mobileOpen = ref(false)
+const showFullPanel = computed(() =>
+  isMobile.value ? mobileOpen.value : !collapsed.value,
+)
+function openPanel() {
+  if (isMobile.value) mobileOpen.value = true
+  else collapsed.value = false
+}
+function closePanel() {
+  if (isMobile.value) mobileOpen.value = false
+  else collapsed.value = true
+}
 
 // ─────────── Favorites ───────────
 type Fav = { key: string; label: string; icon: unknown; count: number; extra?: boolean }
@@ -124,16 +144,17 @@ onMounted(() => {
 <template>
   <div
     class="relative shrink-0 h-full"
-    :style="{ width: collapsed ? '60px' : '288px' }"
-    @mouseenter="collapsed && (hoverOpen = true)"
-    @mouseleave="hoverOpen = false"
+    :style="{ width: (isMobile || collapsed) ? '60px' : '288px' }"
   >
     <!-- ─────────── COLLAPSED RAIL ─────────── -->
     <!-- Design (Recruitera Candidates.dc.html line 84): filter panel is a
          SINGLE full-height card sharing borders on top / left / right with a
-         16px top-left curve — collapsed just narrows width from 288 → 60. -->
+         16px top-left curve — collapsed just narrows width from 288 → 60.
+         On mobile the rail is always shown (never in-flow at 288px — see
+         `isMobile` in showFullPanel) so the panel can't push the table
+         off-screen; tapping the expand buttons opens it as an overlay. -->
     <aside
-      v-if="collapsed && !hoverOpen"
+      v-if="isMobile ? !mobileOpen : collapsed"
       class="w-[60px] h-full flex flex-col items-center gap-0.5 pt-2.5 rounded-tl-[22px] bg-white border-t border-l border-r border-[var(--brand-border)]"
     >
       <button
@@ -147,7 +168,7 @@ onMounted(() => {
       <button
         class="w-10 h-9 rounded-lg flex items-center justify-center text-[var(--brand-icon-muted)] hover:bg-[var(--brand-surface-hover)] transition-colors"
         title="Show more"
-        @click="collapsed = false"
+        @click="openPanel"
       >
         <ChevronUp class="w-3.5 h-3.5" stroke-width="2" />
       </button>
@@ -155,17 +176,24 @@ onMounted(() => {
       <button
         class="w-10 h-9 mb-2 rounded-lg flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-surface-hover)] transition-colors"
         title="Expand filter panel"
-        @click="collapsed = false"
+        @click="openPanel"
       >
         <ChevronRight class="w-3.5 h-3.5" stroke-width="2" />
       </button>
     </aside>
 
+    <!-- Backdrop — mobile overlay only, tap outside to close -->
+    <div
+      v-if="isMobile && mobileOpen"
+      class="fixed inset-0 z-30 bg-black/30"
+      @click="closePanel"
+    />
+
     <!-- ─────────── FULL PANEL ─────────── -->
     <aside
       v-if="showFullPanel"
       class="relative w-[288px] flex flex-col rounded-tl-[22px] bg-white border-t border-l border-r border-[var(--brand-border)] overflow-hidden"
-      :class="collapsed && hoverOpen
+      :class="isMobile && mobileOpen
         ? 'absolute inset-y-0 left-0 z-40 shadow-[0_16px_48px_rgba(0,20,18,0.18)]'
         : 'h-full'"
     >
@@ -237,7 +265,7 @@ onMounted(() => {
         <button
           class="w-9 h-9 rounded-lg flex items-center justify-center text-[var(--brand-text-subtle)] hover:bg-[var(--brand-surface-hover)] transition-colors"
           title="Collapse filter panel"
-          @click="collapsed = true; hoverOpen = false"
+          @click="closePanel"
         >
           <ChevronLeft class="w-3.5 h-3.5" stroke-width="2" />
         </button>

@@ -75,11 +75,42 @@
   --brand-border-divider: #dde1d7;                /* sidebar / column divider */
   --brand-border-fade: #e2e6dc;                   /* light section divider */
   --brand-border-key: #cfd6cd;                    /* ⌘K badge */
+  --brand-border-hairline: #eef1ea;               /* settings table column divider */
+  --brand-border-row: #f1f3ec;                    /* settings table row divider */
 
   /* Semantics */
   --brand-danger: #e01919;                        /* destructive hover */
   --brand-badge-new-bg: var(--brand-teal-secondary);   /* "NEW" pill */
   --brand-badge-new-text: #ffffff;
+  --brand-badge-settings-bg: #eef1ea;             /* settings table count badge (jobs, etc) */
+  --brand-badge-settings-text: #3a5c2e;
+
+  /* Settings module — modal / dropdown / toast (ground truth: Recruitera Settings Standalone.html) */
+  --brand-settings-danger: #c0392b;               /* delete/remove text + icon */
+  --brand-settings-danger-hover-bg: #fff0ee;      /* delete row hover in dropdowns */
+  --brand-settings-modal-bg: #f4f6f3;             /* Add/Edit modal panel bg */
+  --brand-settings-modal-overlay: rgba(0, 20, 18, 0.4);
+  --brand-settings-dropdown-shadow: 0 8px 28px rgba(0, 20, 18, 0.14);
+  --brand-settings-modal-shadow: 0 32px 80px rgba(0, 20, 18, 0.18);
+  --brand-settings-toast-bg: #b91c1c;             /* blocking-delete toast */
+  --brand-settings-pill-bg: #dde8da;              /* automation builder WHEN/THEN pills */
+  --brand-settings-status-active: #2ecc71;        /* public link "Active"/"No expiry" dot */
+  --brand-settings-status-neutral: #c3cabf;       /* public link "Expired" dot */
+  --brand-dynamic-role-bg: #f0f4ff;               /* approver chip: dynamic-role variant bg */
+  --brand-dynamic-role-border: #d0d9f5;           /* approver chip: dynamic-role variant border */
+  --brand-dynamic-role-text: #4a6cf7;             /* approver chip + picker: dynamic-role text/icon */
+  --brand-dynamic-role-icon-bg: #e8f0fe;          /* approver picker: dynamic-role icon bg */
+  --brand-email-highlight-bg: #eef3f0;            /* email editor: active list row / placeholder token bg / info banner bg */
+  --brand-email-highlight-border: #c5d9ce;        /* email editor: info banner border */
+  --brand-status-teal-green: #3a9b7a;             /* jobs-usage modal: status dot */
+  --brand-status-orange: #e67e22;                 /* jobs-usage modal: status dot */
+  --brand-status-gray: #95a5a6;                   /* jobs-usage modal: status dot */
+  --brand-pipeline-blue: #3498db;                 /* pipeline stage type: Phone Screen / Interview */
+  --brand-pipeline-purple: #9b59b6;               /* pipeline stage type: Offer */
+  --brand-status-approved-bg: #eef9f0;            /* WhatsApp template status: Approved */
+  --brand-status-approved-text: #1a6e40;
+  --brand-status-pending-bg: #fef9e8;              /* WhatsApp template status: Pending review */
+  --brand-status-pending-text: #b45309;
 
   /* Top bar */
   --brand-topbar-pill-bg: #eef1ea;                /* Your trial pill + search bg */
@@ -94,10 +125,39 @@
   /* Utility */
   --brand-scrollbar-thumb: #d5dad0;
 
+  /* Career-site preview mockup (generic neutral slate palette — represents a
+     customer's own site chrome, intentionally independent of the forest-green
+     app brand palette above) */
+  --brand-preview-chrome-bg: #f3f4f6;
+  --brand-preview-dot-red: #ff5f57;
+  --brand-preview-dot-yellow: #febc2e;
+  --brand-preview-dot-green: #28c840;
+  --brand-preview-text-heading: #0f172a;
+  --brand-preview-text-muted: #94a3b8;
+  --brand-preview-text-secondary: #64748b;
+  --brand-preview-text-label: #475569;
+  --brand-preview-text-body: #334155;
+  --brand-preview-border: #e2e8f0;
+  --brand-preview-border-card: #eef2f7;
+  --brand-preview-surface-alt: #f1f5f9;
+  --brand-preview-surface-section: #f8fafc;
+  --brand-preview-card-shadow: rgba(15, 23, 42, 0.06);
+
   /* Avatar palette (used by mock data — rotate through) */
   --brand-avatar-1: #1F2937;
   --brand-avatar-2: #374151;
   --brand-avatar-3: #4B5563;
+  --brand-avatar-4: #6b4fa0;
+  --brand-avatar-5: #0e7a5f;
+  --brand-avatar-6: #b4700c;
+  --brand-avatar-text: #ffffff;
+
+  /* Theme preview swatches (Appearance picker) */
+  --brand-theme-light-bg: #f4f7ec;
+  --brand-theme-light-dot: #002427;
+  --brand-theme-dark-bg: #1a2b28;
+  --brand-theme-dark-dot: #aaaaaa;
+  --brand-theme-system-dot: #8a978f;
 
   /* Shell dimensions (matched to Recruitera Candidates.dc.html) */
   --sidebar-width: 212px;

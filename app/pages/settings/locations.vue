@@ -1,16 +1,32 @@
 <script setup lang="ts">
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { Badge } from '~/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
-import { Pencil, MoreHorizontal, Plus, Search } from 'lucide-vue-next'
+import { TableCell, TableHead, TableRow } from '~/components/ui/table'
+import { Copy, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { useLocations } from '~/composables/useLocations'
+import { BrandButton } from '~/components/brand'
+import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
+import SettingsTable from '~/components/settings/SettingsTable.vue'
+import SettingsTableSkeleton from '~/components/settings/SettingsTableSkeleton.vue'
+import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
+import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
+import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
+import SettingsToast from '~/components/settings/SettingsToast.vue'
+import type { Location } from '~/types'
 
 definePageMeta({ layout: 'settings' })
 
 const { data, isLoading } = useLocations()
-const locations = computed(() => data.value?.data ?? [])
-const total = computed(() => data.value?.total ?? 0)
+
+// Local mutable copy so Add/Edit/Duplicate/Delete can actually mutate what's rendered.
+const locations = ref<Location[]>([])
+const seeded = ref(false)
+watch(data, (v) => {
+  if (v && !seeded.value) {
+    locations.value = v.data.map(l => ({ ...l }))
+    seeded.value = true
+  }
+}, { immediate: true })
+
+const total = computed(() => locations.value.length)
 const search = ref('')
 
 const filtered = computed(() => {
@@ -22,69 +38,217 @@ const filtered = computed(() => {
     || l.city.toLowerCase().includes(q),
   )
 })
+
+// ─────────────── Add / Edit modal ───────────────
+const modalOpen = ref(false)
+const editingId = ref<string | null>(null)
+const form = reactive({ name: '', country: '', city: '', link: '' })
+
+function openAddModal() {
+  editingId.value = null
+  form.name = ''
+  form.country = ''
+  form.city = ''
+  form.link = ''
+  modalOpen.value = true
+}
+
+function openEditModal(loc: Location) {
+  editingId.value = loc.id
+  form.name = loc.name
+  form.country = loc.country === '—' ? '' : loc.country
+  form.city = loc.city === '—' ? '' : loc.city
+  form.link = loc.link ?? ''
+  modalOpen.value = true
+}
+
+function saveModal() {
+  if (!form.name.trim()) return
+
+  if (editingId.value) {
+    const loc = locations.value.find(l => l.id === editingId.value)
+    if (loc) {
+      loc.name = form.name.trim()
+      loc.country = form.country.trim() || '—'
+      loc.city = form.city.trim() || '—'
+      loc.link = form.link.trim() || undefined
+    }
+  }
+  else {
+    locations.value.unshift({
+      id: `loc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: form.name.trim(),
+      country: form.country.trim() || '—',
+      city: form.city.trim() || '—',
+      jobCount: 0,
+      link: form.link.trim() || undefined,
+    })
+  }
+  modalOpen.value = false
+}
+
+// ─────────────── Duplicate ───────────────
+function duplicateLocation(loc: Location) {
+  const idx = locations.value.findIndex(l => l.id === loc.id)
+  const clone: Location = { ...loc, id: `loc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
+  locations.value.splice(idx + 1, 0, clone)
+}
+
+// ─────────────── Delete (blocked while jobs are assigned) ───────────────
+const toastOpen = ref(false)
+const toastMessage = ref('')
+
+function deleteLocation(loc: Location) {
+  if (loc.jobCount > 0) {
+    toastMessage.value = `Please assign another location to the ${loc.jobCount} job${loc.jobCount === 1 ? '' : 's'} that use this one as their only location.`
+    toastOpen.value = true
+    return
+  }
+  locations.value = locations.value.filter(l => l.id !== loc.id)
+}
 </script>
 
 <template>
-  <div class="p-6 max-w-5xl">
-    <div class="mb-1 text-[24px] font-bold tracking-tight text-[var(--brand-text)]">Locations</div>
-    <div class="text-[13.5px] text-[var(--brand-text-quiet)] mb-6">Manage locations for your organization</div>
+  <div>
+    <SettingsPageHeader
+      title="Locations"
+      subtitle="Manage locations for your organization and assign them to jobs."
+      learn-more-href="#"
+    />
 
-    <div class="flex items-center gap-3 mb-4">
-      <div class="relative flex-1 max-w-md">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--brand-text-quiet)]" />
-        <Input v-model="search" placeholder="Search locations" class="pl-9 h-10 rounded-lg" />
+    <SettingsTable
+      search-placeholder="Search locations"
+      item-label="locations"
+      :total="total"
+      :filtered-count="filtered.length"
+      :loading="isLoading"
+      :empty="!isLoading && !filtered.length"
+      empty-message="No locations match."
+      :colspan="4"
+      @update:search="v => search = v"
+    >
+      <template #actions>
+        <BrandButton variant="primary-teal" @click="openAddModal">
+          <Plus class="w-4 h-4 mr-1" />
+          New location
+        </BrandButton>
+      </template>
+      <template #header>
+        <TableRow class="bg-[var(--brand-surface-table-alt)] border-b border-[var(--brand-border-light)]">
+          <TableHead class="py-[14px] px-5 text-[13px] font-semibold text-[var(--brand-nav-text)] border-r border-[var(--brand-border-hairline)]">Location name</TableHead>
+          <TableHead class="py-[14px] px-5 text-[13px] font-semibold text-[var(--brand-nav-text)] border-r border-[var(--brand-border-hairline)]">Country / City</TableHead>
+          <TableHead class="py-[14px] px-5 text-[13px] font-semibold text-[var(--brand-nav-text)] border-r border-[var(--brand-border-hairline)]">Jobs</TableHead>
+          <TableHead class="py-[14px] px-5 text-right text-[13px] font-semibold text-[var(--brand-nav-text)]">Actions</TableHead>
+        </TableRow>
+      </template>
+
+      <SettingsTableSkeleton v-if="isLoading" :columns="4" :rows="6" />
+      <TableRow
+        v-for="(loc, i) in filtered"
+        v-else
+        :key="loc.id"
+        class="border-b border-[var(--brand-border-row)] last:border-0"
+        :class="i % 2 === 1 ? 'bg-[var(--brand-surface-table-alt)]/60' : ''"
+      >
+        <TableCell class="py-[11px] px-5 font-semibold text-[14px] text-[var(--brand-text)] border-r border-[var(--brand-border-hairline)]">{{ loc.name }}</TableCell>
+        <TableCell class="py-[11px] px-5 text-[13.5px] text-[var(--brand-text-muted)] border-r border-[var(--brand-border-hairline)]">
+          {{ loc.country === loc.city ? loc.city : `${loc.country}, ${loc.city}` }}
+        </TableCell>
+        <TableCell class="py-[11px] px-5 border-r border-[var(--brand-border-hairline)]">
+          <span class="inline-block bg-[var(--brand-badge-settings-bg)] text-[var(--brand-badge-settings-text)] text-[12px] font-bold rounded-[6px] px-2 py-[3px]">
+            {{ loc.jobCount }} {{ loc.jobCount === 1 ? 'job' : 'jobs' }}
+          </span>
+        </TableCell>
+        <TableCell class="py-[11px] px-5 text-right">
+          <div class="flex items-center gap-1.5 justify-end">
+            <button
+              class="inline-flex items-center justify-center px-[9px] py-[5px] rounded-[9px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[var(--brand-text)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+              @click="openEditModal(loc)"
+            >
+              <Pencil class="w-3.5 h-3.5" />
+            </button>
+            <SettingsRowMenu>
+              <SettingsRowMenuItem @click="duplicateLocation(loc)">
+                <Copy class="w-3.5 h-3.5" />
+                Duplicate
+              </SettingsRowMenuItem>
+              <SettingsRowMenuItem danger @click="deleteLocation(loc)">
+                <Trash2 class="w-3.5 h-3.5" />
+                Delete
+              </SettingsRowMenuItem>
+            </SettingsRowMenu>
+          </div>
+        </TableCell>
+      </TableRow>
+    </SettingsTable>
+
+    <SettingsFormModal
+      v-model="modalOpen"
+      :title="editingId ? 'Edit location' : 'Add location'"
+      width="520px"
+    >
+      <div class="mb-5">
+        <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2">Location name</label>
+        <input
+          v-model="form.name"
+          type="text"
+          placeholder="e.g. HQ — Cairo"
+          class="w-full box-border px-4 py-[13px] rounded-[12px] border-[1.5px] border-[var(--brand-border)] text-[14px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors"
+        >
       </div>
-      <span class="text-[13px] text-[var(--brand-text-muted)] tabular-nums">
-        1–{{ filtered.length }} of {{ total }} locations
-      </span>
-      <Button class="ml-auto bg-[var(--brand-teal)] text-white hover:bg-[var(--brand-teal)]/90 h-10 rounded-lg font-semibold">
-        <Plus class="w-4 h-4 mr-1" />
-        New location
-      </Button>
-    </div>
-
-    <div class="rounded-xl border border-[var(--brand-border)] overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow class="border-b border-[var(--brand-border)] bg-[var(--brand-canvas)]">
-            <TableHead class="text-[12.5px] font-semibold text-[var(--brand-text)]">Location name</TableHead>
-            <TableHead class="text-[12.5px] font-semibold text-[var(--brand-text)]">Country / City</TableHead>
-            <TableHead class="text-[12.5px] font-semibold text-[var(--brand-text)]">Jobs</TableHead>
-            <TableHead class="text-right w-32" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-if="isLoading">
-            <TableCell colspan="4" class="text-center py-8 text-[13px] text-[var(--brand-text-muted)]">Loading…</TableCell>
-          </TableRow>
-          <TableRow v-else-if="!filtered.length">
-            <TableCell colspan="4" class="text-center py-8 text-[13px] text-[var(--brand-text-muted)]">No locations match.</TableCell>
-          </TableRow>
-          <TableRow
-            v-for="loc in filtered"
-            :key="loc.id"
-            class="hover:bg-[var(--brand-surface-table-alt)]/60 border-b border-[var(--brand-border-light)] last:border-0"
+      <div class="grid grid-cols-2 gap-3.5 mb-5">
+        <div>
+          <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2">Country</label>
+          <input
+            v-model="form.country"
+            type="text"
+            class="w-full box-border px-4 py-[13px] rounded-[12px] border-[1.5px] border-[var(--brand-border)] text-[14px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors"
           >
-            <TableCell class="font-semibold text-[13.5px] text-[var(--brand-text)]">{{ loc.name }}</TableCell>
-            <TableCell class="text-[13px] text-[var(--brand-text-secondary)]">{{ loc.country }} · {{ loc.city }}</TableCell>
-            <TableCell>
-              <Badge variant="secondary" class="bg-[var(--brand-lime-tint)] text-[var(--brand-text-secondary)] border-0 text-[11px] font-semibold">
-                {{ loc.jobCount }} jobs
-              </Badge>
-            </TableCell>
-            <TableCell class="text-right">
-              <div class="flex items-center gap-1 justify-end">
-                <button class="w-8 h-8 rounded-md inline-flex items-center justify-center text-[var(--brand-text-muted)] hover:bg-black/[.05]">
-                  <Pencil class="w-3.5 h-3.5" />
-                </button>
-                <button class="w-8 h-8 rounded-md inline-flex items-center justify-center text-[var(--brand-text-muted)] hover:bg-black/[.05]">
-                  <MoreHorizontal class="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+        </div>
+        <div>
+          <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2">City</label>
+          <input
+            v-model="form.city"
+            type="text"
+            class="w-full box-border px-4 py-[13px] rounded-[12px] border-[1.5px] border-[var(--brand-border)] text-[14px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors"
+          >
+        </div>
+      </div>
+      <div class="mb-2">
+        <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2">
+          Location link <span class="font-normal text-[var(--brand-text-quiet)]">(optional)</span>
+        </label>
+        <input
+          v-model="form.link"
+          type="url"
+          placeholder="https://maps..."
+          class="w-full box-border px-4 py-[13px] rounded-[12px] border-[1.5px] border-[var(--brand-border)] text-[14px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors"
+        >
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="px-[22px] py-[11px] rounded-[10px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[14px] font-semibold text-[var(--brand-text-secondary)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+          @click="modalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="px-7 py-[11px] rounded-[10px] border-none bg-[var(--brand-teal)] text-[14px] font-bold text-white outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!form.name.trim()"
+          @click="saveModal"
+        >
+          Save
+        </button>
+      </template>
+    </SettingsFormModal>
+
+    <SettingsToast
+      v-model="toastOpen"
+      title="Location can't be deleted"
+      :message="toastMessage"
+    />
   </div>
 </template>
