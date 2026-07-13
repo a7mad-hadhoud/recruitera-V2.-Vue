@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Search, Plus, Pencil, Copy, Trash2, LayoutGrid, List, Building2, Globe, Shuffle } from 'lucide-vue-next'
-import { BrandButton } from '~/components/brand'
+import { Plus, Pencil, Copy, Trash2, LayoutGrid, List, Building2, Globe, Shuffle } from 'lucide-vue-next'
+import { BrandButton, BrandSearchBar } from '~/components/brand'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
@@ -126,14 +126,8 @@ function deleteTemplate(t: JobTemplate) {
 
     <!-- Toolbar -->
     <div class="flex items-center gap-2.5 mb-4">
-      <div class="flex-1 flex items-center gap-2.5 bg-[var(--brand-surface-white)] border border-[var(--brand-border)] rounded-[12px] px-3.5 py-2.5">
-        <Search class="w-4 h-4 text-[var(--brand-text-quiet)] shrink-0" />
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search job templates"
-          class="border-0 outline-none text-[14px] text-[var(--brand-text)] bg-transparent flex-1"
-        >
+      <div class="flex-1">
+        <BrandSearchBar v-model="search" placeholder="Search job templates" />
       </div>
       <span class="text-[13.5px] text-[var(--brand-text-muted)] whitespace-nowrap">
         <strong class="text-[var(--brand-text)]">{{ filtered.length ? 1 : 0 }}–{{ filtered.length }}</strong> of <strong class="text-[var(--brand-text)]">{{ templates.length }}</strong> templates
@@ -278,21 +272,12 @@ function deleteTemplate(t: JobTemplate) {
       </div>
 
       <template #footer>
-        <button
-          type="button"
-          class="px-6 py-3 rounded-[12px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[14px] font-semibold text-[var(--brand-text-secondary)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
-          @click="modalOpen = false"
-        >
+        <BrandButton type="button" variant="outline" size="lg" @click="modalOpen = false">
           Cancel
-        </button>
-        <button
-          type="button"
-          class="px-8 py-3 rounded-[12px] border-none bg-[var(--brand-teal)] text-[14px] font-bold text-white outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!canSave"
-          @click="saveTemplate"
-        >
+        </BrandButton>
+        <BrandButton type="button" variant="primary-teal" size="lg" :disabled="!canSave" @click="saveTemplate">
           Save
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>

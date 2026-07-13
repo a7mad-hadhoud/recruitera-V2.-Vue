@@ -6,7 +6,7 @@ import {
 import { Button } from '~/components/ui/button'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
-import { BrandSearchBar } from '~/components/brand'
+import { BrandButton, BrandSearchBar, BrandStatusBadge } from '~/components/brand'
 import { useOfferTemplates } from '~/composables/useTemplates'
 import type { OfferTemplate } from '~/types'
 
@@ -187,14 +187,7 @@ function deleteTemplate(t: OfferTemplate) {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-[15px] font-bold text-[var(--brand-text)]">{{ t.name }}</span>
-            <span
-              class="text-[11px] font-bold rounded-[6px] px-2 py-[2px] tracking-[0.04em]"
-              :class="t.type === 'OFFER'
-                ? 'bg-[var(--brand-status-approved-bg)] text-[var(--brand-status-approved-text)]'
-                : 'bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] border border-[var(--brand-border)]'"
-            >
-              {{ t.type }}
-            </span>
+            <BrandStatusBadge :tone="t.type === 'OFFER' ? 'approved' : 'neutral'" :label="t.type" />
           </div>
           <div class="text-[13px] text-[var(--brand-text-quiet)]">
             {{ t.department || 'All departments' }} · {{ t.location || 'All locations' }}
@@ -354,8 +347,8 @@ function deleteTemplate(t: OfferTemplate) {
       </div>
 
       <template #footer>
-        <button type="button" class="px-4 py-2.5 text-[14px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="modalOpen = false">Cancel</button>
-        <button type="button" class="px-7 py-2.5 rounded-[10px] bg-[var(--brand-teal)] text-white text-[14px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!canSave" @click="saveTemplate">Save template</button>
+        <BrandButton type="button" variant="ghost" size="lg" @click="modalOpen = false">Cancel</BrandButton>
+        <BrandButton type="button" variant="primary-teal" size="lg" :disabled="!canSave" @click="saveTemplate">Save template</BrandButton>
       </template>
     </SettingsFormModal>
 
@@ -369,7 +362,7 @@ function deleteTemplate(t: OfferTemplate) {
         <div class="text-[14px] text-[var(--brand-text)] leading-[1.7] bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[10px] px-4 py-4" v-html="renderBodyHtml(bodyEl?.innerText ?? form.message)" />
       </div>
       <template #footer>
-        <button type="button" class="px-7 py-2.5 rounded-[10px] bg-[var(--brand-teal)] text-white text-[14px] font-bold outline-none" @click="previewOpen = false">Close</button>
+        <BrandButton type="button" variant="primary-teal" size="lg" @click="previewOpen = false">Close</BrandButton>
       </template>
     </SettingsFormModal>
   </div>

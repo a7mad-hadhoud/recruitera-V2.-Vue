@@ -3,7 +3,7 @@
 import { Calendar, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import type { FilterCatalogEntry, ActiveFilter } from '~/types/candidate-filter.types'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
-import FilterGroupHeader from './FilterGroupHeader.vue'
+import { BrandFilterGroup } from '~/components/brand'
 
 const props = defineProps<{ entry: FilterCatalogEntry; active: ActiveFilter }>()
 const emit = defineEmits<{ remove: []; update: [patch: Partial<ActiveFilter>] }>()
@@ -32,8 +32,7 @@ function pick(preset: string) {
 </script>
 
 <template>
-  <div>
-    <FilterGroupHeader :title="entry.name" @clear="$emit('remove')" />
+  <BrandFilterGroup :title="entry.name" @clear="$emit('remove')">
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <button
@@ -68,5 +67,5 @@ function pick(preset: string) {
         >Custom date range</button>
       </PopoverContent>
     </Popover>
-  </div>
+  </BrandFilterGroup>
 </template>

@@ -1,7 +1,7 @@
 <!-- number-range: Screening score / Evaluation score. Min-Max inputs. -->
 <script setup lang="ts">
 import type { FilterCatalogEntry, ActiveFilter } from '~/types/candidate-filter.types'
-import FilterGroupHeader from './FilterGroupHeader.vue'
+import { BrandFilterGroup } from '~/components/brand'
 
 const props = defineProps<{ entry: FilterCatalogEntry; active: ActiveFilter }>()
 const emit = defineEmits<{ remove: []; update: [patch: Partial<ActiveFilter>] }>()
@@ -17,8 +17,7 @@ function setMax(v: string) {
 </script>
 
 <template>
-  <div>
-    <FilterGroupHeader :title="entry.name" @clear="$emit('remove')" />
+  <BrandFilterGroup :title="entry.name" @clear="$emit('remove')">
     <div class="flex items-center gap-2 rounded-[12px] border border-[var(--brand-border)] bg-white px-3 py-2">
       <input
         type="number"
@@ -36,5 +35,5 @@ function setMax(v: string) {
         @input="setMax(($event.target as HTMLInputElement).value)"
       />
     </div>
-  </div>
+  </BrandFilterGroup>
 </template>

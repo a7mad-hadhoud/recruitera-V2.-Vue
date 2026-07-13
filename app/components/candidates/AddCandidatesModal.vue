@@ -8,10 +8,9 @@
   interaction shell so the flow matches the design pixel-for-pixel.
 -->
 <script setup lang="ts">
-import { Plus, ChevronRight, ChevronLeft, FileText, Pencil, FileSpreadsheet, Globe, Search, User, Shirt } from 'lucide-vue-next'
+import { Plus, ChevronRight, ChevronLeft, FileText, Pencil, FileSpreadsheet, Globe, User, Shirt } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
-import { Button } from '~/components/ui/button'
-import { BrandLimeCheckbox } from '~/components/brand'
+import { BrandLimeCheckbox, BrandSearchBar, BrandButton } from '~/components/brand'
 
 type Step = 'method' | 'collar' | 'assign'
 type Method = 'cv' | 'manual' | 'csv' | 'extension'
@@ -48,13 +47,14 @@ watch(open, (next) => { if (!next) reset() })
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button
-        size="sm"
-        class="h-9 rounded-lg font-semibold bg-[var(--brand-teal)] text-white hover:bg-[var(--brand-teal)]/90 shrink-0"
+      <BrandButton
+        variant="primary-teal"
+        size="md"
+        class="shrink-0"
       >
         <Plus class="w-4 h-4 mr-1" />
         Add candidates
-      </Button>
+      </BrandButton>
     </PopoverTrigger>
     <PopoverContent
       align="end"
@@ -148,13 +148,8 @@ watch(open, (next) => { if (!next) reset() })
           <span class="w-7 shrink-0" />
         </div>
         <div class="px-4 py-3">
-          <div class="flex items-center gap-2 border-[1.5px] border-[var(--brand-border)] rounded-[9px] px-3 py-2 mb-2.5">
-            <Search class="w-[15px] h-[15px] text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.7" />
-            <input
-              type="text"
-              placeholder="Search jobs and talent pools…"
-              class="flex-1 border-none outline-none bg-transparent text-[13.5px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)]"
-            />
+          <div class="mb-2.5">
+            <BrandSearchBar size="sm" placeholder="Search jobs and talent pools…" />
           </div>
           <div class="text-[11px] font-bold tracking-[0.07em] uppercase text-[var(--brand-text-quiet)] mb-1.5">Jobs</div>
           <div class="flex flex-col gap-px mb-3">
@@ -180,18 +175,22 @@ watch(open, (next) => { if (!next) reset() })
           </div>
         </div>
         <div class="flex items-center gap-2 px-4 py-3 border-t border-[var(--brand-border-fade)]">
-          <button
-            class="flex-1 font-semibold text-[13.5px] text-[var(--brand-text-subtle)] bg-white border border-[var(--brand-border)] rounded-[9px] py-[9px] hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+          <BrandButton
+            variant="outline"
+            size="md"
+            class="flex-1"
             @click="open = false"
           >
             Skip
-          </button>
-          <button
-            class="flex-[2] font-bold text-[13.5px] text-[var(--brand-teal)] bg-[var(--brand-lime)] border-none rounded-[9px] py-[9px] hover:brightness-105 transition-[filter]"
+          </BrandButton>
+          <BrandButton
+            variant="primary-lime"
+            size="md"
+            class="flex-[2]"
             @click="open = false"
           >
             Continue
-          </button>
+          </BrandButton>
         </div>
       </div>
     </PopoverContent>

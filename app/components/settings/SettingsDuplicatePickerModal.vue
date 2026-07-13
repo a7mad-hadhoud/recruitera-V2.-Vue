@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Search } from 'lucide-vue-next'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
+import { BrandSearchBar, BrandButton } from '~/components/brand'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -36,18 +36,12 @@ const emit = defineEmits<{
   >
     <p v-if="description" class="text-[13px] text-[var(--brand-text-quiet)] mb-4 -mt-3">{{ description }}</p>
 
-    <div
-      v-if="search !== undefined"
-      class="flex items-center gap-2 border-[1.5px] border-[var(--brand-teal)] rounded-[10px] px-3.5 py-2.5 bg-[var(--brand-surface-white)] mb-3.5"
-    >
-      <Search class="w-3.5 h-3.5 text-[var(--brand-text-quiet)] shrink-0" />
-      <input
-        :value="search"
-        type="text"
+    <div v-if="search !== undefined" class="mb-3.5">
+      <BrandSearchBar
+        :model-value="search"
         :placeholder="searchPlaceholder"
-        class="border-0 outline-none text-[14px] text-[var(--brand-text)] bg-transparent flex-1"
-        @input="emit('update:search', ($event.target as HTMLInputElement).value)"
-      >
+        @update:model-value="v => emit('update:search', v)"
+      />
     </div>
 
     <div v-if="listLabel" class="flex items-center gap-2 text-[13px] font-bold text-[var(--brand-text)] mb-2">
@@ -78,15 +72,15 @@ const emit = defineEmits<{
     </div>
 
     <template #footer>
-      <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="emit('update:modelValue', false)">Cancel</button>
-      <button
-        type="button"
-        class="px-[22px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+      <BrandButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">Cancel</BrandButton>
+      <BrandButton
+        variant="primary-teal"
+        size="sm"
         :disabled="!selectedId"
         @click="emit('confirm')"
       >
         Duplicate
-      </button>
+      </BrandButton>
     </template>
   </SettingsFormModal>
 </template>

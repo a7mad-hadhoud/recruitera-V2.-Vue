@@ -34,24 +34,25 @@ function close() {
 
 <template>
   <Dialog :open="open" @update:open="v => emit('update:open', v)">
-    <DialogContent class="sm:max-w-[420px]">
-      <DialogHeader>
-        <DialogTitle class="text-[16px] font-bold text-[var(--brand-text)]">{{ title }}</DialogTitle>
-        <DialogDescription v-if="description" class="text-[13.5px] text-[var(--brand-text-muted)]">
-          {{ description }}
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter class="gap-2">
-        <BrandButton variant="outline" :disabled="loading" @click="close">{{ cancelLabel }}</BrandButton>
-        <BrandButton
-          :variant="danger ? 'danger-ghost' : 'primary-teal'"
-          :class="danger ? 'bg-[var(--brand-danger)] text-white hover:bg-[var(--brand-danger)]/90' : ''"
-          :disabled="loading"
-          @click="emit('confirm')"
-        >
-          {{ loading ? 'Please wait…' : confirmLabel }}
-        </BrandButton>
-      </DialogFooter>
+    <DialogContent class="p-0 border-none shadow-none bg-transparent sm:max-w-[420px]">
+      <div class="bg-[var(--brand-settings-modal-bg)] rounded-[24px] p-9 shadow-[var(--brand-settings-modal-shadow)]">
+        <DialogHeader>
+          <DialogTitle class="text-[16px] font-bold text-[var(--brand-text)]">{{ title }}</DialogTitle>
+          <DialogDescription v-if="description" class="text-[13.5px] text-[var(--brand-text-muted)]">
+            {{ description }}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter class="gap-2 mt-8">
+          <BrandButton variant="outline" :disabled="loading" @click="close">{{ cancelLabel }}</BrandButton>
+          <BrandButton
+            :variant="danger ? 'danger' : 'primary-teal'"
+            :disabled="loading"
+            @click="emit('confirm')"
+          >
+            {{ loading ? 'Please wait…' : confirmLabel }}
+          </BrandButton>
+        </DialogFooter>
+      </div>
     </DialogContent>
   </Dialog>
 </template>

@@ -5,6 +5,7 @@
    - outline:     white bg + border (Skip, secondary)
    - ghost:       transparent (Clear, tertiary)
    - danger-ghost: transparent + red text (destructive tertiary)
+   - danger:      solid red bg + white text (destructive primary, e.g. confirm-delete)
 
   Change any variant's colors here → every button in the product updates.
   Extends the shadcn Button so it inherits size + disabled state semantics.
@@ -15,7 +16,7 @@ import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
 
 const props = withDefaults(defineProps<{
-  variant?: 'primary-teal' | 'primary-lime' | 'outline' | 'ghost' | 'danger-ghost'
+  variant?: 'primary-teal' | 'primary-lime' | 'outline' | 'ghost' | 'danger-ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg' | 'icon'
   class?: HTMLAttributes['class']
 }>(), {
@@ -34,6 +35,8 @@ const variantClass = computed(() => ({
     'bg-transparent text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint-hover)]',
   'danger-ghost':
     'bg-transparent text-[var(--brand-danger)] hover:bg-[var(--brand-danger)]/10',
+  'danger':
+    'bg-[var(--brand-danger)] text-white font-semibold hover:bg-[var(--brand-danger)]/90',
 }[props.variant]))
 
 const sizeClass = computed(() => ({

@@ -2,7 +2,7 @@
 import { Plus, X, Trash2, Star, Save, Check } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
-import { BrandSearchBar } from '~/components/brand'
+import { BrandSearchBar, BrandStatusBadge, BrandButton, BrandAvatarInitials } from '~/components/brand'
 import { useHiringRoles, PERM_TABS, PERM_TABS_ORDER } from '~/composables/useTeam'
 import type { HiringRole, HiringRoleId } from '~/types'
 
@@ -267,23 +267,16 @@ function deleteCustomRole(role: HiringRole) {
           :key="m.email"
           class="flex items-center gap-3 py-3 border-b border-[var(--brand-border-fade)] last:border-0"
         >
-          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[var(--brand-teal)] text-[var(--brand-lime)] text-[11.5px] font-bold shrink-0">
-            {{ initials(m.name) }}
-          </span>
+          <BrandAvatarInitials :initials="initials(m.name)" size="md" />
           <div class="flex-1 min-w-0">
             <div class="text-[13.5px] font-semibold text-[var(--brand-text)]">{{ m.name }}</div>
             <div class="text-[12px] text-[var(--brand-text-quiet)]">{{ m.email }}</div>
           </div>
-          <span
-            class="text-[12px] font-semibold rounded-[6px] px-2 py-[3px]"
-            :style="m.status === 'Active'
-              ? { background: 'var(--brand-status-approved-bg)', color: 'var(--brand-status-approved-text)' }
-              : { background: 'var(--brand-status-pending-bg)', color: 'var(--brand-status-pending-text)' }"
-          >{{ m.status }}</span>
+          <BrandStatusBadge :label="m.status" :tone="m.status === 'Active' ? 'approved' : 'pending'" />
         </div>
       </div>
       <template #footer>
-        <button type="button" class="px-7 py-2.5 rounded-[10px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none" @click="membersModalOpen = false">Close</button>
+        <BrandButton variant="primary-teal" size="md" @click="membersModalOpen = false">Close</BrandButton>
       </template>
     </SettingsFormModal>
 
@@ -312,8 +305,8 @@ function deleteCustomRole(role: HiringRole) {
         </select>
       </div>
       <template #footer>
-        <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="createModalOpen = false">Cancel</button>
-        <button type="button" class="px-6 py-2 rounded-[10px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!newRoleName.trim()" @click="createRole">Create role</button>
+        <BrandButton variant="ghost" size="sm" @click="createModalOpen = false">Cancel</BrandButton>
+        <BrandButton variant="primary-teal" size="sm" :disabled="!newRoleName.trim()" @click="createRole">Create role</BrandButton>
       </template>
     </SettingsFormModal>
   </div>

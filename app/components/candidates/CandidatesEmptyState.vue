@@ -7,35 +7,40 @@
 <script setup lang="ts">
 import { SearchX, Users, Plus } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
+import { BrandEmptyState } from '~/components/brand'
 
 defineProps<{ hasFilters: boolean }>()
 defineEmits<{ clear: []; add: [] }>()
 </script>
 
 <template>
-  <div v-if="hasFilters" class="flex flex-col items-center justify-center py-24 gap-3">
-    <SearchX class="w-10 h-10 text-[var(--brand-text-faint)]" stroke-width="1.5" />
-    <p class="text-sm font-semibold text-[var(--brand-text)]">No candidates match your filters</p>
-    <p class="text-sm text-[var(--brand-text-quiet)]">Try adjusting or clearing your filters</p>
+  <BrandEmptyState
+    v-if="hasFilters"
+    :icon="SearchX"
+    title="No candidates match your filters"
+    description="Try adjusting or clearing your filters"
+  >
     <Button
       variant="outline"
       size="sm"
-      class="mt-1 border-[var(--brand-border)]"
+      class="border-[var(--brand-border)]"
       @click="$emit('clear')"
     >Clear filters</Button>
-  </div>
+  </BrandEmptyState>
 
-  <div v-else class="flex flex-col items-center justify-center py-24 gap-3">
-    <Users class="w-10 h-10 text-[var(--brand-text-faint)]" stroke-width="1.5" />
-    <p class="text-sm font-semibold text-[var(--brand-text)]">No candidates yet</p>
-    <p class="text-sm text-[var(--brand-text-quiet)]">Add your first candidate to get started</p>
+  <BrandEmptyState
+    v-else
+    :icon="Users"
+    title="No candidates yet"
+    description="Add your first candidate to get started"
+  >
     <Button
       size="sm"
-      class="mt-1 bg-[var(--brand-teal)] text-white hover:bg-[var(--brand-teal)]/90"
+      class="bg-[var(--brand-teal)] text-white hover:bg-[var(--brand-teal)]/90"
       @click="$emit('add')"
     >
       <Plus class="w-4 h-4 mr-1.5" />
       Add candidate
     </Button>
-  </div>
+  </BrandEmptyState>
 </template>

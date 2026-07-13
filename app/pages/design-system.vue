@@ -189,17 +189,17 @@ function isSwatchable(value: string) {
 // components — not just settings/), excluding this file and the component's own definition.
 const components = [
   { name: 'BrandAvatarInitials', desc: 'Round initials avatar. Rotates through the avatar palette per instance.', usedIn: ['pages/settings/account/profile.vue', 'pages/settings/team/members.vue', 'pages/settings/workflow/approvals.vue'] },
-  { name: 'BrandButton', desc: 'shadcn Button + brand variants: primary-teal / primary-lime / outline / ghost / danger-ghost.', usedIn: ['components/settings/SettingsConfirmDialog.vue', 'pages/settings/blocklist.vue', 'pages/settings/departments.vue', 'pages/settings/job-titles.vue', 'pages/settings/locations.vue', 'pages/settings/team/members.vue', 'pages/settings/templates/job-templates.vue', 'pages/settings/templates/whatsapp.vue', 'pages/settings/workflow/public-links.vue', 'pages/settings/workflow/stage-types.vue', 'pages/settings/workflow/tags-sources.vue'] },
+  { name: 'BrandButton', desc: 'shadcn Button + brand variants: primary-teal / primary-lime / outline / ghost / danger-ghost / danger. Sizes: sm / md / lg / icon.', usedIn: ['components/settings/SettingsConfirmDialog.vue', 'pages/settings/blocklist.vue', 'pages/settings/departments.vue', 'pages/settings/job-titles.vue', 'pages/settings/locations.vue', 'pages/settings/team/members.vue', 'pages/settings/templates/job-templates.vue', 'pages/settings/templates/whatsapp.vue', 'pages/settings/workflow/public-links.vue', 'pages/settings/workflow/stage-types.vue', 'pages/settings/workflow/tags-sources.vue'] },
   { name: 'BrandCard', desc: 'Standard content card — brand border + surface + shadow on top of shadcn Card.', usedIn: [] },
   { name: 'BrandCountBadge', desc: 'Small tabular count pill; zero-state renders in a lighter tone automatically.', usedIn: ['components/brand/BrandFavoriteItem.vue'] },
   { name: 'BrandDataTable', desc: 'Outer chrome (border, radius, shadow, horizontal scroll) for every list-view table.', usedIn: ['components/settings/SettingsTable.vue'] },
   { name: 'BrandEmptyState', desc: 'Icon + title + description + CTA slot for "no results" states.', usedIn: [] },
   { name: 'BrandFavoriteItem', desc: 'Favorite row with drag handle + count badge, for sidebar favorites lists.', usedIn: ['components/candidates/CandidatesFilters.vue'] },
-  { name: 'BrandFilterGroup', desc: 'Filter group wrapper: bold title + × clear + option-row slot.', usedIn: ['components/candidates/CandidatesFilters.vue'] },
+  { name: 'BrandFilterGroup', desc: 'Filter group wrapper: bold title + × clear + option-row slot.', usedIn: ['components/candidates/filters/CheckboxMultiFilter.vue', 'components/candidates/filters/NumberRangeFilter.vue', 'components/candidates/filters/TextContainsFilter.vue', 'components/candidates/filters/DateRangeFilter.vue', 'components/candidates/filters/RadioFilter.vue', 'components/candidates/filters/HasTagFilter.vue', 'components/candidates/filters/EventScheduledFilter.vue'] },
   { name: 'BrandFilterOption', desc: 'Checkbox row inside a filter group — lime checkbox + label + count.', usedIn: ['components/brand/BrandFilterGroup.vue', 'components/candidates/filters/CheckboxMultiFilter.vue', 'components/candidates/filters/EventScheduledFilter.vue'] },
   { name: 'BrandLimeCheckbox', desc: 'shadcn Checkbox wrapped with lime-fill + olive-tick brand accent.', usedIn: ['components/brand/BrandFilterOption.vue', 'components/candidates/AddCandidatesModal.vue', 'components/candidates/CandidatesColumnToggle.vue', 'components/candidates/CandidatesTable.vue', 'components/candidates/CandidatesToolbar.vue', 'components/candidates/SaveSearchPopover.vue'] },
   { name: 'BrandPageTitle', desc: 'H1 + optional favorite star — every page hero.', usedIn: [] },
-  { name: 'BrandSearchBar', desc: 'Icon + pill input, optional ⌘K hint — every search input.', usedIn: ['pages/settings/team/roles.vue', 'pages/settings/templates/application-forms.vue', 'pages/settings/templates/benefits.vue', 'pages/settings/templates/email.vue', 'pages/settings/templates/evaluation-forms.vue', 'pages/settings/templates/offer.vue', 'pages/settings/templates/questionnaires.vue', 'pages/settings/templates/referral.vue'] },
+  { name: 'BrandSearchBar', desc: 'Icon + pill input, optional ⌘K hint — every search input. Sizes: sm / md / lg.', usedIn: ['pages/settings/team/roles.vue', 'pages/settings/templates/application-forms.vue', 'pages/settings/templates/benefits.vue', 'pages/settings/templates/email.vue', 'pages/settings/templates/evaluation-forms.vue', 'pages/settings/templates/offer.vue', 'pages/settings/templates/questionnaires.vue', 'pages/settings/templates/referral.vue'] },
   { name: 'BrandSectionTitle', desc: 'Uppercase bold section header ("FAVORITES", "FILTERS").', usedIn: ['components/candidates/CandidatesFilters.vue'] },
   { name: 'BrandTopbarActions', desc: 'Top bar action icon cluster (help / notifications / settings / account).', usedIn: ['components/layout/AppHeader.vue', 'components/layout/SettingsHeader.vue'] },
 ]
@@ -289,20 +289,32 @@ const demoSearch = ref('')
       <BrandSectionTitle label="Live examples" />
       <BrandCard padded class="p-6 mb-12 flex flex-col gap-8">
         <div>
-          <div class="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)] mb-3">BrandButton</div>
+          <div class="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)] mb-3">BrandButton — variants</div>
           <div class="flex flex-wrap items-center gap-3">
             <BrandButton variant="primary-teal">Primary teal</BrandButton>
             <BrandButton variant="primary-lime">Primary lime</BrandButton>
             <BrandButton variant="outline">Outline</BrandButton>
             <BrandButton variant="ghost">Ghost</BrandButton>
             <BrandButton variant="danger-ghost">Danger ghost</BrandButton>
+            <BrandButton variant="danger">Danger</BrandButton>
+          </div>
+          <div class="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)] mb-3 mt-6">BrandButton — sizes</div>
+          <div class="flex flex-wrap items-center gap-3">
+            <BrandButton variant="primary-teal" size="sm">Small</BrandButton>
+            <BrandButton variant="primary-teal" size="md">Medium</BrandButton>
+            <BrandButton variant="primary-teal" size="lg">Large</BrandButton>
+            <BrandButton variant="primary-teal" size="icon" aria-label="Icon size">
+              <SearchIcon class="w-4 h-4" />
+            </BrandButton>
           </div>
         </div>
 
         <div>
-          <div class="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)] mb-3">BrandSearchBar</div>
-          <div class="max-w-sm">
-            <BrandSearchBar v-model="demoSearch" placeholder="Search templates" hint="⌘K" />
+          <div class="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)] mb-3">BrandSearchBar — sizes</div>
+          <div class="max-w-sm flex flex-col gap-3">
+            <BrandSearchBar v-model="demoSearch" size="sm" placeholder="Small" />
+            <BrandSearchBar v-model="demoSearch" size="md" placeholder="Medium (default)" />
+            <BrandSearchBar v-model="demoSearch" size="lg" placeholder="Large" hint="⌘K" />
           </div>
         </div>
 

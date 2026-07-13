@@ -46,6 +46,7 @@
   /* CTA / deep teal */
   --brand-teal: #002427;                          /* primary CTA */
   --brand-teal-secondary: #127295;
+  --brand-linkedin: #0a66c2;                      /* LinkedIn icon chip */
 
   /* Canvas + surfaces */
   --brand-canvas: #f7f8f9;                        /* app background */
@@ -67,6 +68,7 @@
   /* Icons */
   --brand-icon-default: #6b7a74;                  /* header/bottom icon color (alias of text-subtle) */
   --brand-icon-muted: #aab3a8;                    /* × close icons */
+  --brand-ai-accent: #8fbf1f;                     /* candidate profile: AI Summary / AI Criteria sparkle icon (olive-green, distinct hue from --brand-lime) */
 
   /* Borders */
   --brand-border: #dfe3db;                        /* default */
@@ -111,6 +113,15 @@
   --brand-status-approved-text: #1a6e40;
   --brand-status-pending-bg: #fef9e8;              /* WhatsApp template status: Pending review */
   --brand-status-pending-text: #b45309;
+  --brand-success: #3aab52;                       /* candidate profile: evaluation score good / sent checkmark */
+  --brand-warning: #e8a33d;                        /* candidate profile: evaluation score mid */
+  --brand-track: #eceee7;                          /* candidate profile: gauge/progress-bar track */
+  --brand-whatsapp: #25D366;                       /* WhatsApp brand green — chat header icon, send button */
+  --brand-whatsapp-bubble: #dcf6df;                /* WhatsApp tab: outbound message bubble bg */
+  --brand-encryption-bg: #fdf6e3;                  /* WhatsApp tab: "end-to-end encrypted" notice bg */
+  --brand-encryption-border: #f2e8c8;
+  --brand-encryption-text: #a68b3a;
+  --brand-pdf-icon: #e2231a;                       /* Files tab: PDF file-type badge */
 
   /* Top bar */
   --brand-topbar-pill-bg: #eef1ea;                /* Your trial pill + search bg */

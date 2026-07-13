@@ -12,9 +12,30 @@ import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
 import SettingsDuplicatePickerModal from '~/components/settings/SettingsDuplicatePickerModal.vue'
 import PipelineStageEditForm from '~/components/settings/pipeline/PipelineStageEditForm.vue'
+import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import { usePipelineTemplates } from '~/composables/useTemplates'
-import { PIPELINE_TYPE_COLORS } from '~/types'
 import type { PipelineStage, PipelineStageType, PipelineTemplate, StageAutomation } from '~/types'
+
+const PIPELINE_TYPE_TONE: Record<PipelineStageType, 'gray' | 'pipeline-blue' | 'live' | 'pipeline-purple'> = {
+  'No type': 'gray',
+  'Apply': 'gray',
+  'Phone Screen': 'pipeline-blue',
+  'Interview': 'pipeline-blue',
+  'Evaluation': 'live',
+  'Offer': 'pipeline-purple',
+}
+
+function stageDotTone(section: 'applicants' | 'active' | 'hires', stage: PipelineStage) {
+  if (section === 'hires') return 'live'
+  if (section === 'applicants') return 'gray'
+  return PIPELINE_TYPE_TONE[stage.type]
+}
+
+function stageDotLabel(section: 'applicants' | 'active' | 'hires', stage: PipelineStage) {
+  if (section === 'hires') return 'Hired'
+  if (section === 'applicants') return 'Applied'
+  return stage.type
+}
 
 definePageMeta({ layout: 'settings' })
 
@@ -313,7 +334,11 @@ function deleteTemplate() {
               <div v-else class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[10px] mb-1.5 overflow-hidden">
                 <div class="flex items-center gap-3 px-4 py-3">
                   <GripVertical v-if="section !== 'applicants'" class="w-3 h-3 text-[var(--brand-text-faint)] cursor-grab shrink-0" />
-                  <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ background: section === 'hires' ? 'var(--brand-settings-status-active)' : (section === 'applicants' ? 'var(--brand-status-gray)' : PIPELINE_TYPE_COLORS[stage.type]) }" />
+                  <BrandStatusBadge
+                    variant="dot-only"
+                    :tone="stageDotTone(section, stage)"
+                    :label="stageDotLabel(section, stage)"
+                  />
                   <span class="flex-1 text-[14px] font-medium text-[var(--brand-text)]">{{ stage.name }}</span>
                   <button type="button" class="text-[var(--brand-text-quiet)] outline-none hover:text-[var(--brand-text)] p-1 transition-colors" title="Automations" @click="toggleExpand(stage.id)">
                     <Zap class="w-3.5 h-3.5" />
@@ -365,15 +390,17 @@ function deleteTemplate() {
               @save="addAnother => saveStage(addAnother)"
             />
 
-            <button
+            <BrandButton
               v-if="section !== 'applicants' && !(editing && editing.section === section && editing.idx === null)"
               type="button"
-              class="w-full flex items-center justify-center gap-1.5 border-[1.5px] border-dashed border-[var(--brand-border-mid)] rounded-[10px] py-2.5 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors mt-1"
+              variant="outline"
+              size="md"
+              class="w-full gap-1.5 border-dashed font-semibold mt-1"
               @click="openAdd(section)"
             >
               <Plus class="w-3.5 h-3.5" />
               Add new
-            </button>
+            </BrandButton>
           </template>
         </div>
       </template>
@@ -421,8 +448,8 @@ function deleteTemplate() {
         <input v-model="blankName" type="text" class="w-full box-border px-3.5 py-2.5 rounded-[10px] border-[1.5px] border-[var(--brand-border)] text-[14px] text-[var(--brand-text)] outline-none bg-[var(--brand-surface-white)] focus:border-[var(--brand-teal)] transition-colors" @keyup.enter="createBlank">
       </div>
       <template #footer>
-        <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="newStep = 'closed'">Cancel</button>
-        <button type="button" class="px-[22px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!blankName.trim()" @click="createBlank">Create</button>
+        <BrandButton type="button" variant="ghost" size="md" @click="newStep = 'closed'">Cancel</BrandButton>
+        <BrandButton type="button" variant="primary-teal" size="md" :disabled="!blankName.trim()" @click="createBlank">Create</BrandButton>
       </template>
     </SettingsFormModal>
 

@@ -5,8 +5,7 @@
 -->
 <script setup lang="ts">
 import type { FilterCatalogEntry, ActiveFilter } from '~/types/candidate-filter.types'
-import FilterGroupHeader from './FilterGroupHeader.vue'
-import { BrandFilterOption } from '~/components/brand'
+import { BrandFilterGroup, BrandFilterOption } from '~/components/brand'
 import { Calendar, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 
@@ -40,8 +39,7 @@ function pickDate(preset: string) {
 </script>
 
 <template>
-  <div>
-    <FilterGroupHeader :title="entry.name" @clear="$emit('remove')" />
+  <BrandFilterGroup :title="entry.name" @clear="$emit('remove')">
     <div class="flex flex-col mb-2">
       <BrandFilterOption
         v-for="opt in entry.options ?? []"
@@ -80,5 +78,5 @@ function pickDate(preset: string) {
         </div>
       </PopoverContent>
     </Popover>
-  </div>
+  </BrandFilterGroup>
 </template>

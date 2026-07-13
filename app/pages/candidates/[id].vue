@@ -1,11 +1,965 @@
 <script setup lang="ts">
-definePageMeta({ layout: "default" })
+import {
+  X, Plus, ChevronDown, ChevronUp, Copy, Pencil, Linkedin, Github, Check,
+  Users, ThumbsUp, Tag, Share2, MoreVertical, MessageCircle, FolderCheck, Link2, Printer,
+  ExternalLink, GraduationCap, GripVertical,
+} from 'lucide-vue-next'
+import { toTypedSchema } from '@vee-validate/zod'
+import { useForm } from 'vee-validate'
+import { BrandAvatarInitials, BrandButton, BrandEmptyState, BrandStatusBadge, BrandLimeCheckbox } from '~/components/brand'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
+import CandidateCollapsibleCard from '~/components/candidates/CandidateCollapsibleCard.vue'
+import CandidateJobPipelineCard from '~/components/candidates/CandidateJobPipelineCard.vue'
+import CandidateEmailsTab from '~/components/candidates/CandidateEmailsTab.vue'
+import CandidateWhatsAppTab from '~/components/candidates/CandidateWhatsAppTab.vue'
+import CandidateEvaluationTab from '~/components/candidates/CandidateEvaluationTab.vue'
+import CandidateFilesTab from '~/components/candidates/CandidateFilesTab.vue'
+import CandidateActivityTab from '~/components/candidates/CandidateActivityTab.vue'
+import ErrorBoundary from '~/components/ErrorBoundary.vue'
+import { useCandidates, useCandidateProfile } from '~/composables/useCandidates'
+import { AddNoteSchema, type AddNoteInput } from '~/types/candidate.schema'
+import type { CandidateJob, CandidateProfile } from '~/types'
+
+definePageMeta({ layout: 'default' })
+
+const route = useRoute()
+const router = useRouter()
+const id = computed(() => String(route.params.id))
+
+const { data: profile, isLoading } = useCandidateProfile(id)
+
+function close() {
+  router.push('/candidates')
+}
+
+// Prev/next-candidate rail — walks the same order the candidates table
+// renders in. A large perPage keeps this a single request against the mock
+// dataset rather than wiring up cross-page cursoring.
+const { data: navList } = useCandidates(ref({ perPage: 200, page: 1 }))
+const navIds = computed(() => navList.value?.data.map(c => c.id) ?? [])
+const navIndex = computed(() => navIds.value.indexOf(id.value))
+const prevId = computed(() => navIndex.value > 0 ? navIds.value[navIndex.value - 1] : null)
+const nextId = computed(() => navIndex.value >= 0 && navIndex.value < navIds.value.length - 1 ? navIds.value[navIndex.value + 1] : null)
+
+// Right-column resize handle — width persists per-browser so a recruiter's
+// preferred split survives across candidates.
+const SIDEBAR_WIDTH_KEY = 'candidate-profile-sidebar-width'
+const SIDEBAR_MIN = 360
+const SIDEBAR_MAX = 640
+const sidebarWidth = ref(464)
+const isResizingSidebar = ref(false)
+
+onMounted(() => {
+  const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY))
+  if (stored >= SIDEBAR_MIN && stored <= SIDEBAR_MAX) sidebarWidth.value = stored
+})
+
+function startSidebarResize(e: PointerEvent) {
+  e.preventDefault()
+  isResizingSidebar.value = true
+  const startX = e.clientX
+  const startWidth = sidebarWidth.value
+
+  function onMove(moveEvent: PointerEvent) {
+    const next = startWidth + (startX - moveEvent.clientX)
+    sidebarWidth.value = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, next))
+  }
+  function onUp() {
+    isResizingSidebar.value = false
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth.value))
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+  }
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+}
+
+function goToCandidate(targetId: string | null) {
+  if (!targetId) return
+  router.push(`/candidates/${targetId}`)
+}
+
+const TABS = ['Overview', 'Emails', 'WhatsApp', 'Events', 'Evaluation', 'Files', 'Activity'] as const
+type Tab = typeof TABS[number]
+const activeTab = ref<Tab>('Overview')
+
+// AI Summary — clamp to 2 lines until "See more" is clicked.
+const summaryExpanded = ref(false)
+const AI_SUMMARY = 'This candidate has consistently strong evaluation scores across technical skills, system design, and culture add. Communication is clear, with solid written documentation and a track record of cross-functional collaboration. Overall a high-confidence match for the role — recommend fast-tracking through the remaining pipeline stages.'
+
+// Profile fields — label + accessor pairs, rendered as rows with an "empty" fallback.
+const PROFILE_FIELD_ROWS: { label: string, value: (p: CandidateProfile) => string | null }[] = [
+  { label: 'University', value: p => p.profileFields.university },
+  { label: 'Faculty', value: p => p.profileFields.faculty },
+  { label: 'Years of experience', value: p => p.profileFields.yearsOfExperience === null ? null : String(p.profileFields.yearsOfExperience) },
+  { label: 'Industry-relevant', value: p => p.profileFields.industryRelevant === null ? null : (p.profileFields.industryRelevant ? 'Yes' : 'No') },
+  { label: 'Languages', value: p => p.profileFields.languages },
+  { label: 'Gender', value: p => p.profileFields.gender },
+]
+
+// CV — File/Experience segmented toggle.
+const cvTab = ref<'File' | 'Experience'>('File')
+
+// Contact — static placeholder social links (no linkedin/github fields on the
+// mock Candidate type yet; mirrors the reference mockup's placeholder data-init).
+const socialLinks = ref({
+  linkedin: 'linkedin.com/in/candidate',
+  github: 'github.com/candidate',
+})
+
+// AI Criteria — mock candidate data only stores criterion labels, not a
+// per-criterion % or description, so those are derived/placeholder here.
+const criteriaOpen = ref<boolean[]>([])
+watchEffect(() => {
+  if (profile.value) criteriaOpen.value = profile.value.aiCriteria.map(() => false)
+})
+
+// Local editable copies — no write endpoint exists yet, so every mutation
+// below (tags/tasks/jobs/talent pools/contact) is client-state only, seeded
+// from the fetched profile whenever it (re)loads.
+const localTags = ref<string[]>([])
+const localTasks = ref<{ id: string, title: string, dueDate: string | null, done: boolean }[]>([])
+const localJobs = ref<CandidateJob[]>([])
+const localTalentPools = ref<string[]>([])
+watchEffect(() => {
+  if (!profile.value) return
+  localTags.value = [...profile.value.tags]
+  localTasks.value = profile.value.tasks.map(t => ({ ...t }))
+  localJobs.value = profile.value.jobs.map(j => ({ ...j }))
+  localTalentPools.value = [...profile.value.talentPools]
+})
+
+function removeTag(t: string) {
+  localTags.value = localTags.value.filter(x => x !== t)
+}
+function addTag() {
+  const name = window.prompt('Tag name')
+  if (name?.trim()) localTags.value.push(name.trim())
+}
+
+function disqualifyJob(i: number) {
+  const job = localJobs.value[i]
+  if (job) job.disqualified = true
+}
+function requalifyJob(i: number) {
+  const job = localJobs.value[i]
+  if (job) job.disqualified = false
+}
+function proceedJob(_i: number) {
+  // No further pipeline stage exists in the mock model yet — Proceed is a no-op signal for now.
+}
+function assignJob() {
+  const title = window.prompt('Job title to assign')
+  if (!title?.trim() || !profile.value) return
+  localJobs.value.push({ title: title.trim(), status: 'internal', location: profile.value.location, assignedDate: 'Just now' })
+}
+
+function removeTalentPool(p: string) {
+  localTalentPools.value = localTalentPools.value.filter(x => x !== p)
+}
+
+// Contact — static placeholder social links (no linkedin/github fields on the
+// mock Candidate type yet; mirrors the reference mockup's placeholder data-init).
+// Email/Phone/Links/Location all support multiple entries (the "+ Add" affordance
+// in the reference design), so each is stored as an array — display shows the
+// first entry, edit mode lets you add/remove any number of entries.
+const PHONE_COUNTRIES = [
+  { code: 'EG', flag: '🇪🇬' },
+  { code: 'DE', flag: '🇩🇪' },
+  { code: 'US', flag: '🇺🇸' },
+  { code: 'GB', flag: '🇬🇧' },
+  { code: 'AE', flag: '🇦🇪' },
+] as const
+type PhoneEntry = { country: string, number: string }
+
+const editingField = ref<'email' | 'phone' | 'location' | 'links' | null>(null)
+const contact = reactive({
+  emails: [] as string[],
+  phones: [] as PhoneEntry[],
+  locations: [] as string[],
+})
+const emailsDraft = ref<string[]>([])
+const phonesDraft = ref<PhoneEntry[]>([])
+const locationsDraft = ref<string[]>([])
+const linksDraft = ref<string[]>([])
+watchEffect(() => {
+  if (!profile.value) return
+  contact.emails = [profile.value.email]
+  contact.phones = [{ country: 'EG', number: profile.value.phone }]
+  contact.locations = [profile.value.location]
+})
+
+function stripProtocol(url: string) {
+  return url.trim().replace(/^https?:\/\//i, '')
+}
+function startEdit(field: 'email' | 'phone' | 'location') {
+  editingField.value = field
+  if (field === 'email') emailsDraft.value = [...contact.emails]
+  else if (field === 'phone') phonesDraft.value = contact.phones.map(p => ({ ...p }))
+  else locationsDraft.value = [...contact.locations]
+}
+function startEditLinks() {
+  editingField.value = 'links'
+  linksDraft.value = [socialLinks.value.linkedin, socialLinks.value.github].filter(Boolean)
+}
+function addDraftEntry(field: 'email' | 'phone' | 'location' | 'links') {
+  if (field === 'email') emailsDraft.value.push('')
+  else if (field === 'phone') phonesDraft.value.push({ country: 'EG', number: '' })
+  else if (field === 'location') locationsDraft.value.push('')
+  else linksDraft.value.push('')
+}
+function removeDraftEntry(field: 'email' | 'phone' | 'location' | 'links', i: number) {
+  if (field === 'email') emailsDraft.value.splice(i, 1)
+  else if (field === 'phone') phonesDraft.value.splice(i, 1)
+  else if (field === 'location') locationsDraft.value.splice(i, 1)
+  else linksDraft.value.splice(i, 1)
+}
+function saveEdit() {
+  if (editingField.value === 'email') contact.emails = emailsDraft.value.filter(v => v.trim())
+  else if (editingField.value === 'phone') contact.phones = phonesDraft.value.filter(p => p.number.trim())
+  else if (editingField.value === 'location') contact.locations = locationsDraft.value.filter(v => v.trim())
+  else if (editingField.value === 'links') {
+    const cleaned = linksDraft.value.map(stripProtocol).filter(Boolean)
+    socialLinks.value.linkedin = cleaned.find(u => u.includes('linkedin')) ?? cleaned[0] ?? ''
+    socialLinks.value.github = cleaned.find(u => u.includes('github')) ?? cleaned[1] ?? ''
+  }
+  editingField.value = null
+}
+function cancelEdit() {
+  editingField.value = null
+}
+
+const copiedField = ref<string | null>(null)
+async function copyField(field: string, value: string) {
+  await navigator.clipboard.writeText(value)
+  copiedField.value = field
+  setTimeout(() => { if (copiedField.value === field) copiedField.value = null }, 1600)
+}
+
+function goToTab(tab: Tab) {
+  activeTab.value = tab
+}
+
+const shareCopied = ref(false)
+async function copyShareLink() {
+  await navigator.clipboard.writeText(window.location.href)
+  shareCopied.value = true
+  setTimeout(() => { shareCopied.value = false }, 1600)
+}
+
+function replyToNote(authorName: string) {
+  body.value = `@${authorName} `
+}
+
+function printProfile() {
+  window.print()
+}
+
+// Tasks composer — local state only (no write endpoint yet).
+const newTask = ref('')
+function addTask() {
+  if (!newTask.value.trim()) return
+  localTasks.value.push({ id: `local-${Date.now()}`, title: newTask.value.trim(), dueDate: null, done: false })
+  newTask.value = ''
+}
+function toggleTask(id: string, done: boolean) {
+  const t = localTasks.value.find(x => x.id === id)
+  if (t) t.done = done
+}
+
+// Notes composer — same validate-on-submit pattern as the Add-candidate form.
+const { handleSubmit, resetForm, errors, defineField } = useForm<AddNoteInput>({
+  validationSchema: toTypedSchema(AddNoteSchema),
+  initialValues: { body: '' },
+})
+const [body, bodyAttrs] = defineField('body')
+
+const submitNote = handleSubmit((values) => {
+  // TODO: POST to /api/candidates/:id/notes once the write endpoint exists.
+  console.log('Add note', values)
+  resetForm()
+})
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="flex items-center justify-center h-64 rounded-lg border border-dashed border-[var(--brand-border)]">
-      <p class="text-sm text-[var(--brand-text-quiet)]">Coming soon</p>
+  <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45" @click.self="close">
+    <div class="flex items-start gap-2 w-full lg:w-auto lg:mt-6">
+    <div class="relative w-full min-h-full lg:w-[calc(100vw-118px)] lg:min-w-[900px] lg:max-w-[1500px] lg:h-[calc(100vh-24px)] lg:min-h-0">
+      <div class="w-full min-h-full lg:h-full bg-[var(--brand-surface-white)] lg:rounded-t-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] flex flex-col lg:overflow-hidden">
+      <ErrorBoundary>
+        <!-- Loading -->
+        <div v-if="isLoading" class="flex-1 flex items-center justify-center">
+          <p class="text-[13px] text-[var(--brand-text-quiet)]">Loading candidate…</p>
+        </div>
+
+        <!-- Not found -->
+        <BrandEmptyState
+          v-else-if="!profile"
+          title="Candidate not found"
+          description="This candidate may have been removed."
+          class="flex-1"
+        >
+          <BrandButton variant="primary-teal" @click="close">Back to candidates</BrandButton>
+        </BrandEmptyState>
+
+        <template v-else>
+          <!-- Modal body: 2-col grid from the very top — left is the white
+               candidate header/tabs panel, right is a persistent action +
+               pipeline rail that starts level with the header, not the tabs. -->
+          <div
+            class="flex flex-col lg:flex-row lg:flex-1 lg:min-h-0"
+            :style="{ '--candidate-sidebar-w': sidebarWidth + 'px' }"
+          >
+            <!-- LEFT column -->
+            <div class="flex-1 min-w-0 flex flex-col lg:min-h-0">
+              <!-- Header + tabs -->
+              <div class="shrink-0 border-b border-[var(--brand-border-hairline)]">
+                <div class="flex items-center justify-between gap-4 px-4 lg:px-7 pt-5 pb-4">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <BrandAvatarInitials :initials="profile.initials" :bg="profile.avatarColor" size="xl" />
+                    <div class="flex items-center gap-2.5 flex-wrap min-w-0">
+                      <h1 class="m-0 text-[18px] font-bold tracking-[-0.02em] text-[var(--brand-text)] truncate">{{ profile.name }}</h1>
+                      <BrandStatusBadge v-if="profile.isNew" tone="new" label="NEW" />
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="goToTab('Events')">
+                      <Users class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
+                    </BrandButton>
+                    <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="goToTab('Evaluation')">
+                      <ThumbsUp class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.6" />Evaluate
+                    </BrandButton>
+                    <button
+                      class="lg:hidden w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--brand-icon-default)] hover:bg-[var(--brand-surface-hover)]"
+                      aria-label="Close"
+                      @click="close"
+                    >
+                      <X class="w-5 h-5" stroke-width="1.8" />
+                    </button>
+                  </div>
+                </div>
+                <div class="flex lg:hidden items-center gap-1 px-4 pb-3">
+                  <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="goToTab('Events')">
+                    <Users class="!w-[16px] !h-[16px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
+                  </BrandButton>
+                  <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="goToTab('Evaluation')">
+                    <ThumbsUp class="!w-[16px] !h-[16px] text-[var(--brand-text)]" stroke-width="1.6" />Evaluate
+                  </BrandButton>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex items-center gap-6 px-4 lg:px-7 overflow-x-auto">
+                  <button
+                    v-for="tab in TABS"
+                    :key="tab"
+                    class="relative py-2.5 text-[14.5px] font-semibold whitespace-nowrap transition-colors"
+                    :class="activeTab === tab ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)]'"
+                    @click="activeTab = tab"
+                  >
+                    {{ tab }}
+                    <span
+                      v-if="activeTab === tab"
+                      class="absolute left-0 right-0 bottom-0 h-[3px] rounded-t-[3px] bg-[var(--brand-teal)]"
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <!-- Scrollable tab body -->
+              <div class="lg:flex-1 lg:overflow-auto bg-[var(--brand-canvas)]">
+                <div v-if="activeTab === 'Overview'" class="flex flex-col gap-4 p-6">
+                <!-- Tags -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-flex items-center gap-2 text-[14px] font-bold text-[var(--brand-text)] mr-1">
+                    <Tag class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.7" />Tags
+                  </span>
+                  <span
+                    v-for="t in localTags"
+                    :key="t"
+                    class="inline-flex items-center gap-2 h-[30px] text-[13px] font-medium text-[var(--brand-text)] bg-[var(--brand-surface-white)] border border-[var(--brand-border)] rounded-[9px] pl-3 pr-2.5"
+                  >
+                    {{ t }}
+                    <X class="w-3.5 h-3.5 text-[var(--brand-text-quiet)] hover:text-[var(--brand-danger)] cursor-pointer" stroke-width="1.7" @click="removeTag(t)" />
+                  </span>
+                  <button
+                    type="button"
+                    class="w-[30px] h-[30px] inline-flex items-center justify-center border border-[var(--brand-border)] rounded-[9px] text-[var(--brand-icon-default)] hover:bg-[var(--brand-surface-hover)] cursor-pointer"
+                    title="Add tag"
+                    @click="addTag"
+                  >
+                    <Plus class="w-3.5 h-3.5" stroke-width="1.8" />
+                  </button>
+                </div>
+
+                <!-- Details -->
+                <CandidateCollapsibleCard title="Details">
+                  <div class="flex items-center gap-4 text-[14px] py-1">
+                    <span class="w-[96px] shrink-0 text-[var(--brand-text-quiet)]">Date created</span>
+                    <span class="inline-flex items-center gap-2 text-[var(--brand-text-secondary)]">{{ profile.createdDate }}</span>
+                  </div>
+                  <div class="flex items-center gap-4 text-[14px] py-1">
+                    <span class="w-[96px] shrink-0 text-[var(--brand-text-quiet)]">Source</span>
+                    <span class="flex-1 min-w-0 flex items-center gap-2">
+                      <span class="inline-flex items-center h-[24px] text-[12.5px] font-semibold text-[var(--brand-pipeline-purple)] bg-[var(--brand-surface-badge)] rounded-[7px] px-2.5">{{ profile.source }}</span>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Edit source">
+                        <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                    </span>
+                  </div>
+                  <div v-if="profile.lastActivityDetail" class="flex items-center gap-4 text-[14px] py-1">
+                    <span class="w-[96px] shrink-0 text-[var(--brand-text-quiet)]">Last activity</span>
+                    <span class="flex-1 min-w-0 flex items-center gap-2">
+                      <BrandAvatarInitials :initials="profile.lastActivityDetail.actorInitials" size="sm" />
+                      <span class="text-[var(--brand-text-secondary)] truncate">
+                        <span class="font-semibold text-[var(--brand-text)]">{{ profile.lastActivityDetail.actor }}</span>
+                        {{ profile.lastActivityDetail.action }}
+                      </span>
+                    </span>
+                  </div>
+                </CandidateCollapsibleCard>
+
+                <!-- Contact -->
+                <CandidateCollapsibleCard title="Contact">
+                  <template #actions>
+                    <span class="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--brand-teal-secondary)] cursor-pointer hover:underline" @click="goToTab('WhatsApp')">
+                      <MessageCircle class="w-4 h-4" stroke-width="1.7" />Send message
+                    </span>
+                  </template>
+
+                  <div class="py-1.5">
+                    <div v-if="editingField !== 'email'" class="flex items-center gap-3 text-[14px]">
+                      <span class="w-[60px] shrink-0 text-[var(--brand-text-quiet)]">Email</span>
+                      <a href="#" class="flex-1 min-w-0 truncate text-[var(--brand-teal-secondary)] hover:underline" @click.prevent="copyField('email', contact.emails[0] ?? '')">{{ contact.emails[0] }}</a>
+                      <span v-if="copiedField === 'email'" class="text-[12px] font-medium text-[var(--brand-success)] whitespace-nowrap">Copied!</span>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Copy" @click="copyField('email', contact.emails[0] ?? '')">
+                        <Copy class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Edit" @click="startEdit('email')">
+                        <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                    </div>
+                    <div v-else>
+                      <span class="block text-[14px] text-[var(--brand-text-quiet)] mb-2">Email</span>
+                      <div class="flex flex-col gap-2">
+                        <div v-for="(v, i) in emailsDraft" :key="i" class="flex items-center gap-2">
+                          <input
+                            v-model="emailsDraft[i]"
+                            type="text"
+                            :autofocus="i === 0"
+                            class="flex-1 min-w-0 box-border border border-[var(--brand-border)] rounded-[10px] px-3 py-2 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
+                            @keydown.esc="cancelEdit"
+                          >
+                          <button class="w-7 h-7 inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-danger)]" title="Remove" @click="removeDraftEntry('email', i)">
+                            <X class="w-4 h-4" stroke-width="1.8" />
+                          </button>
+                        </div>
+                        <button type="button" class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--brand-text)] w-fit cursor-pointer" @click="addDraftEntry('email')">
+                          <Plus class="w-4 h-4" stroke-width="2" />Add
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-[var(--brand-border-hairline)]">
+                        <BrandButton variant="primary-teal" size="md" @click="saveEdit">Save</BrandButton>
+                        <BrandButton variant="outline" size="md" @click="cancelEdit">Cancel</BrandButton>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="py-1.5">
+                    <div v-if="editingField !== 'phone'" class="flex items-center gap-3 text-[14px]">
+                      <span class="w-[60px] shrink-0 text-[var(--brand-text-quiet)]">Phone</span>
+                      <span class="flex-1 min-w-0 truncate text-[var(--brand-text-secondary)]">{{ contact.phones[0]?.number }}</span>
+                      <span v-if="copiedField === 'phone'" class="text-[12px] font-medium text-[var(--brand-success)] whitespace-nowrap">Copied!</span>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Copy" @click="copyField('phone', contact.phones[0]?.number ?? '')">
+                        <Copy class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Edit" @click="startEdit('phone')">
+                        <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                    </div>
+                    <div v-else>
+                      <span class="block text-[14px] text-[var(--brand-text-quiet)] mb-2">Phone</span>
+                      <div class="flex flex-col gap-2">
+                        <div v-for="(p, i) in phonesDraft" :key="i" class="flex items-center gap-2">
+                          <select
+                            v-model="p.country"
+                            class="shrink-0 box-border border border-[var(--brand-border)] rounded-[10px] px-2 py-2 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
+                          >
+                            <option v-for="c in PHONE_COUNTRIES" :key="c.code" :value="c.code">{{ c.flag }} {{ c.code }}</option>
+                          </select>
+                          <input
+                            v-model="p.number"
+                            type="text"
+                            :autofocus="i === 0"
+                            class="flex-1 min-w-0 box-border border border-[var(--brand-border)] rounded-[10px] px-3 py-2 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
+                            @keydown.esc="cancelEdit"
+                          >
+                          <button class="w-7 h-7 inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-danger)]" title="Remove" @click="removeDraftEntry('phone', i)">
+                            <X class="w-4 h-4" stroke-width="1.8" />
+                          </button>
+                        </div>
+                        <button type="button" class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--brand-text)] w-fit cursor-pointer" @click="addDraftEntry('phone')">
+                          <Plus class="w-4 h-4" stroke-width="2" />Add
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-[var(--brand-border-hairline)]">
+                        <BrandButton variant="primary-teal" size="md" @click="saveEdit">Save</BrandButton>
+                        <BrandButton variant="outline" size="md" @click="cancelEdit">Cancel</BrandButton>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="py-1.5">
+                    <div v-if="editingField !== 'links'" class="flex items-center gap-3 text-[14px]">
+                      <span class="w-[60px] shrink-0 text-[var(--brand-text-quiet)]">Links</span>
+                      <span class="flex-1 min-w-0 flex items-center gap-3">
+                        <a :href="`https://${socialLinks.linkedin}`" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[14px] font-medium text-[var(--brand-text)] hover:underline">
+                          <span class="w-6 h-6 rounded-md bg-[var(--brand-linkedin)] inline-flex items-center justify-center text-white">
+                            <Linkedin class="w-3.5 h-3.5" stroke-width="2" fill="currentColor" />
+                          </span>LinkedIn
+                        </a>
+                        <a :href="`https://${socialLinks.github}`" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[14px] font-medium text-[var(--brand-text)] hover:underline">
+                          <span class="w-6 h-6 rounded-md bg-[var(--brand-text)] inline-flex items-center justify-center text-white">
+                            <Github class="w-3.5 h-3.5" stroke-width="2" />
+                          </span>GitHub
+                        </a>
+                      </span>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Edit" @click="startEditLinks">
+                        <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                    </div>
+                    <div v-else>
+                      <span class="block text-[14px] text-[var(--brand-text-quiet)] mb-2">Links</span>
+                      <div class="flex flex-col gap-2">
+                        <div v-for="(v, i) in linksDraft" :key="i" class="flex items-center gap-2">
+                          <input
+                            v-model="linksDraft[i]"
+                            type="text"
+                            placeholder="linkedin.com/in/..."
+                            :autofocus="i === 0"
+                            class="flex-1 min-w-0 box-border border border-[var(--brand-border)] rounded-[10px] px-3 py-2 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
+                            @keydown.esc="cancelEdit"
+                          >
+                          <button class="w-7 h-7 inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-danger)]" title="Remove" @click="removeDraftEntry('links', i)">
+                            <X class="w-4 h-4" stroke-width="1.8" />
+                          </button>
+                        </div>
+                        <button type="button" class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--brand-text)] w-fit cursor-pointer" @click="addDraftEntry('links')">
+                          <Plus class="w-4 h-4" stroke-width="2" />Add
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-[var(--brand-border-hairline)]">
+                        <BrandButton variant="primary-teal" size="md" @click="saveEdit">Save</BrandButton>
+                        <BrandButton variant="outline" size="md" @click="cancelEdit">Cancel</BrandButton>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="py-1.5">
+                    <div v-if="editingField !== 'location'" class="flex items-center gap-3 text-[14px]">
+                      <span class="w-[60px] shrink-0 text-[var(--brand-text-quiet)]">Location</span>
+                      <span class="flex-1 min-w-0 truncate text-[var(--brand-text-secondary)]">{{ contact.locations[0] }}</span>
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Edit" @click="startEdit('location')">
+                        <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                    </div>
+                    <div v-else>
+                      <span class="block text-[14px] text-[var(--brand-text-quiet)] mb-2">Location</span>
+                      <div class="flex flex-col gap-2">
+                        <div v-for="(v, i) in locationsDraft" :key="i" class="flex items-center gap-2">
+                          <input
+                            v-model="locationsDraft[i]"
+                            type="text"
+                            :autofocus="i === 0"
+                            class="flex-1 min-w-0 box-border border border-[var(--brand-border)] rounded-[10px] px-3 py-2 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
+                            @keydown.esc="cancelEdit"
+                          >
+                          <button class="w-7 h-7 inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-danger)]" title="Remove" @click="removeDraftEntry('location', i)">
+                            <X class="w-4 h-4" stroke-width="1.8" />
+                          </button>
+                        </div>
+                        <button type="button" class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--brand-text)] w-fit cursor-pointer" @click="addDraftEntry('location')">
+                          <Plus class="w-4 h-4" stroke-width="2" />Add
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-[var(--brand-border-hairline)]">
+                        <BrandButton variant="primary-teal" size="md" @click="saveEdit">Save</BrandButton>
+                        <BrandButton variant="outline" size="md" @click="cancelEdit">Cancel</BrandButton>
+                      </div>
+                    </div>
+                  </div>
+                </CandidateCollapsibleCard>
+
+                <!-- Profile fields -->
+                <CandidateCollapsibleCard title="Profile fields">
+                  <div v-for="f in PROFILE_FIELD_ROWS" :key="f.label" class="flex items-center gap-4 text-[14px] py-1">
+                    <span class="w-[144px] shrink-0 text-[var(--brand-text-quiet)]">{{ f.label }}</span>
+                    <span
+                      class="flex-1 min-w-0 truncate"
+                      :class="f.value(profile) === null ? 'text-[var(--brand-text-faint)] italic' : 'text-[var(--brand-text-secondary)]'"
+                    >{{ f.value(profile) === null ? 'empty' : f.value(profile) }}</span>
+                  </div>
+                </CandidateCollapsibleCard>
+
+                <!-- AI Summary -->
+                <CandidateCollapsibleCard title="AI Summary">
+                  <template #icon>
+                    <svg width="18" height="21" viewBox="0 0 23.272 28" fill="var(--brand-ai-accent)">
+                      <g transform="translate(-4.364 -2)">
+                        <path d="M13.294,7.436l.8,2.23a8.835,8.835,0,0,0,5.316,5.316l2.23.8a.229.229,0,0,1,0,.43l-2.23.8A8.835,8.835,0,0,0,14.1,22.334l-.8,2.23a.229.229,0,0,1-.43,0l-.8-2.23a8.835,8.835,0,0,0-5.316-5.316l-2.23-.8a.229.229,0,0,1,0-.43l2.23-.8a8.835,8.835,0,0,0,5.316-5.316l.8-2.23a.228.228,0,0,1,.43,0Z" />
+                        <path d="M23.332,2.077l.407,1.129A4.477,4.477,0,0,0,26.431,5.9L27.56,6.3a.116.116,0,0,1,0,.218l-1.129.407a4.477,4.477,0,0,0-2.692,2.692l-.407,1.129a.116.116,0,0,1-.218,0l-.407-1.129A4.477,4.477,0,0,0,20.015,6.93l-1.129-.407a.116.116,0,0,1,0-.218L20.015,5.9a4.477,4.477,0,0,0,2.692-2.692l.407-1.129A.116.116,0,0,1,23.332,2.077Z" />
+                        <path d="M23.332,21.25l.407,1.129a4.477,4.477,0,0,0,2.692,2.692l1.129.407a.116.116,0,0,1,0,.218l-1.129.407a4.477,4.477,0,0,0-2.692,2.692l-.407,1.129a.116.116,0,0,1-.218,0l-.407-1.129A4.477,4.477,0,0,0,20.015,26.1L18.886,25.7a.116.116,0,0,1,0-.218l1.129-.407a4.477,4.477,0,0,0,2.692-2.692l.407-1.129A.116.116,0,0,1,23.332,21.25Z" />
+                      </g>
+                    </svg>
+                  </template>
+                  <p
+                    class="m-0 text-[14px] leading-[1.6] text-[var(--brand-text-secondary)]"
+                    :class="!summaryExpanded && 'line-clamp-2'"
+                  >{{ AI_SUMMARY }}</p>
+                  <span
+                    class="inline-block mt-2 text-[13.5px] font-semibold text-[var(--brand-teal-secondary)] cursor-pointer hover:underline"
+                    @click="summaryExpanded = !summaryExpanded"
+                  >{{ summaryExpanded ? 'See less' : 'See more' }}</span>
+                </CandidateCollapsibleCard>
+
+                <!-- Screening questions -->
+                <CandidateCollapsibleCard title="Screening questions">
+                  <template #actions>
+                    <span v-if="profile.screenedAt" class="text-[12.5px] text-[var(--brand-text-quiet)]">Screened {{ profile.screenedAt }}</span>
+                  </template>
+                  <div v-if="profile.screeningQuestions.length" class="flex flex-col gap-4">
+                    <div v-for="q in profile.screeningQuestions" :key="q.id" class="py-1">
+                      <p class="m-0 text-[14px] font-semibold text-[var(--brand-text)]">{{ q.question }}</p>
+                      <p class="m-0 mt-1 text-[14px] leading-[1.6] text-[var(--brand-text-secondary)]">{{ q.answer }}</p>
+                    </div>
+                  </div>
+                  <BrandEmptyState v-else title="No screening questions" description="This candidate hasn't been screened yet." />
+                </CandidateCollapsibleCard>
+
+                <!-- CV -->
+                <CandidateCollapsibleCard title="CV">
+                  <template v-if="profile.cv" #title-controls>
+                    <div class="inline-flex items-center gap-0.5 rounded-[9px] bg-[var(--brand-surface-hover)] p-0.5 ml-1">
+                      <button
+                        v-for="t in (['File', 'Experience'] as const)"
+                        :key="t"
+                        type="button"
+                        class="h-[26px] px-3 rounded-[7px] text-[12.5px] font-semibold cursor-pointer"
+                        :class="cvTab === t ? 'bg-[var(--brand-surface-white)] text-[var(--brand-text)] shadow-sm border border-[var(--brand-border)]' : 'text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)]'"
+                        @click="cvTab = t"
+                      >{{ t }}</button>
+                    </div>
+                  </template>
+                  <template #actions>
+                    <template v-if="profile.cv">
+                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Open in new tab">
+                        <ExternalLink class="w-3.5 h-3.5" stroke-width="1.7" />
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                          <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="More options">
+                            <MoreVertical class="w-3.5 h-3.5" stroke-width="1.7" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="min-w-[160px] p-1.5 rounded-[12px]">
+                          <DropdownMenuItem class="text-[13.5px]">Download</DropdownMenuItem>
+                          <DropdownMenuItem class="text-[13.5px]">Print</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </template>
+                  </template>
+
+                  <template v-if="profile.cv">
+                    <!-- File preview -->
+                    <div v-if="cvTab === 'File'" class="rounded-[12px] border border-[var(--brand-border-hairline)] bg-[var(--brand-surface-hover)] p-6">
+                      <h3 class="m-0 text-[18px] font-bold text-[var(--brand-text)]">{{ profile.cv.candidateName }}</h3>
+                      <p class="m-0 mt-0.5 text-[14px] text-[var(--brand-text-secondary)]">{{ profile.cv.title }} · {{ profile.location }}</p>
+                      <p class="m-0 mt-1 text-[13px] text-[var(--brand-text-quiet)]">{{ profile.cv.contactLine }}</p>
+
+                      <h4 class="m-0 mt-5 text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)]">Summary</h4>
+                      <p class="m-0 mt-2 text-[14px] leading-[1.6] text-[var(--brand-text-secondary)]">{{ profile.cv.summary }}</p>
+
+                      <h4 class="m-0 mt-5 text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--brand-text-quiet)]">Experience</h4>
+                      <div class="flex flex-col gap-3 mt-2">
+                        <div v-for="e in profile.cv.experience" :key="e.role + e.company">
+                          <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-[14px] font-semibold text-[var(--brand-text)]">{{ e.role }} · {{ e.company }}</span>
+                            <span class="shrink-0 text-[12.5px] text-[var(--brand-text-quiet)]">{{ e.period }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Experience timeline -->
+                    <div v-else class="flex flex-col gap-6">
+                      <div>
+                        <h4 class="m-0 mb-3 text-[15px] font-bold text-[var(--brand-text)]">Work experience</h4>
+                        <div class="flex flex-col">
+                          <div v-for="(e, i) in profile.cv.experience" :key="e.role + e.company" class="relative pl-5 pb-4 last:pb-0">
+                            <span
+                              class="absolute left-0 top-1.5 w-2 h-2 rounded-full"
+                              :class="i === 0 ? 'bg-[var(--brand-text)]' : 'bg-[var(--brand-border-mid)]'"
+                            />
+                            <span v-if="i < profile.cv.experience.length - 1" class="absolute left-[3px] top-4 bottom-0 w-px bg-[var(--brand-border)]" />
+                            <span class="block text-[14px] font-bold text-[var(--brand-text)]">{{ e.role }} · {{ e.company }}</span>
+                            <span class="block mt-0.5 text-[12.5px] text-[var(--brand-text-quiet)]">{{ e.period }} · {{ e.location }}</span>
+                            <p class="m-0 mt-1.5 text-[13.5px] leading-[1.6] text-[var(--brand-text-secondary)]">{{ e.description }}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 class="m-0 mb-2.5 text-[15px] font-bold text-[var(--brand-text)]">Skills</h4>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span
+                            v-for="s in profile.cv.skills"
+                            :key="s"
+                            class="inline-flex items-center h-[26px] text-[12.5px] font-semibold text-[var(--brand-olive)] bg-[var(--brand-lime-tint)] border border-[var(--brand-lime)]/50 rounded-[7px] px-2.5"
+                          >{{ s }}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 class="m-0 mb-2.5 text-[15px] font-bold text-[var(--brand-text)]">Education</h4>
+                        <div v-for="ed in profile.cv.education" :key="ed.degree" class="flex items-start gap-3 rounded-[12px] border border-[var(--brand-border-hairline)] p-3.5">
+                          <span class="w-8 h-8 rounded-md bg-[var(--brand-surface-hover)] inline-flex items-center justify-center shrink-0">
+                            <GraduationCap class="w-4 h-4 text-[var(--brand-icon-default)]" stroke-width="1.7" />
+                          </span>
+                          <span class="min-w-0">
+                            <span class="block text-[14px] font-bold text-[var(--brand-text)]">{{ ed.degree }}</span>
+                            <span class="block mt-0.5 text-[13px] text-[var(--brand-text-quiet)]">{{ ed.school }} · {{ ed.period }}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <BrandEmptyState v-else title="No CV on file" description="This candidate hasn't uploaded a resume yet." />
+                </CandidateCollapsibleCard>
+              </div>
+
+                <CandidateEmailsTab v-else-if="activeTab === 'Emails' && profile" :profile="profile" />
+                <CandidateWhatsAppTab v-else-if="activeTab === 'WhatsApp' && profile" :profile="profile" />
+                <BrandEmptyState
+                  v-else-if="activeTab === 'Events'"
+                  title="Events"
+                  description="No interviews scheduled. Use Schedule to add one."
+                />
+                <CandidateEvaluationTab v-else-if="activeTab === 'Evaluation' && profile" :profile="profile" />
+                <CandidateFilesTab v-else-if="activeTab === 'Files' && profile" :profile="profile" />
+                <CandidateActivityTab v-else-if="activeTab === 'Activity' && profile" :profile="profile" />
+              </div>
+            </div>
+
+            <!-- Drag handle: resizes the RIGHT rail, matches
+                 rt-candidate-profile-sidebar-drag-handle in the reference app -->
+            <div
+              class="hidden lg:flex shrink-0 w-3 items-center justify-center cursor-col-resize select-none touch-none border-x border-[var(--brand-border-hairline)] bg-[var(--brand-surface-white)] hover:bg-[var(--brand-lime-tint)] active:bg-[var(--brand-lime-tint)] transition-colors"
+              :class="{ '!bg-[var(--brand-lime-tint)]': isResizingSidebar }"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize panel"
+              @pointerdown="startSidebarResize"
+            >
+              <GripVertical class="w-[14px] h-[14px] text-[var(--brand-icon-muted)]" stroke-width="1.8" />
+            </div>
+
+            <!-- RIGHT column: persistent action + pipeline rail, starts flush
+                 with the left header (not the tabs), independent of activeTab -->
+            <aside
+              class="flex flex-col lg:min-h-0 bg-[var(--brand-canvas)] lg:w-[var(--candidate-sidebar-w)] lg:shrink-0"
+            >
+              <!-- Actions row — sits above the job pipeline card -->
+              <div class="shrink-0 flex items-center justify-between gap-2 px-6 pt-5 pb-4">
+                <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="assignJob">
+                  <Plus class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.8" />Assign
+                </BrandButton>
+                <div class="flex items-center gap-1">
+                  <BrandButton variant="primary-lime" size="md" @click="copyShareLink">
+                    <Share2 class="w-4 h-4" stroke-width="1.7" />{{ shareCopied ? 'Copied!' : 'Share' }}
+                  </BrandButton>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <button class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--brand-text-secondary)] hover:bg-[var(--brand-surface-hover)]" title="More options">
+                        <MoreVertical class="w-[18px] h-[18px]" stroke-width="1.8" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="min-w-[190px] p-1.5 rounded-[12px]">
+                      <DropdownMenuItem class="flex items-center gap-2 text-[13.5px]" @click="copyShareLink">
+                        <Link2 class="w-3.5 h-3.5" stroke-width="1.8" />Copy profile link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="flex items-center gap-2 text-[13.5px]" @click="printProfile">
+                        <Printer class="w-3.5 h-3.5" stroke-width="1.8" />Print profile
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              <div class="lg:flex-1 lg:overflow-auto px-6 pb-6 flex flex-col gap-4">
+                <!-- Job pipeline cards -->
+                <div v-if="localJobs.length" class="shrink-0 rounded-[14px] border border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] overflow-hidden">
+                  <CandidateJobPipelineCard
+                    v-for="(j, i) in localJobs"
+                    :key="j.title"
+                    :job="j"
+                    :location="j.location || profile.location"
+                    :assigned-date="j.assignedDate || profile.createdDate"
+                    @disqualify="disqualifyJob(i)"
+                    @requalify="requalifyJob(i)"
+                    @proceed="proceedJob(i)"
+                  />
+                </div>
+
+                <!-- AI Criteria -->
+                <CandidateCollapsibleCard v-if="profile.aiCriteria.length" title="AI Criteria">
+                  <template #icon>
+                    <svg width="18" height="21" viewBox="0 0 23.272 28" fill="var(--brand-ai-accent)">
+                      <g transform="translate(-4.364 -2)">
+                        <path d="M13.294,7.436l.8,2.23a8.835,8.835,0,0,0,5.316,5.316l2.23.8a.229.229,0,0,1,0,.43l-2.23.8A8.835,8.835,0,0,0,14.1,22.334l-.8,2.23a.229.229,0,0,1-.43,0l-.8-2.23a8.835,8.835,0,0,0-5.316-5.316l-2.23-.8a.229.229,0,0,1,0-.43l2.23-.8a8.835,8.835,0,0,0,5.316-5.316l.8-2.23a.228.228,0,0,1,.43,0Z" />
+                        <path d="M23.332,2.077l.407,1.129A4.477,4.477,0,0,0,26.431,5.9L27.56,6.3a.116.116,0,0,1,0,.218l-1.129.407a4.477,4.477,0,0,0-2.692,2.692l-.407,1.129a.116.116,0,0,1-.218,0l-.407-1.129A4.477,4.477,0,0,0,20.015,6.93l-1.129-.407a.116.116,0,0,1,0-.218L20.015,5.9a4.477,4.477,0,0,0,2.692-2.692l.407-1.129A.116.116,0,0,1,23.332,2.077Z" />
+                        <path d="M23.332,21.25l.407,1.129a4.477,4.477,0,0,0,2.692,2.692l1.129.407a.116.116,0,0,1,0,.218l-1.129.407a4.477,4.477,0,0,0-2.692,2.692l-.407,1.129a.116.116,0,0,1-.218,0l-.407-1.129A4.477,4.477,0,0,0,20.015,26.1L18.886,25.7a.116.116,0,0,1,0-.218l1.129-.407a4.477,4.477,0,0,0,2.692-2.692l.407-1.129A.116.116,0,0,1,23.332,21.25Z" />
+                      </g>
+                    </svg>
+                  </template>
+                  <template #actions>
+                    <span
+                      v-if="profile.score"
+                      class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--brand-olive)] bg-[var(--brand-lime-active-bg)] border border-[var(--brand-lime)]/60 rounded-md px-2.5 py-[3px] whitespace-nowrap"
+                    >AI score {{ profile.score }}</span>
+                  </template>
+
+                  <div v-for="(c, i) in profile.aiCriteria" :key="c.label" class="border-t border-[var(--brand-border-hairline)] first:border-t-0">
+                    <button
+                      type="button"
+                      class="w-full flex items-center gap-2.5 py-2.5 cursor-pointer text-left"
+                      @click="criteriaOpen[i] = !criteriaOpen[i]"
+                    >
+                      <span class="text-[13.5px] font-medium text-[var(--brand-text)]">{{ c.label }}</span>
+                      <ChevronDown
+                        class="w-[15px] h-[15px] text-[var(--brand-text-quiet)] shrink-0 transition-transform duration-150"
+                        :class="{ 'rotate-180': criteriaOpen[i] }"
+                        stroke-width="2"
+                      />
+                      <span class="ml-auto text-[14px] font-semibold text-[var(--brand-olive)] tabular-nums whitespace-nowrap">{{ c.weight }}%</span>
+                    </button>
+                    <div v-show="criteriaOpen[i]" class="pb-3.5 text-[13px] leading-[1.6] text-[var(--brand-text-secondary)]">
+                      AI-derived assessment of this criterion based on the candidate's resume, screening answers, and evaluation history.
+                    </div>
+                  </div>
+                </CandidateCollapsibleCard>
+
+                <!-- Talent pools -->
+                <CandidateCollapsibleCard title="Talent pools">
+                  <div v-if="localTalentPools.length" class="flex flex-col">
+                    <div v-for="p in localTalentPools" :key="p" class="flex items-center gap-3 py-2.5">
+                      <FolderCheck class="w-[19px] h-[19px] text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.6" />
+                      <span class="flex-1 text-[14px] font-medium text-[var(--brand-text)]">{{ p }}</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                          <button class="w-[30px] h-[30px] inline-flex items-center justify-center rounded-lg text-[var(--brand-text-quiet)] hover:bg-[var(--brand-surface-hover)]" title="More options">
+                            <MoreVertical class="w-4 h-4" stroke-width="1.7" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="min-w-[180px] p-1.5 rounded-[12px]">
+                          <DropdownMenuItem class="text-[13.5px] !text-[var(--brand-danger)]" @click="removeTalentPool(p)">
+                            Remove from pool
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  <p v-else class="text-[13px] text-[var(--brand-text-quiet)] m-0 py-1">Not in any talent pool.</p>
+                </CandidateCollapsibleCard>
+
+                <!-- Tasks -->
+                <CandidateCollapsibleCard title="Tasks">
+                  <input
+                    v-model="newTask"
+                    type="text"
+                    placeholder="Add a task…"
+                    class="w-full box-border border border-[var(--brand-border)] rounded-[10px] px-3 py-2.5 text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)] outline-none focus:border-[var(--brand-ai-accent)] mb-3.5"
+                    @keydown.enter="addTask"
+                  >
+                  <div v-if="localTasks.length" class="flex flex-col gap-1">
+                    <label
+                      v-for="t in localTasks"
+                      :key="t.id"
+                      class="flex items-center gap-3 py-2 px-1.5 rounded-lg cursor-pointer hover:bg-[var(--brand-surface-hover)]"
+                    >
+                      <BrandLimeCheckbox :model-value="t.done" @update:model-value="toggleTask(t.id, $event)" />
+                      <span class="flex-1 text-[14px] text-[var(--brand-text)]" :class="t.done && 'line-through text-[var(--brand-text-quiet)]'">{{ t.title }}</span>
+                      <BrandAvatarInitials :initials="profile.ownerInitials" size="xs" />
+                      <span v-if="t.dueDate" class="text-[12px] text-[var(--brand-text-quiet)]">{{ t.dueDate }}</span>
+                    </label>
+                  </div>
+                  <p v-else class="text-[13px] text-[var(--brand-text-quiet)] m-0 py-1">No tasks yet.</p>
+                </CandidateCollapsibleCard>
+
+                <!-- Notes -->
+                <CandidateCollapsibleCard title="Notes">
+                  <form class="flex flex-col gap-1.5 mb-4" @submit.prevent="submitNote">
+                    <textarea
+                      v-model="body"
+                      v-bind="bodyAttrs"
+                      rows="2"
+                      placeholder="Add a note…"
+                      class="w-full resize-none box-border rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3 py-2.5 text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)] outline-none focus:border-[var(--brand-ai-accent)]"
+                    />
+                    <p v-if="errors.body" class="m-0 text-[11.5px] text-[var(--brand-danger)]">{{ errors.body }}</p>
+                    <BrandButton type="submit" size="sm" variant="primary-teal" class="self-end">Save</BrandButton>
+                  </form>
+
+                  <div v-if="profile.notes.length" class="flex flex-col gap-4">
+                    <div v-for="n in profile.notes" :key="n.id" class="flex gap-3">
+                      <BrandAvatarInitials :initials="n.authorInitials" size="sm" />
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="font-semibold text-[14px] text-[var(--brand-text)]">{{ n.author }}</span>
+                          <span class="text-[12px] text-[var(--brand-text-quiet)]">{{ n.createdAt }}</span>
+                        </div>
+                        <p class="m-0 mt-1 text-[14px] text-[var(--brand-text-secondary)]">{{ n.body }}</p>
+                        <span class="inline-block mt-2 text-[13px] font-semibold text-[var(--brand-teal-secondary)] cursor-pointer hover:underline" @click="replyToNote(n.author)">Reply</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else class="text-[13px] text-[var(--brand-text-quiet)] m-0">No notes yet.</p>
+                </CandidateCollapsibleCard>
+              </div>
+            </aside>
+          </div>
+        </template>
+      </ErrorBoundary>
+      </div>
+    </div>
+
+    <!-- Close/Prev/Next rail, sits outside the card (desktop only — mobile close lives in the header) -->
+    <div class="hidden lg:flex flex-col gap-2 shrink-0 pt-0.5">
+      <button
+        class="w-11 h-11 inline-flex items-center justify-center rounded-xl bg-white/10 text-white/90 hover:bg-white/20"
+        aria-label="Close"
+        @click="close"
+      >
+        <X class="w-5 h-5" stroke-width="1.8" />
+      </button>
+      <div class="flex flex-col rounded-xl overflow-hidden bg-white/10">
+        <button
+          class="w-11 h-11 inline-flex items-center justify-center text-white/90 enabled:hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Previous candidate"
+          :disabled="!prevId"
+          @click="goToCandidate(prevId)"
+        >
+          <ChevronUp class="w-5 h-5" stroke-width="1.8" />
+        </button>
+        <div class="h-px bg-white/15" />
+        <button
+          class="w-11 h-11 inline-flex items-center justify-center text-white/90 enabled:hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Next candidate"
+          :disabled="!nextId"
+          @click="goToCandidate(nextId)"
+        >
+          <ChevronDown class="w-5 h-5" stroke-width="1.8" />
+        </button>
+      </div>
+    </div>
     </div>
   </div>
 </template>

@@ -5,7 +5,7 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
   initials: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'xl' | 'lg'
   bg?: string
   color?: string
 }>(), {
@@ -13,8 +13,10 @@ withDefaults(defineProps<{
 })
 
 const sizeClasses: Record<string, string> = {
+  xs: 'w-5 h-5 text-[9px]',
   sm: 'w-6 h-6 text-[10px]',
   md: 'w-8 h-8 text-[11.5px]',
+  xl: 'w-10 h-10 text-[13px]',
   lg: 'w-14 h-14 text-[18px]',
 }
 </script>

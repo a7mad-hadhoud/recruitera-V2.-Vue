@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
-import type { Candidate, CandidateFilterCounts, CandidatesResponse } from '~/types'
+import type { Candidate, CandidateFilterCounts, CandidateProfile, CandidatesResponse } from '~/types'
 import { useApi } from '~/composables/useApi'
 
 /**
@@ -29,6 +29,14 @@ export function useCandidate(id: Ref<string>) {
   return useQuery({
     queryKey: ['candidate', id],
     queryFn: () => api.get<Candidate>(`/api/candidates/${id.value}`),
+  })
+}
+
+export function useCandidateProfile(id: Ref<string>) {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['candidate', id, 'profile'],
+    queryFn: () => api.get<CandidateProfile>(`/api/candidates/${id.value}/profile`),
   })
 }
 

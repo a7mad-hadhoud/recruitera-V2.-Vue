@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
+import { BrandButton } from '~/components/brand'
 
 withDefaults(defineProps<{
   modelValue: boolean
@@ -31,8 +32,8 @@ const emit = defineEmits<{
       >
     </div>
     <template #footer>
-      <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="emit('update:modelValue', false)">Cancel</button>
-      <button type="button" class="px-[18px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!draft.trim()" @click="emit('confirm')">Save</button>
+      <BrandButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">Cancel</BrandButton>
+      <BrandButton variant="primary-teal" size="sm" :disabled="!draft.trim()" @click="emit('confirm')">Save</BrandButton>
     </template>
   </SettingsFormModal>
 </template>

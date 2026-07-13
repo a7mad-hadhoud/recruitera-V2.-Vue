@@ -4,11 +4,10 @@
   7-8, 3-4 mirror this pattern for Disqualify reason too).
 -->
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, Search } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp } from 'lucide-vue-next'
 import type { FilterCatalogEntry, ActiveFilter } from '~/types/candidate-filter.types'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
-import { Input } from '~/components/ui/input'
-import FilterGroupHeader from './FilterGroupHeader.vue'
+import { BrandSearchBar, BrandFilterGroup } from '~/components/brand'
 
 const props = defineProps<{ entry: FilterCatalogEntry; active: ActiveFilter }>()
 const emit = defineEmits<{ remove: []; update: [patch: Partial<ActiveFilter>] }>()
@@ -39,8 +38,7 @@ const selectedLabels = computed(() => {
 </script>
 
 <template>
-  <div>
-    <FilterGroupHeader :title="operatorLabel" @clear="$emit('remove')" />
+  <BrandFilterGroup :title="operatorLabel" @clear="$emit('remove')">
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <button
@@ -59,14 +57,7 @@ const selectedLabels = computed(() => {
         class="w-[240px] p-0 rounded-[10px] border-[var(--brand-border-light)] shadow-[0_8px_24px_rgba(0,20,18,0.12)] overflow-hidden"
       >
         <div class="p-2">
-          <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--brand-text-quiet)]" />
-            <Input
-              v-model="search"
-              :placeholder="`Search ${entry.name.toLowerCase()}s`"
-              class="h-9 pl-9 border-[1.5px] border-[var(--brand-lime)] focus-visible:border-[var(--brand-lime)] focus-visible:ring-0 text-[13.5px]"
-            />
-          </div>
+          <BrandSearchBar v-model="search" size="sm" :placeholder="`Search ${entry.name.toLowerCase()}s`" />
         </div>
         <div class="max-h-[240px] overflow-y-auto pb-2">
           <button
@@ -87,5 +78,5 @@ const selectedLabels = computed(() => {
         </div>
       </PopoverContent>
     </Popover>
-  </div>
+  </BrandFilterGroup>
 </template>

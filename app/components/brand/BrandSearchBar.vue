@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
   modelValue?: string
   placeholder?: string
   hint?: string           // right-side kbd hint, e.g. "⌘ K"
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   class?: HTMLAttributes['class']
 }>(), {
   placeholder: 'Search',
@@ -25,7 +25,11 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [v: string] }>()
 
-const heightClass = computed(() => (props.size === 'sm' ? 'h-8' : 'h-9'))
+const heightClass = computed(() => {
+  if (props.size === 'sm') return 'h-8 text-[14px]'
+  if (props.size === 'lg') return 'h-11 text-[15px] md:text-[15px]'
+  return 'h-9 text-[14px]'
+})
 </script>
 
 <template>
@@ -40,7 +44,7 @@ const heightClass = computed(() => (props.size === 'sm' ? 'h-8' : 'h-9'))
         // Override shadcn's neutral defaults with our brand pill look.
         heightClass,
         'w-full pl-10 rounded-lg border shadow-none bg-[var(--brand-topbar-pill-bg)] border-[var(--brand-topbar-pill-border)]',
-        'text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)]',
+        'text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)]',
         'focus-visible:bg-white focus-visible:border-[var(--brand-border-mid)] focus-visible:ring-0',
         hint ? 'pr-16' : 'pr-3',
         props.class,

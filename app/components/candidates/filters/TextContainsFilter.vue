@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { CornerDownLeft } from 'lucide-vue-next'
 import type { FilterCatalogEntry, ActiveFilter } from '~/types/candidate-filter.types'
-import FilterGroupHeader from './FilterGroupHeader.vue'
+import { BrandFilterGroup } from '~/components/brand'
 
 const props = defineProps<{ entry: FilterCatalogEntry; active: ActiveFilter }>()
 const emit = defineEmits<{ remove: []; update: [patch: Partial<ActiveFilter>] }>()
@@ -15,8 +15,7 @@ function setText(v: string) { emit('update', { text: v }) }
 </script>
 
 <template>
-  <div>
-    <FilterGroupHeader :title="operatorLabel" @clear="$emit('remove')" />
+  <BrandFilterGroup :title="operatorLabel" @clear="$emit('remove')">
     <div class="relative">
       <input
         type="text"
@@ -27,5 +26,5 @@ function setText(v: string) { emit('update', { text: v }) }
       />
       <CornerDownLeft class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
     </div>
-  </div>
+  </BrandFilterGroup>
 </template>

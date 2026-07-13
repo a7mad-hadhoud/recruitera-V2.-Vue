@@ -5,7 +5,7 @@ import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 import SettingsRenameModal from '~/components/settings/SettingsRenameModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
-import { BrandSearchBar } from '~/components/brand'
+import { BrandButton, BrandSearchBar } from '~/components/brand'
 import { useBenefitsTemplates } from '~/composables/useTemplates'
 import type { BenefitsTemplate } from '~/types'
 
@@ -225,8 +225,8 @@ function deleteTemplate() {
         >
       </div>
       <template #footer>
-        <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="newModalOpen = false">Cancel</button>
-        <button type="button" class="px-[22px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!newName.trim()" @click="createTemplate">Create</button>
+        <BrandButton type="button" variant="ghost" size="md" @click="newModalOpen = false">Cancel</BrandButton>
+        <BrandButton type="button" variant="primary-teal" size="md" :disabled="!newName.trim()" @click="createTemplate">Create</BrandButton>
       </template>
     </SettingsFormModal>
   </div>

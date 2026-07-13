@@ -23,6 +23,7 @@ import {
   Upload,
   Youtube,
 } from 'lucide-vue-next'
+import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import { Switch } from '~/components/ui/switch'
 import { Input } from '~/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
@@ -61,10 +62,13 @@ const SECTIONS: { key: AccordionKey, label: string, icon: any }[] = [
 ]
 
 // ─────────────── Colors ───────────────
+/* eslint-disable local/no-hex-colors -- default values for the customer's own
+   career-site theme picker, intentionally independent of Recruitera's brand tokens */
 const primaryColor = ref('#4d7c0f')
 const headerColor = ref('#0f172a')
 const btnColor = ref('#4d7c0f')
 const ctaColor = ref('#4d7c0f')
+/* eslint-enable local/no-hex-colors */
 
 function onPrimaryChange(v: string) {
   primaryColor.value = v
@@ -180,14 +184,14 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
             <ExternalLink :size="13" :stroke-width="1.9" />
             Visit site
           </a>
-          <button
-            type="button"
-            class="flex-1 inline-flex items-center justify-center px-3.5 py-2.5 rounded-[10px] text-[13.5px] font-bold text-white transition-colors"
-            :class="saved ? 'bg-emerald-600' : 'bg-[var(--brand-teal)] hover:opacity-90'"
+          <BrandButton
+            variant="primary-teal"
+            class="flex-1"
+            :class="saved ? 'bg-[var(--brand-status-teal-green)] hover:bg-[var(--brand-status-teal-green)]' : ''"
             @click="saveChanges"
           >
             {{ saved ? '✓ Saved!' : 'Save changes' }}
-          </button>
+          </BrandButton>
         </div>
       </div>
 
@@ -312,9 +316,16 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
               </div>
               <Input v-model="v.name" type="text" placeholder="Value name" class="w-full" />
               <textarea v-model="v.desc" rows="2" placeholder="Description" class="w-full box-border resize-none rounded-[9px] border-[1.5px] border-[var(--brand-border)] px-3 py-2 text-[13.5px] text-[var(--brand-text)] leading-[1.5] outline-none focus:border-[var(--brand-teal)] transition-colors" />
-              <button type="button" class="text-[13px] font-semibold text-[var(--brand-settings-danger)]" @click="removeValue(i)">Remove</button>
+              <BrandButton variant="danger-ghost" size="sm" class="px-0 h-auto justify-start font-semibold" @click="removeValue(i)">Remove</BrandButton>
             </div>
-            <button v-if="values.length < 6" type="button" class="w-full py-2.5 rounded-[10px] border-[1.5px] border-dashed border-[var(--brand-border)] text-[13.5px] text-[var(--brand-text-muted)] hover:border-[var(--brand-teal)] transition-colors" @click="addValue">+ Add value ({{ values.length }}/6)</button>
+            <BrandButton
+              v-if="values.length < 6"
+              variant="outline"
+              class="w-full border-dashed border-[1.5px] hover:border-[var(--brand-teal)]"
+              @click="addValue"
+            >
+              + Add value ({{ values.length }}/6)
+            </BrandButton>
           </div>
 
           <!-- Testimonials -->
@@ -326,9 +337,16 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
               </div>
               <Input v-model="t.role" type="text" placeholder="Job title" class="w-full" />
               <textarea v-model="t.quote" rows="3" placeholder="Quote" class="w-full box-border resize-none rounded-[9px] border-[1.5px] border-[var(--brand-border)] px-3 py-2 text-[13.5px] text-[var(--brand-text)] leading-[1.5] outline-none focus:border-[var(--brand-teal)] transition-colors" />
-              <button type="button" class="text-[13px] font-semibold text-[var(--brand-settings-danger)]" @click="removeTestimonial(i)">Remove</button>
+              <BrandButton variant="danger-ghost" size="sm" class="px-0 h-auto justify-start font-semibold" @click="removeTestimonial(i)">Remove</BrandButton>
             </div>
-            <button v-if="testimonials.length < 5" type="button" class="w-full py-2.5 rounded-[10px] border-[1.5px] border-dashed border-[var(--brand-border)] text-[13.5px] text-[var(--brand-text-muted)] hover:border-[var(--brand-teal)] transition-colors" @click="addTestimonial">+ Add testimonial ({{ testimonials.length }}/5)</button>
+            <BrandButton
+              v-if="testimonials.length < 5"
+              variant="outline"
+              class="w-full border-dashed border-[1.5px] hover:border-[var(--brand-teal)]"
+              @click="addTestimonial"
+            >
+              + Add testimonial ({{ testimonials.length }}/5)
+            </BrandButton>
           </div>
 
           <!-- For Employees -->
@@ -365,11 +383,11 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
                 <span class="px-3 py-2.5 text-[14px] text-[var(--brand-text-muted)] bg-[var(--brand-canvas)] border-l-[1.5px] border-[var(--brand-border)] whitespace-nowrap">.recruitera.ai</span>
               </div>
             </div>
-            <button type="button" class="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint)] transition-colors" @click="copyLink">
+            <BrandButton variant="outline" class="w-full gap-2" @click="copyLink">
               <Check v-if="copied" :size="14" :stroke-width="1.8" />
               <Copy v-else :size="14" :stroke-width="1.8" />
               {{ copied ? 'Copied!' : 'Copy link' }}
-            </button>
+            </BrandButton>
           </div>
         </div>
       </div>
@@ -378,9 +396,7 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
     <!-- RIGHT PREVIEW PANEL -->
     <div class="flex-1 flex flex-col overflow-hidden min-w-0 bg-[var(--brand-canvas)]">
       <div class="shrink-0 px-5 py-2.5 bg-[var(--brand-surface-white)] border-b border-[var(--brand-border-light)] flex items-center gap-3">
-        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 text-[12.5px] font-bold px-2.5 py-1 rounded-full">
-          <span class="w-[7px] h-[7px] rounded-full bg-emerald-500 shrink-0" />Published
-        </span>
+        <BrandStatusBadge variant="solid" tone="approved" label="Published" />
         <Globe class="w-[14px] h-[14px] text-[var(--brand-icon-muted)] shrink-0" />
         <span class="text-[13px] text-[var(--brand-text)] font-semibold">{{ previewDomain }}</span>
         <Copy class="cursor-pointer shrink-0 w-[13px] h-[13px] text-[var(--brand-icon-muted)]" @click="copyLink" />

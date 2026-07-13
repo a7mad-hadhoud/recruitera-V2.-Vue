@@ -21,7 +21,7 @@ function reset() { error.value = null }
 
 <template>
   <div v-if="error" class="flex flex-col items-center justify-center p-8 gap-3">
-    <AlertTriangle class="w-8 h-8 text-amber-500" />
+    <AlertTriangle class="w-8 h-8 text-[var(--brand-status-orange)]" />
     <p class="text-sm font-semibold text-[var(--brand-text)]">Something went wrong</p>
     <p class="text-xs text-[var(--brand-text-quiet)] max-w-md text-center">{{ error.message }}</p>
     <Button variant="outline" size="sm" class="border-[var(--brand-border)]" @click="reset">

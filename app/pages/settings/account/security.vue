@@ -4,6 +4,7 @@ import { Button } from '~/components/ui/button'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 import SettingsToggleCard from '~/components/settings/SettingsToggleCard.vue'
+import { BrandCard, BrandStatusBadge, BrandButton } from '~/components/brand'
 
 definePageMeta({ layout: 'settings' })
 
@@ -47,11 +48,11 @@ function savePassword() {
 
     <div class="flex flex-col gap-4">
       <!-- Password -->
-      <div class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[10px] p-5">
+      <BrandCard padded>
         <div class="text-[14px] font-bold text-[var(--brand-text)] mb-1">Password</div>
         <div class="text-[13px] text-[var(--brand-text-quiet)] mb-3.5">{{ lastChangedLabel }}</div>
-        <button type="button" class="inline-flex items-center border border-[var(--brand-border)] rounded-[9px] px-3.5 py-2 bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] outline-none hover:bg-[var(--brand-lime-tint)] transition-colors" @click="openChangePassword">Change password</button>
-      </div>
+        <BrandButton variant="outline" @click="openChangePassword">Change password</BrandButton>
+      </BrandCard>
 
       <!-- Two-factor authentication -->
       <SettingsToggleCard
@@ -61,7 +62,7 @@ function savePassword() {
       />
 
       <!-- Active sessions -->
-      <div class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[10px] p-5">
+      <BrandCard padded>
         <div class="text-[14px] font-bold text-[var(--brand-text)] mb-1">Active sessions</div>
         <div class="text-[13px] text-[var(--brand-text-quiet)] mb-3.5">Manage where you're logged in</div>
         <div class="flex flex-col gap-2">
@@ -75,12 +76,12 @@ function savePassword() {
               <div class="text-[13.5px] font-semibold text-[var(--brand-text)]">{{ s.device }} — {{ s.location }}</div>
               <div class="text-[12px] text-[var(--brand-text-quiet)]">{{ s.current ? 'Current session' : 'Signed in earlier' }}</div>
             </div>
-            <span v-if="s.current" class="text-[12px] font-semibold text-[var(--brand-status-approved-text)]">Active</span>
-            <button v-else type="button" class="text-[12px] font-semibold text-[var(--brand-settings-danger)] outline-none" @click="revokeSession(s.id)">Revoke</button>
+            <BrandStatusBadge v-if="s.current" variant="text" label="Active" tone="approved" />
+            <BrandButton v-else variant="danger-ghost" size="sm" @click="revokeSession(s.id)">Revoke</BrandButton>
           </div>
           <p v-if="!sessions.length" class="text-[13px] text-[var(--brand-text-quiet)] px-3 py-2">No active sessions.</p>
         </div>
-      </div>
+      </BrandCard>
     </div>
 
     <!-- ─────────────── Change password modal ─────────────── -->
@@ -102,8 +103,8 @@ function savePassword() {
         </div>
       </div>
       <template #footer>
-        <button type="button" class="px-4 py-2.5 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="modalOpen = false">Cancel</button>
-        <button type="button" class="px-6 py-2.5 rounded-[10px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!canSave" @click="savePassword">Save</button>
+        <BrandButton variant="ghost" @click="modalOpen = false">Cancel</BrandButton>
+        <BrandButton variant="primary-teal" :disabled="!canSave" @click="savePassword">Save</BrandButton>
       </template>
     </SettingsFormModal>
   </div>

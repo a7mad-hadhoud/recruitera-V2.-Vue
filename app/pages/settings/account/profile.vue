@@ -3,7 +3,7 @@ import { Pencil, Lock, Upload, Phone } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 import SettingsToggleCard from '~/components/settings/SettingsToggleCard.vue'
-import { BrandAvatarInitials } from '~/components/brand'
+import { BrandAvatarInitials, BrandStatusBadge, BrandButton } from '~/components/brand'
 
 definePageMeta({ layout: 'settings' })
 
@@ -118,23 +118,25 @@ const twoFactor = ref(false)
       <div class="flex flex-col gap-2 mb-5">
         <div class="flex items-center gap-3 border border-[var(--brand-border-light)] rounded-[12px] px-4 py-3 bg-[var(--brand-surface-white)]">
           <div class="w-8 h-8 rounded-[8px] border border-[var(--brand-border-light)] flex items-center justify-center shrink-0">
+            <!-- eslint-disable-next-line local/no-hex-colors -- Google's fixed multi-color logo, not a brand-token color -->
             <svg width="16" height="16" viewBox="0 0 533 544"><path d="M533 278c0-18-1-37-4-55H272v105h147c-6 34-26 64-54 83v68h88c51-47 81-117 81-200z" fill="#4285f4"/><path d="M272 544c73 0 135-24 180-66l-88-68c-24 17-56 26-93 26-71 0-131-48-153-112H28v70c46 92 140 150 244 150z" fill="#34a853"/><path d="M119 324c-11-34-11-70 0-104V150H28c-39 77-39 168 0 244l91-70z" fill="#fbbc04"/><path d="M272 108c39 0 76 14 104 41l78-78C405 25 340-1 272 0 169 0 75 58 28 150l91 70c21-65 82-112 153-112z" fill="#ea4335"/></svg>
           </div>
           <div class="flex-1">
             <div class="text-[13.5px] font-semibold text-[var(--brand-text)]">Google Calendar</div>
-            <div class="text-[12px]" :class="googleConnected ? 'text-[var(--brand-status-approved-text)]' : 'text-[var(--brand-text-quiet)]'">{{ googleConnected ? 'Connected' : 'Not connected' }}</div>
+            <BrandStatusBadge variant="text" :tone="googleConnected ? 'approved' : 'neutral'" :label="googleConnected ? 'Connected' : 'Not connected'" />
           </div>
-          <button type="button" class="inline-flex items-center border border-[var(--brand-border)] rounded-[9px] px-3.5 py-2 bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] outline-none hover:bg-[var(--brand-lime-tint)] transition-colors" @click="googleConnected = !googleConnected">{{ googleConnected ? 'Disconnect' : 'Connect' }}</button>
+          <BrandButton variant="outline" @click="googleConnected = !googleConnected">{{ googleConnected ? 'Disconnect' : 'Connect' }}</BrandButton>
         </div>
         <div class="flex items-center gap-3 border border-[var(--brand-border-light)] rounded-[12px] px-4 py-3 bg-[var(--brand-surface-white)]">
           <div class="w-8 h-8 rounded-[8px] border border-[var(--brand-border-light)] flex items-center justify-center shrink-0">
+            <!-- eslint-disable-next-line local/no-hex-colors -- Microsoft's fixed multi-color logo, not a brand-token color -->
             <svg width="14" height="14" viewBox="0 0 17 17"><rect x="0" y="0" width="8" height="8" fill="#F25022"/><rect x="9" y="0" width="8" height="8" fill="#7FBA00"/><rect x="0" y="9" width="8" height="8" fill="#00A4EF"/><rect x="9" y="9" width="8" height="8" fill="#FFB900"/></svg>
           </div>
           <div class="flex-1">
             <div class="text-[13.5px] font-semibold text-[var(--brand-text)]">Microsoft (Outlook)</div>
-            <div class="text-[12px]" :class="outlookConnected ? 'text-[var(--brand-status-approved-text)]' : 'text-[var(--brand-text-quiet)]'">{{ outlookConnected ? 'Connected' : 'Not connected' }}</div>
+            <BrandStatusBadge variant="text" :tone="outlookConnected ? 'approved' : 'neutral'" :label="outlookConnected ? 'Connected' : 'Not connected'" />
           </div>
-          <button type="button" class="inline-flex items-center border border-[var(--brand-border)] rounded-[9px] px-3.5 py-2 bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] outline-none hover:bg-[var(--brand-lime-tint)] transition-colors" @click="outlookConnected = !outlookConnected">{{ outlookConnected ? 'Disconnect' : 'Connect' }}</button>
+          <BrandButton variant="outline" @click="outlookConnected = !outlookConnected">{{ outlookConnected ? 'Disconnect' : 'Connect' }}</BrandButton>
         </div>
       </div>
 
@@ -252,7 +254,7 @@ const twoFactor = ref(false)
             <div class="text-[14px] font-semibold text-[var(--brand-text)]">iCareer</div>
             <div class="text-[12px] text-[var(--brand-text-quiet)]">Admin</div>
           </div>
-          <span class="text-[13px] font-semibold text-[var(--brand-status-approved-text)]">✓ Signed in</span>
+          <BrandStatusBadge variant="text" label="✓ Signed in" tone="approved" class="text-[13px]" />
         </div>
       </div>
 

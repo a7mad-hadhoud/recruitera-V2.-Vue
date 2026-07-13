@@ -2,7 +2,7 @@
 import { TableCell, TableHead, TableRow } from '~/components/ui/table'
 import { Check, Copy, ExternalLink, Eye, Pencil, Plus, Share2, Trash2, X } from 'lucide-vue-next'
 import { usePublicLinks } from '~/composables/usePublicLinks'
-import { BrandButton } from '~/components/brand'
+import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsTable from '~/components/settings/SettingsTable.vue'
 import SettingsTableSkeleton from '~/components/settings/SettingsTableSkeleton.vue'
@@ -45,11 +45,11 @@ const filtered = computed(() => {
 })
 
 function statusFor(link: PublicLink) {
-  if (!link.expiresOn) return { label: 'No expiry', color: 'var(--brand-settings-status-active)' }
+  if (!link.expiresOn) return { label: 'No expiry', tone: 'live' as const }
   const diffDays = Math.ceil((new Date(link.expiresOn).getTime() - Date.now()) / 86400000)
-  if (diffDays <= 0) return { label: 'Expired', color: 'var(--brand-settings-status-neutral)' }
+  if (diffDays <= 0) return { label: 'Expired', tone: 'expired' as const }
   const months = Math.max(1, Math.round(diffDays / 30))
-  return { label: `Active (${months}mo)`, color: 'var(--brand-settings-status-active)' }
+  return { label: `Active (${months}mo)`, tone: 'live' as const }
 }
 
 function shareUrl(id: string) {
@@ -231,10 +231,7 @@ async function copyLink(id: string) {
       >
         <TableCell class="py-[11px] px-5 text-[13.5px] font-medium text-[var(--brand-text)] border-r border-[var(--brand-border-hairline)]">{{ link.name }}</TableCell>
         <TableCell class="py-[11px] px-4 border-r border-[var(--brand-border-hairline)]">
-          <div class="flex items-center gap-1.5">
-            <span class="w-[7px] h-[7px] rounded-full shrink-0" :style="{ background: statusFor(link).color }" />
-            <span class="text-[13px] text-[var(--brand-text)]">{{ statusFor(link).label }}</span>
-          </div>
+          <BrandStatusBadge variant="dot" plain-label :label="statusFor(link).label" :tone="statusFor(link).tone" />
         </TableCell>
         <TableCell class="py-[11px] px-4 text-[13.5px] text-[var(--brand-text)] border-r border-[var(--brand-border-hairline)]">{{ link.candidates.length }}</TableCell>
         <TableCell class="py-[11px] px-4 text-[13.5px] text-[var(--brand-text)] border-r border-[var(--brand-border-hairline)]">{{ link.guestReviews }}</TableCell>
@@ -322,13 +319,7 @@ async function copyLink(id: string) {
               class="flex-1 px-3.5 py-[11px] rounded-[12px] border-[1.5px] border-[var(--brand-border)] text-[13.5px] outline-none bg-[var(--brand-surface-white)] focus:border-[var(--brand-teal)] transition-colors"
               @keyup.enter="addCandidate"
             >
-            <button
-              type="button"
-              class="px-4 py-[11px] rounded-[12px] border-none bg-[var(--brand-teal)] text-white text-[13.5px] font-bold whitespace-nowrap outline-none"
-              @click="addCandidate"
-            >
-              Add
-            </button>
+            <BrandButton variant="primary-teal" class="rounded-[12px] py-[11px] h-auto whitespace-nowrap" @click="addCandidate">Add</BrandButton>
           </div>
         </div>
 
@@ -390,15 +381,11 @@ async function copyLink(id: string) {
           <div class="text-[13.5px] font-semibold text-[var(--brand-text)] mb-2">Public link</div>
           <div class="flex items-center gap-2 border border-[var(--brand-border)] rounded-[10px] px-3.5 py-2.5 bg-[var(--brand-canvas)]">
             <span class="flex-1 text-[13px] text-[var(--brand-text)] break-all">{{ shareUrl(editingId) }}</span>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[7px] border-none bg-[var(--brand-teal)] text-white text-[12.5px] font-bold outline-none shrink-0"
-              @click="copyLink(editingId)"
-            >
+            <BrandButton variant="primary-teal" size="sm" class="shrink-0 gap-1.5" @click="copyLink(editingId)">
               <Check v-if="copiedId === editingId" class="w-3.5 h-3.5" />
               <Copy v-else class="w-3.5 h-3.5" />
               {{ copiedId === editingId ? 'Copied' : 'Copy' }}
-            </button>
+            </BrandButton>
           </div>
         </div>
 
@@ -415,46 +402,22 @@ async function copyLink(id: string) {
 
       <template #footer>
         <template v-if="modalTab === 'edit'">
-          <button
-            type="button"
-            class="px-4 py-[9px] text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none"
-            @click="modalOpen = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="px-[22px] py-[9px] rounded-[10px] border-none bg-[var(--brand-teal)] text-[13.5px] font-bold text-white outline-none"
-            @click="isCreating ? continueToShare() : saveEdit()"
-          >
+          <BrandButton variant="ghost" @click="modalOpen = false">Cancel</BrandButton>
+          <BrandButton variant="primary-teal" @click="isCreating ? continueToShare() : saveEdit()">
             {{ isCreating ? 'Continue' : 'Save changes' }}
-          </button>
+          </BrandButton>
         </template>
         <template v-else>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand-settings-danger)] outline-none"
-            @click="deleteFromModal"
-          >
+          <BrandButton variant="danger-ghost" size="sm" class="gap-1.5" @click="deleteFromModal">
             <Trash2 class="w-3.5 h-3.5" />
             Delete
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand-nav-text)] outline-none ml-3.5"
-            @click="editingId && openLink(editingId)"
-          >
+          </BrandButton>
+          <BrandButton variant="ghost" size="sm" class="gap-1.5 ml-3.5" @click="editingId && openLink(editingId)">
             <Eye class="w-3.5 h-3.5" />
             Preview
-          </button>
+          </BrandButton>
           <div class="flex-1" />
-          <button
-            type="button"
-            class="px-[22px] py-[9px] rounded-[10px] border-none bg-[var(--brand-teal)] text-[13.5px] font-bold text-white outline-none"
-            @click="saveShare"
-          >
-            Save
-          </button>
+          <BrandButton variant="primary-teal" @click="saveShare">Save</BrandButton>
         </template>
       </template>
     </SettingsFormModal>

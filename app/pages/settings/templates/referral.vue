@@ -14,7 +14,7 @@ import SettingsRenameModal from '~/components/settings/SettingsRenameModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
 import SettingsDuplicatePickerModal from '~/components/settings/SettingsDuplicatePickerModal.vue'
-import { BrandSearchBar } from '~/components/brand'
+import { BrandButton, BrandSearchBar } from '~/components/brand'
 import { useReferralQuestions } from '~/composables/useTemplates'
 import type { ReferralQuestion, ReferralQuestionType, ReferralQuestionVisibility, ReferralTemplate } from '~/types'
 
@@ -369,10 +369,10 @@ function deleteTemplate() {
                     <X class="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <button type="button" class="self-start flex items-center gap-1.5 border-[1.5px] border-[var(--brand-border-mid)] rounded-[8px] px-3 py-1.5 text-[13px] font-semibold text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" @click="addOption(question.id)">
+                <BrandButton type="button" variant="outline" size="sm" class="self-start gap-1.5 font-semibold" @click="addOption(question.id)">
                   <Plus class="w-3 h-3" />
                   Add
-                </button>
+                </BrandButton>
               </div>
 
               <!-- Salary -->
@@ -502,8 +502,8 @@ function deleteTemplate() {
         </div>
       </div>
       <template #footer>
-        <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="newStep = 'closed'">Cancel</button>
-        <button type="button" class="px-[22px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!blankName.trim() || !blankCategory.trim()" @click="createBlank">Create</button>
+        <BrandButton type="button" variant="ghost" size="md" @click="newStep = 'closed'">Cancel</BrandButton>
+        <BrandButton type="button" variant="primary-teal" size="md" :disabled="!blankName.trim() || !blankCategory.trim()" @click="createBlank">Create</BrandButton>
       </template>
     </SettingsFormModal>
 

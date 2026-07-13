@@ -1,3 +1,4 @@
+<!-- eslint-disable local/no-hex-colors -- fixed third-party brand-logo colors (LinkedIn/Google/Wuzzuf/WhatsApp) and a VS-Code-style syntax-highlighter palette for the embed snippet, none of which are brand UI chrome -->
 <script setup lang="ts">
 import { Copy, Check } from 'lucide-vue-next'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
@@ -73,6 +74,7 @@ async function copyEmbedCode() {
 </script>
 
 <template>
+  <!-- eslint-disable local/no-hex-colors -- fixed third-party brand-logo colors (LinkedIn/Google/Wuzzuf/WhatsApp), not brand UI chrome -->
   <div>
     <SettingsPageHeader
       title="Integrations"

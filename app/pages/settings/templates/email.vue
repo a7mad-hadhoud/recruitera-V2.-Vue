@@ -14,7 +14,7 @@ import SettingsRenameModal from '~/components/settings/SettingsRenameModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
 import SettingsDuplicatePickerModal from '~/components/settings/SettingsDuplicatePickerModal.vue'
-import { BrandSearchBar } from '~/components/brand'
+import { BrandButton, BrandSearchBar } from '~/components/brand'
 import { useEmailTemplates } from '~/composables/useTemplates'
 import type { EmailTemplate, TemplateCategory } from '~/types'
 
@@ -552,8 +552,8 @@ function removeAttachment(name: string) {
         </div>
       </div>
       <template #footer>
-        <button type="button" class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none" @click="newStep = 'closed'">Cancel</button>
-        <button type="button" class="px-[22px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!blankName.trim()" @click="createBlank">Create</button>
+        <BrandButton type="button" variant="ghost" size="md" @click="newStep = 'closed'">Cancel</BrandButton>
+        <BrandButton type="button" variant="primary-teal" size="md" :disabled="!blankName.trim()" @click="createBlank">Create</BrandButton>
       </template>
     </SettingsFormModal>
 
@@ -615,7 +615,7 @@ function removeAttachment(name: string) {
         </div>
       </div>
       <template #footer>
-        <button type="button" class="px-7 py-2.5 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none" @click="jobsModalOpen = false">Got it</button>
+        <BrandButton type="button" variant="primary-teal" size="lg" @click="jobsModalOpen = false">Got it</BrandButton>
       </template>
     </SettingsFormModal>
   </div>

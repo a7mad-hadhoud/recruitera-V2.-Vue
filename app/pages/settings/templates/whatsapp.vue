@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TableCell, TableHead, TableRow } from '~/components/ui/table'
 import { Pencil, Plus, Trash2, Info } from 'lucide-vue-next'
-import { BrandButton } from '~/components/brand'
+import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsTable from '~/components/settings/SettingsTable.vue'
 import SettingsTableSkeleton from '~/components/settings/SettingsTableSkeleton.vue'
@@ -178,20 +178,10 @@ function insertVariable(v: string) {
         <TableCell class="py-[11px] px-5 font-semibold text-[14px] text-[var(--brand-text)] border-r border-[var(--brand-border-hairline)]">{{ t.name }}</TableCell>
         <TableCell class="py-[11px] px-5 text-[13.5px] text-[var(--brand-text-muted)] border-r border-[var(--brand-border-hairline)]">{{ t.language }} · {{ t.category }}</TableCell>
         <TableCell class="py-[11px] px-5 border-r border-[var(--brand-border-hairline)]">
-          <!-- Inline `style` for status pill colors: the CSS custom properties
-               are defined in main.css but Tailwind's JIT can't reliably pick
-               up new arbitrary `bg-[var(...)]` classes here without a full
-               server restart, so we bind directly to the resolved variables. -->
-          <span
-            class="inline-block text-[12px] font-bold rounded-[6px] px-2 py-[3px]"
-            :style="t.status === 'Approved'
-              ? { background: 'var(--brand-status-approved-bg)', color: 'var(--brand-status-approved-text)' }
-              : t.status === 'Pending'
-                ? { background: 'var(--brand-status-pending-bg)', color: 'var(--brand-status-pending-text)' }
-                : { background: 'var(--brand-canvas)', color: 'var(--brand-text-quiet)' }"
-          >
-            {{ t.status }}
-          </span>
+          <BrandStatusBadge
+            :label="t.status"
+            :tone="t.status === 'Approved' ? 'approved' : t.status === 'Pending' ? 'pending' : 'neutral'"
+          />
         </TableCell>
         <TableCell class="py-[11px] px-5 text-right">
           <div class="flex items-center gap-1.5 justify-end">
@@ -301,21 +291,23 @@ function insertVariable(v: string) {
       </div>
 
       <template #footer>
-        <button
+        <BrandButton
           type="button"
-          class="px-[18px] py-2.5 text-[14px] font-semibold text-[var(--brand-nav-text)] outline-none"
+          variant="ghost"
+          size="lg"
           @click="modalOpen = false"
         >
           Discard
-        </button>
-        <button
+        </BrandButton>
+        <BrandButton
           type="button"
-          class="px-6 py-2.5 rounded-[10px] bg-[var(--brand-teal)] text-white text-[14px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary-teal"
+          size="lg"
           :disabled="!canSubmit"
           @click="submitTemplate"
         >
           {{ editingId ? 'Save' : 'Submit for review' }}
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>

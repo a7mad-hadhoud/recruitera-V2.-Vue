@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Search } from 'lucide-vue-next'
 import { refDebounced } from '@vueuse/core'
-import { Input } from '~/components/ui/input'
+import { BrandPageTitle, BrandSearchBar } from '~/components/brand'
 import ErrorBoundary from '~/components/ErrorBoundary.vue'
 import CandidatesFilters from '~/components/candidates/CandidatesFilters.vue'
 import CandidatesTable from '~/components/candidates/CandidatesTable.vue'
@@ -10,11 +9,11 @@ import CandidatesTableSkeleton from '~/components/candidates/CandidatesTableSkel
 import CandidatesEmptyState from '~/components/candidates/CandidatesEmptyState.vue'
 import CandidatesPerPage from '~/components/candidates/CandidatesPerPage.vue'
 import SampleDataBanner from '~/components/candidates/SampleDataBanner.vue'
-// Heavy / infrequently opened: lazy-loaded so JS ships only when the star is clicked.
-const SaveSearchPopover = defineAsyncComponent(() => import('~/components/candidates/SaveSearchPopover.vue'))
 import { useCandidates } from '~/composables/useCandidates'
 import { useCandidateFilters } from '~/composables/useCandidateFilters'
 import { useCandidatesStore } from '~/stores/candidates.store'
+// Heavy / infrequently opened: lazy-loaded so JS ships only when the star is clicked.
+const SaveSearchPopover = defineAsyncComponent(() => import('~/components/candidates/SaveSearchPopover.vue'))
 
 definePageMeta({ layout: 'default' })
 
@@ -33,7 +32,7 @@ watch(() => filters.value.search, (v) => {
 })
 
 // Vue Query keeps prior rows visible while the new page/filter loads
-const { data, isLoading, isFetching } = useCandidates(computed(() => ({ ...filters.value })))
+const { data, isFetching } = useCandidates(computed(() => ({ ...filters.value })))
 const candidates = computed(() => data.value?.data ?? [])
 const total      = computed(() => data.value?.total ?? 0)
 const totalPages = computed(() => data.value?.totalPages ?? 1)
@@ -72,20 +71,17 @@ function onPerPageChange(n: number) {
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--brand-surface-white)] border-t border-[var(--brand-border)]">
       <!-- Page header -->
       <div class="flex items-center gap-2 px-6 pt-6 pb-4">
-        <h1 class="text-[26px] font-bold tracking-tight text-[var(--brand-text)]">Candidates</h1>
+        <BrandPageTitle label="Candidates" />
         <SaveSearchPopover @save="(p) => console.log('Saved search', p)" />
       </div>
 
       <!-- Search -->
       <div class="px-6 pb-3">
-        <div class="relative">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--brand-text-quiet)]" />
-          <Input
-            v-model="searchInput"
-            placeholder="Search candidates by anything or use keywords e.g. John AND manager"
-            class="pl-9 h-11 bg-white border-[var(--brand-border)] rounded-xl"
-          />
-        </div>
+        <BrandSearchBar
+          v-model="searchInput"
+          size="lg"
+          placeholder="Search candidates by anything or use keywords e.g. John AND manager"
+        />
       </div>
 
       <!-- Toolbar (transforms on selection) -->

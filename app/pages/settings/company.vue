@@ -2,6 +2,7 @@
 import { Image, Pencil, Upload } from 'lucide-vue-next'
 import { useCompany } from '~/composables/useCompany'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
+import { BrandButton } from '~/components/brand'
 import type { CompanyInfo } from '~/types'
 
 definePageMeta({ layout: 'settings' })
@@ -76,15 +77,15 @@ function onSeoImageChange(e: Event) {
       <!-- Company details -->
       <div class="flex items-center justify-between mb-4">
         <div class="text-[16px] font-bold text-[var(--brand-text)]">Company details</div>
-        <button
+        <BrandButton
           v-if="!editing"
-          type="button"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[9px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+          variant="outline"
+          size="sm"
           @click="openEdit"
         >
           <Pencil class="w-3.5 h-3.5" />
           Edit
-        </button>
+        </BrandButton>
       </div>
 
       <!-- View mode -->
@@ -166,20 +167,20 @@ function onSeoImageChange(e: Event) {
         </div>
 
         <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="px-4 py-2.5 rounded-[9px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text-secondary)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+          <BrandButton
+            variant="outline"
+            size="md"
             @click="cancelEdit"
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            class="px-4 py-2.5 rounded-[9px] border-none bg-[var(--brand-teal)] text-[13.5px] font-bold text-white outline-none"
+          </BrandButton>
+          <BrandButton
+            variant="primary-teal"
+            size="md"
             @click="saveDetails"
           >
             Save changes
-          </button>
+          </BrandButton>
         </div>
       </div>
 

@@ -5,10 +5,10 @@
   Selecting an operator emits `add(id, op)` and closes the popover.
 -->
 <script setup lang="ts">
-import { ArrowLeft, ChevronRight, Search, X } from 'lucide-vue-next'
+import { ArrowLeft, ChevronRight, X } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
+import { BrandSearchBar } from '~/components/brand'
 import { Filter as FilterIcon } from 'lucide-vue-next'
 import { useFilterRegistry } from '~/composables/useFilterRegistry'
 import type { FilterOperator } from '~/types/candidate-filter.types'
@@ -80,14 +80,7 @@ function pickOperator(op: FilterOperator) {
           ><X class="w-4 h-4" /></button>
         </div>
         <div class="px-2.5 pt-2">
-          <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--brand-text-quiet)] pointer-events-none" />
-            <Input
-              v-model="search"
-              placeholder="Search filters"
-              class="h-9 pl-9 bg-[var(--brand-lime-tint-hover)] border-[1.5px] border-[var(--brand-border-light)] focus-visible:border-[var(--brand-lime)] focus-visible:ring-0 text-[13.5px]"
-            />
-          </div>
+          <BrandSearchBar v-model="search" size="sm" placeholder="Search filters" />
         </div>
         <div class="max-h-[280px] overflow-y-auto px-1.5 pb-2 pt-2">
           <button

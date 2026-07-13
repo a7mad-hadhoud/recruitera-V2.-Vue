@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowDown, Briefcase, CheckSquare, ChevronDown, ChevronRight, Clock, GripVertical, Mail, Pencil, Plus, X, Zap } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
+import { BrandButton } from '~/components/brand'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 
@@ -231,23 +232,19 @@ function saveAutomation() {
             >
           </div>
           <div class="flex items-center justify-between px-5 py-3 bg-[var(--brand-settings-modal-bg)] border-t border-[var(--brand-border-light)]">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 text-[13px] text-[var(--brand-text-quiet)] outline-none"
-              @click="deleteReason"
-            >
+            <BrandButton variant="ghost" size="sm" class="px-0 h-auto font-normal" @click="deleteReason">
               Delete
-            </button>
+            </BrandButton>
             <div class="flex items-center gap-2">
-              <button type="button" class="text-[13px] font-semibold text-[var(--brand-nav-text)] outline-none px-3 py-[7px]" @click="closeForm">
+              <BrandButton variant="ghost" size="sm" @click="closeForm">
                 Cancel
-              </button>
-              <button type="button" class="bg-[var(--brand-surface-white)] border border-[var(--brand-border)] rounded-[8px] text-[13px] font-medium text-[var(--brand-nav-text)] outline-none px-3.5 py-[7px]" @click="saveAndAddAnother">
+              </BrandButton>
+              <BrandButton variant="outline" size="sm" @click="saveAndAddAnother">
                 Save and add another
-              </button>
-              <button type="button" class="bg-[var(--brand-teal)] text-white border-none rounded-[8px] text-[13px] font-semibold outline-none px-[18px] py-[7px]" @click="save">
+              </BrandButton>
+              <BrandButton variant="primary-teal" size="sm" @click="save">
                 Save
-              </button>
+              </BrandButton>
             </div>
           </div>
         </div>
@@ -274,27 +271,23 @@ function saveAutomation() {
           >
         </div>
         <div class="flex items-center justify-end px-5 py-3 bg-[var(--brand-settings-modal-bg)] border-t border-[var(--brand-border-light)] gap-2">
-          <button type="button" class="text-[13px] font-semibold text-[var(--brand-nav-text)] outline-none px-3 py-[7px]" @click="closeForm">
+          <BrandButton variant="ghost" size="sm" @click="closeForm">
             Cancel
-          </button>
-          <button type="button" class="bg-[var(--brand-surface-white)] border border-[var(--brand-border)] rounded-[8px] text-[13px] font-medium text-[var(--brand-nav-text)] outline-none px-3.5 py-[7px]" @click="saveAndAddAnother">
+          </BrandButton>
+          <BrandButton variant="outline" size="sm" @click="saveAndAddAnother">
             Save and add another
-          </button>
-          <button type="button" class="bg-[var(--brand-teal)] text-white border-none rounded-[8px] text-[13px] font-semibold outline-none px-[18px] py-[7px]" @click="save">
+          </BrandButton>
+          <BrandButton variant="primary-teal" size="sm" @click="save">
             Save
-          </button>
+          </BrandButton>
         </div>
       </div>
 
       <div class="mt-1.5 border border-[var(--brand-border-light)] rounded-[12px] overflow-hidden">
-        <button
-          type="button"
-          class="w-full bg-[var(--brand-surface-white)] border-none px-4 py-3 text-[13.5px] text-[var(--brand-nav-text)] outline-none flex items-center justify-center gap-1.5 font-semibold hover:bg-[var(--brand-canvas)] transition-colors"
-          @click="openAdd"
-        >
+        <BrandButton variant="ghost" class="w-full rounded-none gap-1.5" @click="openAdd">
           <Plus class="w-3.5 h-3.5 text-[var(--brand-olive)]" />
           <span class="text-[var(--brand-olive)]">Add new</span>
-        </button>
+        </BrandButton>
       </div>
     </div>
 
@@ -343,16 +336,12 @@ function saveAutomation() {
               <p class="text-[12.5px] text-[var(--brand-text-quiet)]">Build personalised automations by setting triggers and actions. <a href="#" class="text-[var(--brand-teal)] font-semibold underline">Learn more</a></p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <button type="button" class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[10px] px-4 py-2 text-[13px] font-medium text-[var(--brand-nav-text)] outline-none">
+              <BrandButton variant="outline">
                 Give feedback
-              </button>
-              <button
-                type="button"
-                class="bg-[var(--brand-teal)] text-white border-none rounded-[10px] px-[18px] py-2 text-[13px] font-bold outline-none"
-                @click="saveAutomation"
-              >
+              </BrandButton>
+              <BrandButton variant="primary-teal" @click="saveAutomation">
                 Save automation
-              </button>
+              </BrandButton>
               <button
                 type="button"
                 class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[10px] w-9 h-9 flex items-center justify-center text-[var(--brand-nav-text)] outline-none"
@@ -451,14 +440,14 @@ function saveAutomation() {
               </div>
 
               <div class="mt-3.5 border border-[var(--brand-border-light)] rounded-[12px] bg-[var(--brand-surface-white)] overflow-hidden">
-                <button
-                  type="button"
-                  class="w-full border-none bg-transparent px-4 py-3 text-[13px] font-semibold text-[var(--brand-olive)] outline-none flex items-center justify-center gap-1.5 hover:bg-[var(--brand-canvas)] transition-colors"
+                <BrandButton
+                  variant="ghost"
+                  class="w-full rounded-none gap-1.5 text-[var(--brand-olive)] hover:text-[var(--brand-olive)]"
                   @click="showActionPicker = !showActionPicker"
                 >
                   <Plus class="w-3.5 h-3.5" />
                   Add an action
-                </button>
+                </BrandButton>
                 <div v-if="showActionPicker" class="border-t border-[var(--brand-border-fade)] px-4 py-3.5 flex flex-wrap gap-2">
                   <button
                     v-for="tpl in AUTOMATION_TEMPLATES"

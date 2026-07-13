@@ -171,21 +171,12 @@ function addStage() {
       </div>
 
       <template #footer>
-        <button
-          type="button"
-          class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[9px] text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none px-5 py-2"
-          @click="modalOpen = false"
-        >
+        <BrandButton variant="outline" @click="modalOpen = false">
           Discard
-        </button>
-        <button
-          type="button"
-          class="bg-[var(--brand-teal)] text-white border-none rounded-[9px] text-[13.5px] font-bold outline-none px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!newName.trim()"
-          @click="addStage"
-        >
+        </BrandButton>
+        <BrandButton variant="primary-teal" :disabled="!newName.trim()" @click="addStage">
           Add Stage Type
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>

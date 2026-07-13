@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Badge } from '~/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { ArrowDown, ArrowUp, ArrowDownUp, Users as UsersIcon } from 'lucide-vue-next'
-import { BrandLimeCheckbox } from '~/components/brand'
+import { BrandDataTable, BrandLimeCheckbox, BrandStatusBadge } from '~/components/brand'
 import { useCandidatesStore } from '~/stores/candidates.store'
 import {
   useCandidateColumns,
@@ -16,6 +16,7 @@ import type { Candidate, JobStatus } from '~/types'
 
 const props = defineProps<{ candidates: Candidate[]; isFetching?: boolean }>()
 
+const router = useRouter()
 const store = useCandidatesStore()
 const { orderedVisible } = useCandidateColumns()
 const { key: sortKey, dir: sortDir, set: setSort } = useCandidateSort()
@@ -53,11 +54,17 @@ function toggleSort(col: CandidateColumnKey) {
   if (k) setSort(k as never)
 }
 
-const JOB_DOT: Record<JobStatus, string> = {
-  published: 'bg-emerald-500',
-  internal:  'bg-gray-400',
-  closed:    'bg-gray-300',
-  archived:  'bg-gray-300 opacity-50',
+const JOB_STATUS_TONE: Record<JobStatus, 'teal-green' | 'gray'> = {
+  published: 'teal-green',
+  internal: 'gray',
+  closed: 'gray',
+  archived: 'gray',
+}
+const JOB_STATUS_LABEL: Record<JobStatus, string> = {
+  published: 'Published',
+  internal: 'Internal',
+  closed: 'Closed',
+  archived: 'Archived',
 }
 
 const { getWidth, setWidth } = useCandidateColumnWidths()
@@ -93,8 +100,8 @@ onBeforeUnmount(onResizeEnd)
 </script>
 
 <template>
-  <div class="rounded-[14px] border border-[var(--brand-border-light)] overflow-x-auto shadow-[0_1px_2px_rgba(0,20,18,0.04)]">
-  <Table class="table-fixed border-collapse w-auto min-w-full">
+  <BrandDataTable>
+    <template #header>
     <TableHeader class="sticky top-0 z-10 bg-[var(--brand-canvas)]">
       <TableRow class="hover:bg-transparent border-b border-[var(--brand-border)]">
         <TableHead class="w-8 shrink-0">
@@ -137,6 +144,7 @@ onBeforeUnmount(onResizeEnd)
         </TableHead>
       </TableRow>
     </TableHeader>
+    </template>
     <TableBody>
       <TableRow
         v-for="(c, i) in candidates"
@@ -148,7 +156,7 @@ onBeforeUnmount(onResizeEnd)
         ]"
         @click="(e: MouseEvent) => {
           if ((e.target as HTMLElement).closest('button, a, input, label')) return
-          store.openProfile(c.id)
+          router.push(`/candidates/${c.id}`)
         }"
       >
         <TableCell class="align-middle py-3">
@@ -185,7 +193,12 @@ onBeforeUnmount(onResizeEnd)
                   :key="j.title"
                   class="flex items-center gap-2 text-[13px]"
                 >
-                  <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="JOB_DOT[j.status]" />
+                  <BrandStatusBadge
+                    variant="dot-only"
+                    :tone="JOB_STATUS_TONE[j.status]"
+                    :label="JOB_STATUS_LABEL[j.status]"
+                    :faded="j.status === 'archived'"
+                  />
                   <a
                     href="#"
                     class="text-[var(--brand-text)] hover:text-[var(--brand-teal)] hover:underline"
@@ -263,6 +276,5 @@ onBeforeUnmount(onResizeEnd)
         </template>
       </TableRow>
     </TableBody>
-  </Table>
-  </div>
+  </BrandDataTable>
 </template>

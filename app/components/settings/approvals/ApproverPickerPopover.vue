@@ -7,6 +7,7 @@
 -->
 <script setup lang="ts">
 import { User } from 'lucide-vue-next'
+import { BrandSearchBar, BrandAvatarInitials } from '~/components/brand'
 
 export interface DynamicRole { name: string, desc: string }
 export interface UserApprover { name: string, initials: string, role?: string }
@@ -53,12 +54,7 @@ const filteredUsers = computed(() => {
         @click.stop
       >
         <div class="px-2 pb-2 border-b border-[var(--brand-border-fade)] mb-1.5">
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search..."
-            class="w-full box-border px-3 py-[7px] rounded-[8px] border-[1.5px] border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-white focus:border-[var(--brand-teal)] transition-colors"
-          >
+          <BrandSearchBar v-model="search" size="sm" placeholder="Search..." />
         </div>
 
         <button
@@ -102,9 +98,7 @@ const filteredUsers = computed(() => {
             class="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[8px] border-none bg-transparent text-left outline-none hover:bg-[var(--brand-settings-modal-bg)] transition-colors"
             @click="emit('pick', { type: 'user', name: u.name, initials: u.initials })"
           >
-            <div class="w-[26px] h-[26px] rounded-full bg-[var(--brand-teal)] text-[var(--brand-lime)] text-[10px] font-extrabold flex items-center justify-center shrink-0">
-              {{ u.initials }}
-            </div>
+            <BrandAvatarInitials :initials="u.initials" size="sm" />
             <div>
               <div class="text-[13px] font-semibold text-[var(--brand-text)]">{{ u.name }}</div>
               <div v-if="u.role" class="text-[11.5px] text-[var(--brand-text-quiet)]">{{ u.role }}</div>

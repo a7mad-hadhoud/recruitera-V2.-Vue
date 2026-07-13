@@ -10,6 +10,7 @@ import {
 } from '~/components/ui/dropdown-menu'
 import { PIPELINE_TYPE_COLORS } from '~/types'
 import type { PipelineStageType } from '~/types'
+import { BrandButton } from '~/components/brand'
 
 const props = defineProps<{
   draft: { name: string, type: PipelineStageType, sla: string }
@@ -75,9 +76,9 @@ defineEmits<{
       </button>
       <div v-else />
       <div class="flex items-center gap-2">
-        <button type="button" class="text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none px-3 py-1.5" @click="$emit('cancel')">Cancel</button>
-        <button type="button" class="border border-[var(--brand-border-mid)] rounded-[9px] px-3.5 py-1.5 text-[13px] font-medium text-[var(--brand-nav-text)] bg-[var(--brand-surface-white)] outline-none disabled:opacity-50" :disabled="!draft.name.trim()" @click="$emit('save', true)">Save and add another</button>
-        <button type="button" class="bg-[var(--brand-teal)] text-white rounded-[9px] px-4 py-1.5 text-[13px] font-bold outline-none disabled:opacity-50" :disabled="!draft.name.trim()" @click="$emit('save', false)">Save</button>
+        <BrandButton variant="ghost" size="sm" @click="$emit('cancel')">Cancel</BrandButton>
+        <BrandButton variant="outline" size="sm" :disabled="!draft.name.trim()" @click="$emit('save', true)">Save and add another</BrandButton>
+        <BrandButton variant="primary-teal" size="sm" :disabled="!draft.name.trim()" @click="$emit('save', false)">Save</BrandButton>
       </div>
     </div>
   </div>

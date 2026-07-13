@@ -6,7 +6,7 @@
 -->
 <script setup lang="ts">
 import type { FilterCatalogEntry, ActiveFilter } from '~/types/candidate-filter.types'
-import FilterGroupHeader from './FilterGroupHeader.vue'
+import { BrandFilterGroup } from '~/components/brand'
 
 const props = defineProps<{ entry: FilterCatalogEntry; active: ActiveFilter }>()
 const emit = defineEmits<{ remove: []; update: [patch: Partial<ActiveFilter>] }>()
@@ -17,8 +17,7 @@ function pick(v: string) {
 </script>
 
 <template>
-  <div>
-    <FilterGroupHeader :title="entry.name" @clear="$emit('remove')" />
+  <BrandFilterGroup :title="entry.name" @clear="$emit('remove')">
     <div class="flex flex-col">
       <label
         v-for="opt in entry.options ?? []"
@@ -45,5 +44,5 @@ function pick(v: string) {
         <span class="flex-1">{{ opt.label }}</span>
       </label>
     </div>
-  </div>
+  </BrandFilterGroup>
 </template>

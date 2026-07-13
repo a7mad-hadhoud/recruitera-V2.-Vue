@@ -6,7 +6,7 @@ import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 import SettingsToggleCard from '~/components/settings/SettingsToggleCard.vue'
 import ApprovalFlowCard from '~/components/settings/approvals/ApprovalFlowCard.vue'
 import ApproverPickerPopover from '~/components/settings/approvals/ApproverPickerPopover.vue'
-import { BrandAvatarInitials } from '~/components/brand'
+import { BrandAvatarInitials, BrandButton } from '~/components/brand'
 import type { ApprovalFlow, ApprovalStep, Approver } from '~/types/approval.types'
 import { newApproverId, newFlowId, newStepId } from '~/types/approval.types'
 
@@ -250,14 +250,14 @@ function clearRecruiter() {
               />
             </div>
 
-            <button
-              type="button"
-              class="flex items-center justify-center gap-2 w-full py-3 border-[1.5px] border-dashed border-[var(--brand-border-mid)] rounded-[12px] bg-transparent text-[13.5px] font-semibold text-[var(--brand-text-muted)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+            <BrandButton
+              variant="ghost"
+              class="w-full py-3 h-auto border-[1.5px] border-dashed border-[var(--brand-border-mid)] rounded-[12px] gap-2"
               @click="openAddDeptModal"
             >
               <Plus class="w-3.5 h-3.5" />
               Add department flow
-            </button>
+            </BrandButton>
           </template>
         </SettingsToggleCard>
       </div>
@@ -333,12 +333,9 @@ function clearRecruiter() {
                 </div>
               </div>
               <div class="flex justify-end mt-3.5">
-                <button
-                  type="button"
-                  class="bg-[var(--brand-teal)] text-white border-none rounded-[8px] px-5 py-2.5 text-[13px] font-semibold outline-none"
-                >
+                <BrandButton variant="primary-teal">
                   Save assignments
-                </button>
+                </BrandButton>
               </div>
             </template>
           </SettingsToggleCard>
@@ -388,21 +385,12 @@ function clearRecruiter() {
       </div>
 
       <template #footer>
-        <button
-          type="button"
-          class="px-[18px] py-2 text-[13.5px] font-semibold text-[var(--brand-nav-text)] outline-none"
-          @click="addDeptModalOpen = false"
-        >
+        <BrandButton variant="ghost" @click="addDeptModalOpen = false">
           Cancel
-        </button>
-        <button
-          type="button"
-          class="px-[18px] py-2 rounded-[8px] bg-[var(--brand-teal)] text-white text-[13.5px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!addDeptSelection"
-          @click="confirmAddDept"
-        >
+        </BrandButton>
+        <BrandButton variant="primary-teal" :disabled="!addDeptSelection" @click="confirmAddDept">
           Add flow
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>

@@ -13,8 +13,7 @@
 -->
 <script setup lang="ts">
 import { refDebounced } from '@vueuse/core'
-import { Search } from 'lucide-vue-next'
-import { BrandDataTable } from '~/components/brand'
+import { BrandDataTable, BrandSearchBar } from '~/components/brand'
 import { TableBody, TableCell, TableHeader, TableRow } from '~/components/ui/table'
 
 const props = withDefaults(defineProps<{
@@ -42,14 +41,8 @@ watch(debouncedSearch, v => emit('update:search', v))
 
 <template>
   <div class="flex items-center gap-2.5 mb-4">
-    <div class="flex-1 flex items-center gap-2.5 bg-[var(--brand-surface-white)] border border-[var(--brand-border)] rounded-[12px] px-[14px] py-[10px] text-[var(--brand-text-quiet)]">
-      <Search class="w-4 h-4 shrink-0" />
-      <input
-        v-model="search"
-        type="text"
-        :placeholder="searchPlaceholder"
-        class="flex-1 border-0 outline-none bg-transparent text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)]"
-      >
+    <div class="flex-1">
+      <BrandSearchBar v-model="search" :placeholder="searchPlaceholder" />
     </div>
     <span class="text-[13.5px] text-[var(--brand-text-muted)] tabular-nums whitespace-nowrap">
       <strong>1–{{ filteredCount }}</strong> of <strong>{{ total }}</strong> {{ itemLabel }}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Pencil, Trash2, Plus, Mail } from 'lucide-vue-next'
 import { TableCell, TableHead, TableRow } from '~/components/ui/table'
-import { BrandButton, BrandAvatarInitials } from '~/components/brand'
+import { BrandButton, BrandAvatarInitials, BrandStatusBadge } from '~/components/brand'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsTable from '~/components/settings/SettingsTable.vue'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
@@ -147,24 +147,11 @@ function deleteMember(m: TeamMember) {
           </span>
         </TableCell>
         <TableCell class="px-5 py-[13px] border-r border-[var(--brand-border-hairline)]">
-          <span
-            class="inline-flex items-center gap-1.5 text-[13px] font-semibold"
-            :style="m.status === 'Active'
-              ? { color: 'var(--brand-status-approved-text)' }
-              : m.status === 'Pending'
-                ? { color: 'var(--brand-status-pending-text)' }
-                : { color: 'var(--brand-text-quiet)' }"
-          >
-            <span
-              class="inline-block w-[7px] h-[7px] rounded-full"
-              :style="m.status === 'Active'
-                ? { background: 'var(--brand-status-approved-text)' }
-                : m.status === 'Pending'
-                  ? { background: 'var(--brand-status-pending-text)' }
-                  : { background: 'var(--brand-text-quiet)' }"
-            ></span>
-            {{ m.status }}
-          </span>
+          <BrandStatusBadge
+            variant="dot"
+            :label="m.status"
+            :tone="m.status === 'Active' ? 'approved' : m.status === 'Pending' ? 'pending' : 'neutral'"
+          />
         </TableCell>
         <TableCell class="px-5 py-[13px] text-right">
           <div class="inline-flex items-center gap-1.5">
@@ -237,11 +224,11 @@ function deleteMember(m: TeamMember) {
       </div>
 
       <template #footer>
-        <button type="button" class="px-7 py-3 rounded-[12px] border-[1.5px] border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] text-[14px] font-semibold text-[var(--brand-text-secondary)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" @click="modalOpen = false">Discard</button>
-        <button type="button" class="px-9 py-3 rounded-[12px] bg-[var(--brand-teal)] text-white text-[14px] font-bold outline-none disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2" :disabled="!canSave" @click="saveMember">
+        <BrandButton variant="outline" size="lg" @click="modalOpen = false">Discard</BrandButton>
+        <BrandButton variant="primary-teal" size="lg" :disabled="!canSave" @click="saveMember">
           <Mail v-if="!editingId" class="w-3.5 h-3.5" />
           {{ editingId ? 'Save' : 'Submit' }}
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>

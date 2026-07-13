@@ -172,20 +172,12 @@ function deleteItem(item: TagItem) {
               @keyup.enter="saveEdit"
               @keyup.escape="cancelEdit"
             >
-            <button
-              type="button"
-              class="px-3.5 py-[6px] rounded-[7px] border-none bg-[var(--brand-teal)] text-white text-[12.5px] font-semibold outline-none whitespace-nowrap"
-              @click="saveEdit"
-            >
+            <BrandButton variant="primary-teal" size="sm" class="whitespace-nowrap" @click="saveEdit">
               Save
-            </button>
-            <button
-              type="button"
-              class="px-2 py-[6px] text-[13px] font-medium text-[var(--brand-nav-text)] outline-none whitespace-nowrap"
-              @click="cancelEdit"
-            >
+            </BrandButton>
+            <BrandButton variant="ghost" size="sm" class="whitespace-nowrap" @click="cancelEdit">
               Cancel
-            </button>
+            </BrandButton>
           </div>
           <div v-else class="flex items-center gap-2.5">
             <input type="checkbox" class="w-3.5 h-3.5 accent-[var(--brand-teal)] shrink-0">
@@ -230,21 +222,12 @@ function deleteItem(item: TagItem) {
       </div>
 
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-[7px] text-[13px] font-semibold text-[var(--brand-nav-text)] outline-none"
-          @click="modalOpen = false"
-        >
+        <BrandButton variant="ghost" @click="modalOpen = false">
           Cancel
-        </button>
-        <button
-          type="button"
-          class="px-[18px] py-[7px] rounded-[8px] border-none bg-[var(--brand-teal)] text-[13px] font-semibold text-white outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!nameInput.trim()"
-          @click="saveModal"
-        >
+        </BrandButton>
+        <BrandButton variant="primary-teal" :disabled="!nameInput.trim()" @click="saveModal">
           {{ activeTab === 'sources' ? 'Add source' : 'Add tags' }}
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>

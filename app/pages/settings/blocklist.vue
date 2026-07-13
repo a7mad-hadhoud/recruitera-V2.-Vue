@@ -213,21 +213,21 @@ function closeBulkModal() {
       </div>
 
       <template #footer>
-        <button
-          type="button"
-          class="px-6 py-3 rounded-[12px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[14px] font-semibold text-[var(--brand-text-secondary)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+        <BrandButton
+          variant="outline"
+          size="lg"
           @click="modalOpen = false"
         >
           Cancel
-        </button>
-        <button
-          type="button"
-          class="px-8 py-3 rounded-[12px] border-none bg-[var(--brand-teal)] text-[14px] font-bold text-white outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        </BrandButton>
+        <BrandButton
+          variant="primary-teal"
+          size="lg"
           :disabled="!form.name.trim()"
           @click="saveModal"
         >
           Add to blocklist
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
 
@@ -254,21 +254,21 @@ function closeBulkModal() {
       </label>
 
       <template #footer>
-        <button
-          type="button"
-          class="px-[22px] py-[11px] rounded-[10px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[14px] font-semibold text-[var(--brand-text-secondary)] outline-none hover:bg-[var(--brand-lime-tint-hover)] transition-colors"
+        <BrandButton
+          variant="outline"
+          size="lg"
           @click="closeBulkModal"
         >
           Cancel
-        </button>
-        <button
-          type="button"
-          class="px-7 py-[11px] rounded-[10px] border-none bg-[var(--brand-teal)] text-[14px] font-bold text-white outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        </BrandButton>
+        <BrandButton
+          variant="primary-teal"
+          size="lg"
           :disabled="!bulkFileName"
           @click="closeBulkModal"
         >
           Upload
-        </button>
+        </BrandButton>
       </template>
     </SettingsFormModal>
   </div>
