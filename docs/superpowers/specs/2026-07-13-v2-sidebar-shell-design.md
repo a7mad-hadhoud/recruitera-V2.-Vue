@@ -7,9 +7,16 @@ main-nav sidebar design: full-height, dark themed, logo + collapse toggle
 built into the sidebar itself, with a different link set than the current
 `AppSidebar.vue`. The ask is to build this as a fully separate, comparable
 version of the app reachable at its own URL prefix, without touching the
-current app at all. The current Settings module (light-themed, 5-group
-accordion sidebar) is explicitly kept as-is — it is not being reskinned, only
-made reachable under the new URL prefix.
+current app at all.
+
+A follow-up pull of the source Figma file
+(`https://www.figma.com/design/E8hOBOHACaWqP9VwwQxDiG/New-Dashboard?node-id=465-14328`,
+via the Figma MCP `get_screenshot` tool at near-native resolution) surfaced
+higher-fidelity detail that revises part of the original plan — most notably,
+Settings does **not** replace the main sidebar in this design the way it does
+today; see "Settings nesting" below. The Settings module's internal
+groups/colors are otherwise unchanged, just reorganized per what the
+reference actually shows.
 
 ## Goals
 
@@ -47,8 +54,12 @@ made reachable under the new URL prefix.
   the old and new shell can render the same logic.
 - `app/components/layout/SettingsSidebar.vue`: light theme, 5 accordion
   groups (Company, Workflow, Templates, Team & Roles, My Account), 29 routes
-  under `/settings/...`. Confirmed: stays exactly as-is, just becomes
-  reachable at `/v2/settings/...` reusing the same `settings` layout.
+  under `/settings/...`, rendered via a dedicated `settings` layout that
+  hides the main `AppSidebar` entirely (replaced by a "Back to app" link).
+- `app/layouts/settings.vue`: confirmed it does **not** render `AppSidebar` —
+  full-screen swap to just `SettingsSidebar` + content. This layout is reused
+  unchanged for `/settings/*` (untouched, existing behavior). It is **not**
+  reused for `/v2/settings/*` — see "Settings nesting" below.
 
 ## Design
 
@@ -66,13 +77,76 @@ New pages under `app/pages/v2/` mirror the existing top-level routes:
 | `/v2/workforce` | same placeholder pattern |
 | `/v2/schedule` (Time Schedule) | **new** placeholder page |
 | `/v2/analytics` | same placeholder pattern |
-| `/v2/settings/**` (all 29 routes) | existing `settings` layout + `SettingsSidebar.vue`, unchanged |
+| `/v2/settings/**` (all routes) | existing settings page components, new nested layout — see below |
 | `/v2/help` (Help Center) | **new** placeholder page |
 
-Each new `/v2/*` page file sets `definePageMeta({ layout: 'v2' })` (default
-pages keep `layout: 'default'` — no change to existing files). Settings
-pages reached via `/v2/settings/*` keep `definePageMeta({ layout: 'settings'
-})` exactly as today.
+Each new `/v2/*` page file sets `definePageMeta({ layout: 'v2' })`, **except**
+`/v2/settings/*` pages which set `definePageMeta({ layout: 'v2-settings' })`
+(a new layout — see "Settings nesting"). Default pages keep `layout:
+'default'` / `layout: 'settings'` — no change to existing files.
+
+### Settings nesting (revised from initial screenshots)
+
+The higher-fidelity Figma pull shows Settings is not a full-screen swap in
+this design — the dark main sidebar (`AppSidebarV2`) stays visible at all
+times, including while browsing Settings, with "Settings" shown as the
+active/highlighted item. The existing light-themed `SettingsSidebar.vue`
+(Company/Workflow/Templates/Manage groups) renders as a **second column**
+immediately to its right, not as a replacement.
+
+This means `/v2/settings/*` needs its own layout, `app/layouts/
+v2-settings.vue`, that composes both sidebars:
+
+```
+<div class="flex h-screen overflow-hidden">
+  <AppSidebarV2 />          <!-- same component used by the v2 layout, "Settings" shown active -->
+  <SettingsSidebar />        <!-- reused unchanged -->
+  <div class="flex flex-col flex-1 min-w-0">
+    <header> <SettingsHeader /> </header>  <!-- reused unchanged -->
+    <main class="flex-1 overflow-auto"><slot /></main>
+  </div>
+</div>
+```
+
+`SettingsSidebar.vue` itself needs one small change to work in this nested
+context: its "Back to app" link at the top is redundant once the main dark
+sidebar is always visible alongside it, and should be conditionally hidden
+when rendered inside `v2-settings` (e.g. a `showBackLink` prop, default
+`true`, passed `false` from the new layout) — `/settings/*` keeps the link
+as-is since it still fully replaces the main nav there.
+
+### Settings group content (per the reference, for `/v2/settings/*` only)
+
+The reference's settings groups differ slightly from the current
+`SettingsSidebar.vue` — these differences are `/v2`-only; `/settings/*`
+(existing app) is untouched:
+
+- **Company** — same 8 items, plus one new item **"Bonus Programs"** inserted
+  between Career Site and Integrations (new placeholder page).
+- **Workflow** — reference shows: Tags & Sources, Disqualify Reasons, Public
+  Links, Stage Types, **Conflict Management** (new placeholder), **Smart
+  Distribution** (new placeholder), Requisitions (reuses the existing
+  `/settings/workflow/approvals` "Requisition approvals" page/content — same
+  feature, renamed label to match the reference). "Hiring rules" is not
+  present in the reference's Workflow group and is dropped from the `/v2`
+  Workflow nav list — its existing `/settings/workflow/hiring-rules` page is
+  untouched and still reachable at that URL, just not linked from the `/v2`
+  settings sidebar.
+- **Templates** — same 10 items as today (2 labels trimmed per the
+  reference: "Referral questions" → "Referral", "Offer Management" → "Offer"
+  — cosmetic label-only change for `/v2`).
+- **Manage** — new grouping: contains Team & Roles + **My Account** nested
+  under it (today these are two separate top-level groups). Confirmed with
+  the user after the reference showed this inconsistently in two different
+  screens; nesting under Manage was the chosen interpretation.
+
+### Sidebar user identity chip
+
+Below the Settings / Help Center links, the reference shows a small
+avatar-initials + name row (e.g. "MA · Mahmoud Ash") pinned to the bottom of
+the dark sidebar. Not present in the current `AppSidebar.vue`. Add it to
+`AppSidebarV2` only, sourced from the same auth/user state `AppHeader`
+already reads for its account menu (no new data source needed).
 
 ### Component extraction (only 2 files need it)
 
@@ -162,5 +236,9 @@ hardcoded hex in the component, consistent with the existing lint rule):
   `/analytics`, `/settings/*` are completely unchanged (no visual or
   behavioral diff) — this is the main regression risk given the
   `candidates/index.vue` and `candidates/[id].vue` extraction.
-- Confirm `/v2/settings/*` renders identically to `/settings/*` (same light
-  theme, same accordion sidebar).
+- Confirm `/v2/settings/*` renders the dark `AppSidebarV2` (Settings active)
+  alongside the light `SettingsSidebar` (no "Back to app" link, no duplicate
+  page content vs. `/settings/*` for routes that exist in both).
+- Confirm `/settings/*` (existing app) is completely unchanged — still shows
+  "Back to app", still has Team & Roles / My Account as separate groups, no
+  Bonus Programs / Conflict Management / Smart Distribution items.
