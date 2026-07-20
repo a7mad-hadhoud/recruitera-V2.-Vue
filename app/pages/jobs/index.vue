@@ -4,13 +4,13 @@
   panel on the right, brand primitives for every button/pill/badge.
 -->
 <script setup lang="ts">
-import { Zap, Plus, SlidersHorizontal } from 'lucide-vue-next'
+import { Zap, Plus } from 'lucide-vue-next'
 import { BrandPageTitle, BrandSearchBar, BrandButton, BrandDataTable, BrandStatusBadge } from '~/components/brand'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import JobsFilters from '~/components/jobs/JobsFilters.vue'
 import JobsColumnsPicker from '~/components/jobs/JobsColumnsPicker.vue'
 import JobsFiltersPanel from '~/components/jobs/JobsFiltersPanel.vue'
-import JobsNewViewSheet, { type ViewVisibility } from '~/components/jobs/JobsNewViewSheet.vue'
+import JobsNewViewPanel, { type ViewVisibility } from '~/components/jobs/JobsNewViewSheet.vue'
 import type { Job, JobStatus, CollarType } from '~/types'
 import { useJobs } from '~/composables/useJobs'
 import { useJobsColumns } from '~/composables/useJobsColumns'
@@ -22,15 +22,15 @@ const { jobs } = useJobs()
 const { isVisible: isColVisible } = useJobsColumns()
 const { rows: filterRows, addRow, removeRow, updateRow, clearAll: clearFilters } = useJobsFilters()
 
-// ── Panel/sheet open state ──
-const filtersOpen = ref(false)
+// New-view mode swaps the JobsFilters sidebar column for the New View editor.
 const newViewOpen = ref(false)
 
-// ── Saved views (in-memory for now) ──
+// Saved views (in-memory for now).
 type SavedView = { id: string; title: string; visibility: ViewVisibility }
 const savedViews = ref<SavedView[]>([])
 function onSaveView(payload: { title: string; visibility: ViewVisibility }) {
   savedViews.value = [...savedViews.value, { id: `v${Date.now()}`, title: payload.title, visibility: payload.visibility }]
+  newViewOpen.value = false
 }
 
 type ViewKey = 'all' | 'followed' | 'involved' | 'active' | 'archived' | 'draft' | 'closed'
@@ -74,11 +74,6 @@ const filteredJobs = computed(() => {
   return applyJobFilters(preFilter, filterRows.value)
 })
 
-// Count pill shown next to the Filters button — reflects rows that carry values.
-const activeFilterCount = computed(() =>
-  filterRows.value.filter(r => r.op === 'is-empty' || r.values.length).length,
-)
-
 const STATUS: Record<JobStatus, { label: string; tone: 'approved' | 'pending' | 'neutral' | 'closed' }> = {
   published: { label: 'PUBLISHED', tone: 'approved' },
   internal:  { label: 'INTERNAL',  tone: 'pending' },
@@ -106,7 +101,14 @@ const slotsLeft = 5
 
 <template>
   <div class="flex h-full overflow-hidden bg-[var(--brand-canvas)]">
+    <!-- Sidebar column: default view list, or the inline New View editor. -->
+    <JobsNewViewPanel
+      v-if="newViewOpen"
+      @cancel="newViewOpen = false"
+      @save="onSaveView"
+    />
     <JobsFilters
+      v-else
       :active="activeView"
       :counts="viewCounts"
       :saved-views="savedViews"
@@ -158,14 +160,14 @@ const slotsLeft = 5
         <div class="w-[280px]">
           <BrandSearchBar v-model="search" placeholder="Search jobs..." />
         </div>
-        <BrandButton variant="outline" @click="filtersOpen = true">
-          <SlidersHorizontal class="w-4 h-4 mr-1.5" stroke-width="1.8" />
-          Filters
-          <span
-            v-if="activeFilterCount > 0"
-            class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 rounded-full bg-[var(--brand-teal)] text-white text-[11px] font-bold"
-          >{{ activeFilterCount }}</span>
-        </BrandButton>
+        <JobsFiltersPanel
+          :rows="filterRows"
+          :result-count="filteredJobs.length"
+          @add="addRow"
+          @remove="(id) => removeRow(id)"
+          @update="(id, patch) => updateRow(id, patch)"
+          @clear="clearFilters"
+        />
         <JobsColumnsPicker />
       </div>
 
@@ -237,19 +239,5 @@ const slotsLeft = 5
       </div>
     </div>
 
-    <!-- Panels — teleport out of the flex row via Dialog/Sheet portals. -->
-    <JobsFiltersPanel
-      v-model:open="filtersOpen"
-      :rows="filterRows"
-      :result-count="filteredJobs.length"
-      @add="addRow"
-      @remove="(id) => removeRow(id)"
-      @update="(id, patch) => updateRow(id, patch)"
-      @clear="clearFilters"
-    />
-    <JobsNewViewSheet
-      v-model:open="newViewOpen"
-      @save="onSaveView"
-    />
   </div>
 </template>

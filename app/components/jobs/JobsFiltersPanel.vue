@@ -1,41 +1,37 @@
 <!--
-  Filters modal — 820px sheet with row builder (Where / Field / Op / Value).
-  Ported from Recruitera Jobs Standalone.html #filter-panel.
+  Filters popover — 820px sheet with row builder (Where / And / Field / Op / Value).
+  Anchored directly under the "Filters" button, matches Recruitera Jobs Standalone.html.
 
-  - opened from the "Filters" button (v-model:open by parent, or via <Dialog>)
-  - value-chips use BrandStatusBadge tones for the Status field
-  - "+ Add filter" appends a blank row, "Clear filters" wipes them all
+  Own trigger + count badge live inside; parent just passes rows + result count
+  and listens for add/remove/update/clear.
 -->
 <script setup lang="ts">
-import { Plus, X, Info, ChevronDown } from 'lucide-vue-next'
-import { Dialog, DialogContent } from '~/components/ui/dialog'
-import { Checkbox } from '~/components/ui/checkbox'
+import { Plus, X, Info, ChevronDown, SlidersHorizontal } from 'lucide-vue-next'
+import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import { Checkbox } from '~/components/ui/checkbox'
 import {
   JOB_FILTER_FIELDS, JOB_FILTER_OPS, JOB_FILTER_OPTIONS,
   type JobFilterField, type JobFilterOp, type JobFilterRow,
 } from '~/composables/useJobsFilters'
 
 const props = defineProps<{
-  open: boolean
   rows: JobFilterRow[]
   resultCount: number
 }>()
 
 const emit = defineEmits<{
-  'update:open': [v: boolean]
   add: []
   remove: [id: string]
   update: [id: string, patch: Partial<JobFilterRow>]
   clear: []
 }>()
 
-function fieldLabel(f: JobFilterField) {
-  return JOB_FILTER_FIELDS.find(x => x.key === f)?.label ?? f
-}
-function opLabel(o: JobFilterOp) {
-  return JOB_FILTER_OPS.find(x => x.key === o)?.label ?? o
-}
+// Badge count on the trigger — rows that are actually filtering anything.
+const activeCount = computed(() =>
+  props.rows.filter(r => r.op === 'is-empty' || r.values.length).length,
+)
+
 function optionsFor(f: JobFilterField) {
   return JOB_FILTER_OPTIONS[f] ?? []
 }
@@ -52,9 +48,22 @@ function dotForValue(f: JobFilterField, v: string) {
 </script>
 
 <template>
-  <Dialog :open="props.open" @update:open="(v) => emit('update:open', v)">
-    <DialogContent
-      class="max-w-[820px] w-[820px] p-0 rounded-[16px] border border-[var(--brand-border-light)] shadow-[0_12px_40px_rgba(0,20,18,0.18)] gap-0"
+  <Popover>
+    <PopoverTrigger as-child>
+      <BrandButton variant="outline">
+        <SlidersHorizontal class="w-4 h-4 mr-1.5" stroke-width="1.8" />
+        Filters
+        <span
+          v-if="activeCount > 0"
+          class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 rounded-full bg-[var(--brand-teal)] text-white text-[11px] font-bold"
+        >{{ activeCount }}</span>
+      </BrandButton>
+    </PopoverTrigger>
+
+    <PopoverContent
+      align="end"
+      :side-offset="8"
+      class="w-[820px] max-w-[96vw] p-0 rounded-[16px] border border-[var(--brand-border-light)] shadow-[0_12px_40px_rgba(0,20,18,0.18)]"
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--brand-border-fade)]">
@@ -71,11 +80,13 @@ function dotForValue(f: JobFilterField, v: string) {
       <!-- Rows -->
       <div class="px-6 py-4 flex flex-col gap-2.5 max-h-[60vh] overflow-y-auto">
         <div
-          v-for="row in props.rows"
+          v-for="(row, idx) in props.rows"
           :key="row.id"
           class="flex items-center gap-2"
         >
-          <span class="text-[13px] text-[var(--brand-text-quiet)] w-12 shrink-0">Where</span>
+          <span class="text-[13px] text-[var(--brand-text-quiet)] w-12 shrink-0">
+            {{ idx === 0 ? 'Where' : 'And' }}
+          </span>
 
           <!-- Field select -->
           <div class="relative w-[160px] shrink-0">
@@ -127,7 +138,7 @@ function dotForValue(f: JobFilterField, v: string) {
                     </button>
                   </span>
                 </template>
-                <span v-else class="text-[13px] text-[var(--brand-text-quiet)] px-1">Select values…</span>
+                <span v-else class="text-[13px] text-[var(--brand-text-quiet)] px-1">Select</span>
                 <ChevronDown class="w-3 h-3 text-[var(--brand-text-faint)] ml-auto shrink-0" />
               </button>
             </PopoverTrigger>
@@ -185,6 +196,6 @@ function dotForValue(f: JobFilterField, v: string) {
           @click="emit('clear')"
         >Clear filters</button>
       </div>
-    </DialogContent>
-  </Dialog>
+    </PopoverContent>
+  </Popover>
 </template>
