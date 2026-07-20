@@ -7,6 +7,18 @@ import type { Job, JobStatus } from '~/types'
  *
  * Kept as a module-scope ref so status changes made via the Status
  * column dropdown persist across route changes within the same tab.
+ *
+ * ─── When the real API lands, migrate these here ────────────────────
+ *   • Pagination — swap `jobs` for `useQuery({ queryKey: ['jobs', filters], … })`
+ *     and thread `page/perPage` through the filters (see useCandidates for the
+ *     shape). If total counts pass ~1000, add @tanstack/vue-virtual to the card
+ *     list container instead of paginating.
+ *   • Skeleton loading — render a stack of skeleton JobCards while `isFetching`
+ *     is true (mirror CandidatesTableSkeleton). Avoids layout jump.
+ *   • Optimistic status mutations — `useMutation` with onMutate to write the
+ *     new status into the query cache, rollback in onError.
+ *   • URL-synced search + filters — bind `searchInput` + activeView + collarTab
+ *     to router.query so bookmarked/shared links reproduce the view.
  */
 const FIXTURE: Job[] = [
   { id: 'j1', title: 'Backend Engineer',        status: 'published', location: 'Tel Aviv',  department: 'Engineering', workModel: 'on-site', collar: 'white', candidateCount: 58, newCandidates: 11, hires: 2 },

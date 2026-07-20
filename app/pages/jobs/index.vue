@@ -4,7 +4,8 @@
   panel on the right, brand primitives for every button/pill/badge.
 -->
 <script setup lang="ts">
-import { Zap, Plus, ChevronDown, Check, Rows3, LayoutGrid, MapPin, Globe, Bookmark, MoreHorizontal, Pencil, Megaphone, ExternalLink, Copy, Archive, MessageSquare, Folder, Trash2 } from 'lucide-vue-next'
+import { Plus, Rows3, LayoutGrid, Bookmark, MoreHorizontal, Pencil, Megaphone, Copy, Archive, MessageSquare, Folder, Trash2 } from 'lucide-vue-next'
+import { refDebounced, useLocalStorage } from '@vueuse/core'
 import { BrandPageTitle, BrandSearchBar, BrandButton, BrandDataTable, BrandStatusBadge } from '~/components/brand'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -12,6 +13,8 @@ import JobsFilters from '~/components/jobs/JobsFilters.vue'
 import JobsColumnsPicker from '~/components/jobs/JobsColumnsPicker.vue'
 import JobsFiltersPanel from '~/components/jobs/JobsFiltersPanel.vue'
 import JobsNewViewPanel, { type ViewVisibility, type ViewMode as SavedViewMode } from '~/components/jobs/JobsNewViewSheet.vue'
+import JobCard from '~/components/jobs/JobCard.vue'
+import JobStatusMenu from '~/components/jobs/JobStatusMenu.vue'
 import type { Job, JobStatus, CollarType } from '~/types'
 import { useJobs } from '~/composables/useJobs'
 import { useJobsColumns, type JobColumnKey } from '~/composables/useJobsColumns'
@@ -57,8 +60,8 @@ function widthStyle(col: JobColumnKey) {
 // New-view mode swaps the JobsFilters sidebar column for the New View editor.
 const newViewOpen = ref(false)
 
-// Table vs card view mode.
-const viewMode = ref<'table' | 'cards'>('table')
+// Table vs card view mode — persisted so the choice sticks across visits.
+const viewMode = useLocalStorage<'table' | 'cards'>('recruitera:jobs:view-mode', 'table')
 
 // Saved views (in-memory for now).
 type SavedView = { id: string; title: string; visibility: ViewVisibility; mode: SavedViewMode }
@@ -85,7 +88,12 @@ type CollarTab = 'all' | 'white' | 'blue'
 
 const activeView = ref<ViewKey>('all')
 const collarTab  = ref<CollarTab>('all')
-const search     = ref('')
+
+// 250ms debounce on the search input. Feels instant to the user but avoids
+// re-running the filter/sort chain on every keystroke — matters more once
+// the fixture is replaced by a Vue Query call.
+const searchInput = ref('')
+const search      = refDebounced(searchInput, 250)
 
 // Clear the saved-view selection whenever a predefined view is picked, so the
 // header title reflects the currently active filter.
@@ -142,17 +150,6 @@ const filteredJobs = computed(() => {
   })
   return applyJobFilters(preFilter, filterRows.value)
 })
-
-// Status column: verb-style label + design-system dot color.
-// Dropdown lets the user change a row's status inline.
-const STATUS_META: Record<JobStatus, { label: string; dot: string }> = {
-  published: { label: 'Publish',        dot: 'var(--brand-status-approved-text)' },
-  internal:  { label: 'Use Internally', dot: 'var(--brand-status-teal-green)' },
-  draft:     { label: 'Draft',          dot: 'var(--brand-text-quiet)' },
-  closed:    { label: 'Close',          dot: 'var(--brand-status-closed-text)' },
-  archived:  { label: 'Archived',       dot: 'var(--brand-text-faint)' },
-}
-const STATUS_OPTIONS: JobStatus[] = ['published', 'internal', 'draft', 'closed', 'archived']
 
 const WORK_MODEL_LABEL: Record<Job['workModel'], string> = {
   'on-site': 'On-site',
@@ -225,7 +222,7 @@ const slotsLeft = 5
         <div class="flex-1" />
 
         <div class="w-[280px]">
-          <BrandSearchBar v-model="search" placeholder="Search jobs..." />
+          <BrandSearchBar v-model="searchInput" placeholder="Search jobs..." />
         </div>
         <JobsFiltersPanel
           :rows="filterRows"
@@ -319,34 +316,10 @@ const slotsLeft = 5
                 class="align-middle py-2 border-r border-[var(--brand-border-fade)]"
                 :style="widthStyle('status')"
               >
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <button
-                      class="inline-flex items-center gap-2 h-8 pl-2 pr-1.5 rounded-md text-[13.5px] text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint)]/50 transition"
-                      @click.stop
-                    >
-                      <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: STATUS_META[j.status].dot }" />
-                      {{ STATUS_META[j.status].label }}
-                      <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)] shrink-0" stroke-width="2" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" class="w-[180px] p-1">
-                    <DropdownMenuItem
-                      v-for="opt in STATUS_OPTIONS"
-                      :key="opt"
-                      class="flex items-center gap-2 px-2 py-1.5 text-[13.5px] cursor-pointer"
-                      @select="setStatus(j.id, opt)"
-                    >
-                      <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: STATUS_META[opt].dot }" />
-                      <span class="flex-1">{{ STATUS_META[opt].label }}</span>
-                      <Check
-                        v-if="opt === j.status"
-                        class="w-3.5 h-3.5 text-[var(--brand-status-approved-text)] shrink-0"
-                        stroke-width="2.5"
-                      />
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <JobStatusMenu
+                  :model-value="j.status"
+                  @update:model-value="(s) => setStatus(j.id, s)"
+                />
               </TableCell>
 
               <TableCell
@@ -437,112 +410,15 @@ const slotsLeft = 5
         </div>
       </div>
 
-      <!-- Card view — each job as its own card, matching the Recruitee mock. -->
+      <!-- Card view — one <JobCard /> per row. Extracted so a "recent jobs"
+           widget or any future surface can render the same card. -->
       <div v-else class="flex-1 overflow-auto px-6 pt-4 pb-6 flex flex-col gap-3 bg-[var(--brand-surface-listview)]">
-        <article
+        <JobCard
           v-for="j in filteredJobs"
           :key="j.id"
-          class="rounded-[14px] border border-[var(--brand-border-light)] bg-white p-5 hover:shadow-[0_2px_8px_rgba(0,20,18,0.06)] transition-shadow"
-        >
-          <!-- Top row: title + id + action buttons -->
-          <div class="flex items-start gap-3">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-[16px] font-bold text-[var(--brand-text)]">{{ j.title }}</h3>
-                <span class="text-[11.5px] font-mono text-[var(--brand-text-quiet)] bg-[var(--brand-canvas)] px-1.5 py-0.5 rounded">#{{ j.id }}</span>
-              </div>
-              <div class="mt-1.5 flex items-center gap-3 flex-wrap text-[13px] text-[var(--brand-text-muted)]">
-                <span v-if="j.location" class="inline-flex items-center gap-1">
-                  <MapPin class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
-                  {{ j.location }}
-                </span>
-                <span class="text-[var(--brand-text-faint)]">•</span>
-                <span class="inline-flex items-center gap-1">
-                  <Globe class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
-                  {{ WORK_MODEL_LABEL[j.workModel] }}
-                </span>
-                <span class="text-[var(--brand-text-faint)]">•</span>
-                <BrandStatusBadge
-                  variant="solid"
-                  :tone="j.collar === 'white' ? 'neutral' : 'pipeline-blue'"
-                  :label="COLLAR_LABEL[j.collar]"
-                />
-              </div>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button class="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[13px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]/50 transition">
-                <Megaphone class="w-3.5 h-3.5" stroke-width="1.8" />
-                Cross post
-              </button>
-              <button class="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[13px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]/50 transition">
-                <Pencil class="w-3.5 h-3.5" stroke-width="1.8" />
-                Edit
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <button class="w-8 h-8 rounded-[8px] flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)]/50 transition">
-                    <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-[180px] p-1">
-                  <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
-                    <ExternalLink class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
-                    <Copy class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
-                    <Archive class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
-                    Archive
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          <!-- Bottom row: candidates count + follow + status -->
-          <div class="mt-4 pt-3 border-t border-[var(--brand-border-fade)] flex items-center gap-4 text-[13px]">
-            <div class="flex-1 text-[var(--brand-text-secondary)]">
-              <span class="text-[15px] font-bold text-[var(--brand-text)]">{{ j.candidateCount }}</span>
-              <span class="ml-1">Qualified candidates</span>
-            </div>
-            <span class="inline-flex items-center gap-1.5 text-[var(--brand-status-approved-text)] font-semibold">
-              <Bookmark class="w-3.5 h-3.5 fill-current" stroke-width="1.7" />
-              Following
-            </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <button
-                  class="inline-flex items-center gap-2 h-7 px-2 rounded-md text-[13px] font-semibold hover:bg-[var(--brand-lime-tint)]/50 transition"
-                  :style="{ color: STATUS_META[j.status].dot }"
-                  @click.stop
-                >
-                  <span class="w-2 h-2 rounded-full" :style="{ background: STATUS_META[j.status].dot }" />
-                  {{ STATUS_META[j.status].label }}
-                  <ChevronDown class="w-3 h-3" stroke-width="2" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="w-[180px] p-1">
-                <DropdownMenuItem
-                  v-for="opt in STATUS_OPTIONS"
-                  :key="opt"
-                  class="flex items-center gap-2 px-2 py-1.5 text-[13.5px] cursor-pointer"
-                  @select="setStatus(j.id, opt)"
-                >
-                  <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: STATUS_META[opt].dot }" />
-                  <span class="flex-1">{{ STATUS_META[opt].label }}</span>
-                  <Check
-                    v-if="opt === j.status"
-                    class="w-3.5 h-3.5 text-[var(--brand-status-approved-text)] shrink-0"
-                    stroke-width="2.5"
-                  />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </article>
+          :job="j"
+          @update-status="setStatus"
+        />
 
         <div v-if="!filteredJobs.length" class="py-16 text-center text-[13.5px] text-[var(--brand-text-quiet)]">
           No jobs match this view.

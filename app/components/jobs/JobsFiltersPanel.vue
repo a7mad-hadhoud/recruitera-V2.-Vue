@@ -132,6 +132,7 @@ function dotForValue(f: JobFilterField, v: string) {
                     {{ labelForValue(row.field, v) }}
                     <button
                       class="text-[var(--brand-text-faint)] hover:text-[var(--brand-text-secondary)]"
+                      :aria-label="`Remove ${labelForValue(row.field, v)}`"
                       @click.stop="toggleValue(row, v)"
                     >
                       <X class="w-3 h-3" stroke-width="2" />
