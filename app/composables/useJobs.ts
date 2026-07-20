@@ -1,9 +1,12 @@
-import type { Job } from '~/types'
+import type { Job, JobStatus } from '~/types'
 
 /**
  * Static jobs fixture — matches the rows in the design reference.
  * Swap for an MSW handler + Vue Query call when the API is ready
  * (mirror the useCandidates.ts pattern).
+ *
+ * Kept as a module-scope ref so status changes made via the Status
+ * column dropdown persist across route changes within the same tab.
  */
 const FIXTURE: Job[] = [
   { id: 'j1', title: 'Backend Engineer',        status: 'published', location: 'Tel Aviv',  department: 'Engineering', workModel: 'on-site', collar: 'white', candidateCount: 58, newCandidates: 11, hires: 2 },
@@ -17,7 +20,11 @@ const FIXTURE: Job[] = [
   { id: 'j9', title: 'UX Researcher',            status: 'draft',     location: 'Remote',    department: 'Design',      workModel: 'remote',  collar: 'white', candidateCount: 0,  newCandidates: 0,  hires: 0 },
 ]
 
+const jobsRef = ref<Job[]>(FIXTURE)
+
 export function useJobs() {
-  const jobs = ref<Job[]>(FIXTURE)
-  return { jobs: readonly(jobs) }
+  function setStatus(id: string, status: JobStatus) {
+    jobsRef.value = jobsRef.value.map(j => j.id === id ? { ...j, status } : j)
+  }
+  return { jobs: jobsRef, setStatus }
 }

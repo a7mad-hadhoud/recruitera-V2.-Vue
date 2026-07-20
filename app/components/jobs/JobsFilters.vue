@@ -15,6 +15,7 @@ const props = defineProps<{
   active: ViewKey
   counts: Record<ViewKey, number>
   savedViews?: SavedView[]
+  selectedSavedViewId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -68,7 +69,10 @@ function isActive(k: ViewKey) { return props.active === k }
       <button
         v-for="v in (props.savedViews ?? [])"
         :key="v.id"
-        class="mt-0.5 flex items-center px-2 py-1.5 rounded-lg text-[13.5px] transition-colors w-full text-left text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]"
+        class="mt-0.5 flex items-center px-2 py-1.5 rounded-lg text-[13.5px] transition-colors w-full text-left"
+        :class="props.selectedSavedViewId === v.id
+          ? 'bg-[var(--brand-lime-tint)] text-[var(--brand-olive)] font-semibold'
+          : 'text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]'"
         @click="emit('select-view', v.id)"
       >
         <span class="w-[22px] mr-2.5 shrink-0" />
