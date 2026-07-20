@@ -1,6 +1,7 @@
 export * from './candidate.types'
 export * from './company.types'
 export * from './job.types'
+export * from './job-pipeline.types'
 export * from './user.types'
 export * from './location.types'
 export * from './department.types'

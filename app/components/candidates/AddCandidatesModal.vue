@@ -4,13 +4,35 @@
    1. Choose method — CV upload / Manually / Import CSV / Browser extension
    2. Collar type — White / Blue (skipped for the browser-extension method)
    3. Assign to job/pool (optional) — search + checkbox lists, Skip/Continue
-  Steps 2 and 3 are mocked (no upload/assign wiring yet) — this ports the
-  interaction shell so the flow matches the design pixel-for-pixel.
+
+  Shared by the Candidates page toolbar AND the Job Detail (/jobs/[id])
+  page's "Add candidates" button. When opened from a job context, pass
+  the jobId via `preselectedJobId` — Step 3 pre-checks that job so the
+  user sees where the candidate will land.
+
+  ─── Sync path (once the API lands) ─────────────────────────────────────
+  Continue → POST /candidates with { …candidate, assignments: { jobIds } }.
+  The mutation's onSuccess invalidates BOTH:
+    queryClient.invalidateQueries({ queryKey: ['candidates'] })
+    queryClient.invalidateQueries({ queryKey: ['pipeline'] })      // any job
+  Any surface listening on either key refetches automatically — the
+  candidate shows up in /candidates AND in /jobs/[id] pipelines that
+  contain it, no extra plumbing required.
+
+  Steps 2 and 3 are visual today (no upload/assign wiring yet) — this
+  ports the interaction shell so the flow matches the design.
 -->
 <script setup lang="ts">
 import { Plus, ChevronRight, ChevronLeft, FileText, Pencil, FileSpreadsheet, Globe, User, Shirt } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { BrandLimeCheckbox, BrandSearchBar, BrandButton } from '~/components/brand'
+import { useJobs } from '~/composables/useJobs'
+
+const props = defineProps<{
+  /** When present, Step 3 pre-checks this job so the user knows the
+   *  candidate will land in the current job's pipeline. */
+  preselectedJobId?: string
+}>()
 
 type Step = 'method' | 'collar' | 'assign'
 type Method = 'cv' | 'manual' | 'csv' | 'extension'
@@ -26,8 +48,35 @@ const METHODS: { key: Method; icon: unknown; label: string; desc: string; extern
   { key: 'extension', icon: Globe, label: 'Browser sourcing extension', desc: 'Source candidates via Recruitera Talent Sourcing.', external: true },
 ]
 
-const JOBS = ['Backend Engineer', 'Product Designer', 'Developer']
+// Real jobs from the shared store (used to be a hardcoded 3-item array).
+const { jobs } = useJobs()
 const POOLS = ['Leadership Pipeline', 'Data & ML']
+
+// Which jobs/pools are checked in Step 3 — seeded with the caller's
+// preselectedJobId so the user opening from /jobs/[id] sees it ticked.
+const selectedJobIds = ref<Set<string>>(new Set())
+const selectedPools  = ref<Set<string>>(new Set())
+
+// Reseed selection whenever the popover opens (fresh flow each time).
+watch(open, (next) => {
+  if (next) {
+    selectedJobIds.value = new Set(props.preselectedJobId ? [props.preselectedJobId] : [])
+    selectedPools.value  = new Set()
+  } else {
+    reset()
+  }
+})
+
+function toggleJob(id: string) {
+  const s = new Set(selectedJobIds.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  selectedJobIds.value = s
+}
+function togglePool(p: string) {
+  const s = new Set(selectedPools.value)
+  s.has(p) ? s.delete(p) : s.add(p)
+  selectedPools.value = s
+}
 
 function pickMethod(m: Method) {
   method.value = m
@@ -40,8 +89,6 @@ function reset() {
   step.value = 'method'
   method.value = null
 }
-
-watch(open, (next) => { if (!next) reset() })
 </script>
 
 <template>
@@ -152,14 +199,17 @@ watch(open, (next) => { if (!next) reset() })
             <BrandSearchBar size="sm" placeholder="Search jobs and talent pools…" />
           </div>
           <div class="text-[11px] font-bold tracking-[0.07em] uppercase text-[var(--brand-text-quiet)] mb-1.5">Jobs</div>
-          <div class="flex flex-col gap-px mb-3">
+          <div class="flex flex-col gap-px mb-3 max-h-[160px] overflow-y-auto">
             <label
-              v-for="j in JOBS"
-              :key="j"
+              v-for="j in jobs"
+              :key="j.id"
               class="flex items-center gap-2.5 px-1 py-2 rounded-md cursor-pointer text-[13.5px] text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint)] transition-colors"
             >
-              <BrandLimeCheckbox />
-              {{ j }}
+              <BrandLimeCheckbox
+                :model-value="selectedJobIds.has(j.id)"
+                @update:model-value="() => toggleJob(j.id)"
+              />
+              {{ j.title }}
             </label>
           </div>
           <div class="text-[11px] font-bold tracking-[0.07em] uppercase text-[var(--brand-text-quiet)] mb-1.5">Talent pools</div>
@@ -169,7 +219,10 @@ watch(open, (next) => { if (!next) reset() })
               :key="p"
               class="flex items-center gap-2.5 px-1 py-2 rounded-md cursor-pointer text-[13.5px] text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint)] transition-colors"
             >
-              <BrandLimeCheckbox />
+              <BrandLimeCheckbox
+                :model-value="selectedPools.has(p)"
+                @update:model-value="() => togglePool(p)"
+              />
               {{ p }}
             </label>
           </div>

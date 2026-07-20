@@ -305,10 +305,13 @@ const slotsLeft = 5
               :class="i % 2 === 1 ? 'bg-[var(--brand-surface-table-alt)]/60' : ''"
             >
               <TableCell
-                class="align-top py-3 border-r border-[var(--brand-border-fade)] text-[14px] font-semibold text-[var(--brand-text)]"
+                class="align-top py-3 border-r border-[var(--brand-border-fade)] text-[14px] font-semibold"
                 :style="widthStyle('title')"
               >
-                {{ j.title }}
+                <NuxtLink
+                  :to="`/jobs/${j.id}`"
+                  class="text-[var(--brand-text)] hover:text-[var(--brand-teal)] hover:underline"
+                >{{ j.title }}</NuxtLink>
               </TableCell>
 
               <!-- Status: dot + verb label + chevron; click to change. -->

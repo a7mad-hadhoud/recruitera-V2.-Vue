@@ -44,7 +44,10 @@ const COLLAR_LABEL: Record<CollarType, string> = { white: 'White collar', blue: 
     <div class="flex items-start gap-3">
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <h3 class="text-[16px] font-bold text-[var(--brand-text)]">{{ props.job.title }}</h3>
+          <NuxtLink
+            :to="`/jobs/${props.job.id}`"
+            class="text-[16px] font-bold text-[var(--brand-text)] hover:text-[var(--brand-teal)] hover:underline"
+          >{{ props.job.title }}</NuxtLink>
           <span class="text-[11.5px] font-mono text-[var(--brand-text-quiet)] bg-[var(--brand-canvas)] px-1.5 py-0.5 rounded">#{{ props.job.id }}</span>
         </div>
         <div class="mt-1.5 flex items-center gap-3 flex-wrap text-[13px] text-[var(--brand-text-muted)]">
