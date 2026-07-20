@@ -1,4 +1,6 @@
-export type JobStatus = 'published' | 'internal' | 'closed' | 'archived'
+export type JobStatus = 'published' | 'internal' | 'closed' | 'archived' | 'draft'
+export type CollarType = 'white' | 'blue'
+export type WorkModel = 'on-site' | 'remote' | 'hybrid'
 
 export interface Job {
   id: string
@@ -6,5 +8,9 @@ export interface Job {
   status: JobStatus
   location: string | null
   department: string | null
+  workModel: WorkModel
+  collar: CollarType
   candidateCount: number
+  newCandidates: number
+  hires: number
 }

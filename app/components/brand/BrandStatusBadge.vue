@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-type Tone = 'approved' | 'pending' | 'neutral' | 'live' | 'expired' | 'teal-green' | 'orange' | 'gray' | 'pipeline-blue' | 'pipeline-purple' | 'new' | 'danger'
+type Tone = 'approved' | 'pending' | 'neutral' | 'live' | 'expired' | 'teal-green' | 'orange' | 'gray' | 'pipeline-blue' | 'pipeline-purple' | 'new' | 'danger' | 'closed'
 type Variant = 'solid' | 'dot' | 'text' | 'dot-only'
 
 const props = withDefaults(defineProps<{
@@ -38,6 +38,7 @@ const TONES: Record<Tone, { bg: string; text: string }> = {
   'pipeline-purple': { bg: 'var(--brand-canvas)', text: 'var(--brand-pipeline-purple)' },
   'new': { bg: 'var(--brand-badge-new-bg)', text: 'var(--brand-badge-new-text)' },
   'danger': { bg: 'var(--brand-canvas)', text: 'var(--brand-danger)' },
+  'closed': { bg: 'var(--brand-status-closed-bg)', text: 'var(--brand-status-closed-text)' },
 }
 
 const colors = computed(() => TONES[props.tone])

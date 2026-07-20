@@ -59,12 +59,14 @@ const JOB_STATUS_TONE: Record<JobStatus, 'teal-green' | 'gray'> = {
   internal: 'gray',
   closed: 'gray',
   archived: 'gray',
+  draft: 'gray',
 }
 const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   published: 'Published',
   internal: 'Internal',
   closed: 'Closed',
   archived: 'Archived',
+  draft: 'Draft',
 }
 
 const { getWidth, setWidth } = useCandidateColumnWidths()

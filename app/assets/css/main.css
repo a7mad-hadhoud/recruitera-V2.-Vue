@@ -113,6 +113,8 @@
   --brand-status-approved-text: #1a6e40;
   --brand-status-pending-bg: #fef9e8;              /* WhatsApp template status: Pending review */
   --brand-status-pending-text: #b45309;
+  --brand-status-closed-bg: #fdecec;               /* Jobs table status: Closed */
+  --brand-status-closed-text: #b02a2a;
   --brand-success: #3aab52;                       /* candidate profile: evaluation score good / sent checkmark */
   --brand-warning: #e8a33d;                        /* candidate profile: evaluation score mid */
   --brand-track: #eceee7;                          /* candidate profile: gauge/progress-bar track */

@@ -1,5 +1,5 @@
 export type CandidateStatus = 'new' | 'qualified' | 'disqualified' | 'not_contacted' | 'followed'
-export type JobStatus       = 'published' | 'internal' | 'closed' | 'archived'
+export type JobStatus       = 'published' | 'internal' | 'closed' | 'archived' | 'draft'
 
 export interface CandidateJob {
   title: string

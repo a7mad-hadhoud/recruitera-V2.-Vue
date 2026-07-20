@@ -4,7 +4,7 @@
   useLocalStorage; the group containing the current route auto-opens.
 -->
 <script setup lang="ts">
-import { ChevronDown, Building2, Workflow, LayoutTemplate, Users2, User, ArrowLeft } from 'lucide-vue-next'
+import { ChevronDown, Building2, Workflow, LayoutTemplate, Users2, User } from 'lucide-vue-next'
 import { useLocalStorage } from '@vueuse/core'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible'
 
@@ -79,15 +79,7 @@ const isChildActive = (to: string) => route.path === to || route.path.startsWith
 </script>
 
 <template>
-  <aside class="w-[232px] shrink-0 flex flex-col bg-[var(--brand-canvas)] overflow-y-auto px-2.5 py-4">
-    <NuxtLink
-      to="/candidates"
-      class="flex items-center gap-2.5 px-3 h-9 rounded-[10px] text-[13.5px] font-semibold text-[var(--brand-text-secondary)] bg-[var(--brand-topbar-pill-bg)] hover:brightness-95 transition-colors mb-3"
-    >
-      <ArrowLeft class="w-4 h-4" />
-      Back to app
-    </NuxtLink>
-
+  <aside class="w-[232px] shrink-0 flex flex-col rounded-tl-[22px] bg-white border-t border-l border-r border-[var(--brand-border)] overflow-y-auto px-2.5 py-4">
     <nav class="flex flex-col gap-0.5">
       <Collapsible
         v-for="g in groups"
