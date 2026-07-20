@@ -4,14 +4,14 @@
   panel on the right, brand primitives for every button/pill/badge.
 -->
 <script setup lang="ts">
-import { Zap, Plus, ChevronDown, Check, Rows3, LayoutGrid, MapPin, Globe, Bookmark, MoreHorizontal, Pencil, Megaphone } from 'lucide-vue-next'
+import { Zap, Plus, ChevronDown, Check, Rows3, LayoutGrid, MapPin, Globe, Bookmark, MoreHorizontal, Pencil, Megaphone, ExternalLink, Copy, Archive, MessageSquare, Folder, Trash2 } from 'lucide-vue-next'
 import { BrandPageTitle, BrandSearchBar, BrandButton, BrandDataTable, BrandStatusBadge } from '~/components/brand'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import JobsFilters from '~/components/jobs/JobsFilters.vue'
 import JobsColumnsPicker from '~/components/jobs/JobsColumnsPicker.vue'
 import JobsFiltersPanel from '~/components/jobs/JobsFiltersPanel.vue'
-import JobsNewViewPanel, { type ViewVisibility } from '~/components/jobs/JobsNewViewSheet.vue'
+import JobsNewViewPanel, { type ViewVisibility, type ViewMode as SavedViewMode } from '~/components/jobs/JobsNewViewSheet.vue'
 import type { Job, JobStatus, CollarType } from '~/types'
 import { useJobs } from '~/composables/useJobs'
 import { useJobsColumns, type JobColumnKey } from '~/composables/useJobsColumns'
@@ -61,18 +61,23 @@ const newViewOpen = ref(false)
 const viewMode = ref<'table' | 'cards'>('table')
 
 // Saved views (in-memory for now).
-type SavedView = { id: string; title: string; visibility: ViewVisibility }
+type SavedView = { id: string; title: string; visibility: ViewVisibility; mode: SavedViewMode }
 const savedViews = ref<SavedView[]>([])
 const selectedSavedViewId = ref<string | null>(null)
 
-function onSaveView(payload: { title: string; visibility: ViewVisibility }) {
-  const view: SavedView = { id: `v${Date.now()}`, title: payload.title, visibility: payload.visibility }
+function onSaveView(payload: { title: string; visibility: ViewVisibility; mode: SavedViewMode }) {
+  const view: SavedView = { id: `v${Date.now()}`, title: payload.title, visibility: payload.visibility, mode: payload.mode }
   savedViews.value = [...savedViews.value, view]
   selectedSavedViewId.value = view.id
+  // A saved view remembers its own layout — apply it when the view is created
+  // and when selected from the sidebar.
+  viewMode.value = view.mode === 'table' ? 'table' : 'cards'
   newViewOpen.value = false
 }
 function onSelectSavedView(id: string) {
   selectedSavedViewId.value = id
+  const v = savedViews.value.find(sv => sv.id === id)
+  if (v) viewMode.value = v.mode === 'table' ? 'table' : 'cards'
 }
 
 type ViewKey = 'all' | 'followed' | 'involved' | 'active' | 'archived' | 'draft' | 'closed'
@@ -185,18 +190,16 @@ const slotsLeft = 5
       @select-view="onSelectSavedView"
     />
 
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--brand-surface-white)] border-t border-[var(--brand-border)]">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--brand-surface-listview)] border-t border-[var(--brand-border)]">
       <!-- Page header bar: view name + slots + Add job. White bg + bottom line. -->
-      <div class="flex items-center gap-3 px-6 py-4 border-b border-[var(--brand-border-fade)]">
+      <div class="flex items-center gap-3 px-6 py-4 bg-white border-b border-[var(--brand-border-fade)]">
         <h1 class="text-[20px] font-bold text-[var(--brand-text)] tracking-tight flex-1 min-w-0 truncate">
           {{ activeViewName }}
         </h1>
-        <button
-          class="inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] bg-[var(--brand-status-pending-bg)] text-[var(--brand-status-pending-text)] text-[13px] font-semibold hover:brightness-95 transition"
-        >
-          <Zap class="w-3.5 h-3.5" stroke-width="2" />
+        <BrandButton variant="outline">
           {{ slotsLeft }} slots left
-        </button>
+          <ChevronDown class="w-3.5 h-3.5 ml-1.5 text-[var(--brand-text-quiet)]" stroke-width="1.8" />
+        </BrandButton>
         <BrandButton variant="primary-teal">
           <Plus class="w-4 h-4 mr-1" stroke-width="2.5" />
           Add job
@@ -270,13 +273,13 @@ const slotsLeft = 5
 
       <!-- Table — same chrome as CandidatesTable: sticky canvas header,
            column dividers, zebra rows, lime-tint hover/selected, drag-to-resize. -->
-      <div v-if="viewMode === 'table'" class="flex-1 overflow-auto px-6 pb-6">
+      <div v-if="viewMode === 'table'" class="flex-1 overflow-auto px-6 pt-4 pb-6 bg-[var(--brand-surface-listview)]">
         <BrandDataTable>
           <template #header>
             <TableHeader class="sticky top-0 z-10 bg-[var(--brand-canvas)]">
               <TableRow class="hover:bg-transparent border-b border-[var(--brand-border)]">
                 <TableHead
-                  v-for="col in (['title','status','cands','hired','dept','location','workmodel','tags'] as JobColumnKey[])"
+                  v-for="col in (['title','status','cands','hired','dept','location','workmodel','tags','manage'] as JobColumnKey[])"
                   v-show="isColVisible(col)"
                   :key="col"
                   class="relative text-[13px] font-semibold text-[var(--brand-text)] whitespace-nowrap border-r border-[var(--brand-border-fade)] last:border-r-0"
@@ -285,6 +288,7 @@ const slotsLeft = 5
                   {{ ({
                     title: 'Title', status: 'Status', cands: 'Candidates', hired: 'Hires',
                     dept: 'Department', location: 'Location', workmodel: 'Work model', tags: 'Tags',
+                    manage: 'Manage',
                   } as Record<JobColumnKey, string>)[col] }}
                   <div
                     class="absolute top-0 right-0 bottom-0 w-1.5 -mr-[3px] cursor-col-resize z-10 select-none"
@@ -359,12 +363,70 @@ const slotsLeft = 5
               <TableCell v-if="isColVisible('dept')"      class="align-top py-3 border-r border-[var(--brand-border-fade)] text-[13px] text-[var(--brand-text-muted)]" :style="widthStyle('dept')">{{ j.department ?? '—' }}</TableCell>
               <TableCell v-if="isColVisible('location')"  class="align-top py-3 border-r border-[var(--brand-border-fade)] text-[13px] text-[var(--brand-text-muted)]" :style="widthStyle('location')">{{ j.location ?? '—' }}</TableCell>
               <TableCell v-if="isColVisible('workmodel')" class="align-top py-3 border-r border-[var(--brand-border-fade)] text-[13px] text-[var(--brand-text-muted)]" :style="widthStyle('workmodel')">{{ WORK_MODEL_LABEL[j.workModel] }}</TableCell>
-              <TableCell v-if="isColVisible('tags')" class="align-top py-3" :style="widthStyle('tags')">
+              <TableCell v-if="isColVisible('tags')" class="align-top py-3 border-r border-[var(--brand-border-fade)]" :style="widthStyle('tags')">
                 <BrandStatusBadge
                   variant="solid"
                   :tone="j.collar === 'white' ? 'neutral' : 'pipeline-blue'"
                   :label="COLLAR_LABEL[j.collar]"
                 />
+              </TableCell>
+
+              <!-- Manage: Following · Cross-post · Edit · ⋯ menu.
+                   Same actions as the card view so both layouts feel identical. -->
+              <TableCell v-if="isColVisible('manage')" class="align-middle py-2" :style="widthStyle('manage')">
+                <div class="flex items-center gap-0.5">
+                  <button
+                    class="w-7 h-7 rounded-md flex items-center justify-center text-[var(--brand-status-approved-text)] hover:bg-[var(--brand-lime-tint)]/50 transition"
+                    title="Following"
+                  >
+                    <Bookmark class="w-3.5 h-3.5 fill-current" stroke-width="1.7" />
+                  </button>
+                  <button
+                    class="w-7 h-7 rounded-md flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)]/50 transition"
+                    title="Cross post"
+                  >
+                    <Megaphone class="w-3.5 h-3.5" stroke-width="1.7" />
+                  </button>
+                  <button
+                    class="w-7 h-7 rounded-md flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)]/50 transition"
+                    title="Edit"
+                  >
+                    <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <button
+                        class="w-7 h-7 rounded-md flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)]/50 transition"
+                        title="More"
+                        @click.stop
+                      >
+                        <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-[180px] p-1">
+                      <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                        <MessageSquare class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                        Go to notes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                        <Folder class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                        Go to files
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                        <Copy class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                        <Archive class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                        Archive
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer text-[var(--brand-danger)]">
+                        <Trash2 class="w-3.5 h-3.5" stroke-width="1.7" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </TableCell>
             </TableRow>
           </TableBody>
@@ -376,7 +438,7 @@ const slotsLeft = 5
       </div>
 
       <!-- Card view — each job as its own card, matching the Recruitee mock. -->
-      <div v-else class="flex-1 overflow-auto px-6 pb-6 flex flex-col gap-3">
+      <div v-else class="flex-1 overflow-auto px-6 pt-4 pb-6 flex flex-col gap-3 bg-[var(--brand-surface-listview)]">
         <article
           v-for="j in filteredJobs"
           :key="j.id"
@@ -389,7 +451,7 @@ const slotsLeft = 5
                 <h3 class="text-[16px] font-bold text-[var(--brand-text)]">{{ j.title }}</h3>
                 <span class="text-[11.5px] font-mono text-[var(--brand-text-quiet)] bg-[var(--brand-canvas)] px-1.5 py-0.5 rounded">#{{ j.id }}</span>
               </div>
-              <div class="mt-1.5 flex items-center gap-3 text-[13px] text-[var(--brand-text-muted)]">
+              <div class="mt-1.5 flex items-center gap-3 flex-wrap text-[13px] text-[var(--brand-text-muted)]">
                 <span v-if="j.location" class="inline-flex items-center gap-1">
                   <MapPin class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
                   {{ j.location }}
@@ -399,20 +461,44 @@ const slotsLeft = 5
                   <Globe class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
                   {{ WORK_MODEL_LABEL[j.workModel] }}
                 </span>
+                <span class="text-[var(--brand-text-faint)]">•</span>
+                <BrandStatusBadge
+                  variant="solid"
+                  :tone="j.collar === 'white' ? 'neutral' : 'pipeline-blue'"
+                  :label="COLLAR_LABEL[j.collar]"
+                />
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <button class="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[13px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]/50 transition">
                 <Megaphone class="w-3.5 h-3.5" stroke-width="1.8" />
-                Promote
+                Cross post
               </button>
               <button class="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[13px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]/50 transition">
                 <Pencil class="w-3.5 h-3.5" stroke-width="1.8" />
                 Edit
               </button>
-              <button class="w-8 h-8 rounded-[8px] flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)]/50 transition">
-                <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <button class="w-8 h-8 rounded-[8px] flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)]/50 transition">
+                    <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-[180px] p-1">
+                  <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                    <ExternalLink class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                    <Copy class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-2 text-[13.5px] cursor-pointer">
+                    <Archive class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                    Archive
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

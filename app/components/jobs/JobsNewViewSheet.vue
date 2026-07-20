@@ -2,21 +2,24 @@
   Inline "New view" panel — replaces the JobsFilters sidebar column while
   the user is creating a new saved view. Same rounded-tl white-card shell
   as JobsFilters so the swap is invisible outside the body content.
-  Ported from Recruitera Jobs Standalone.html #new-view-panel.
+  Layout: Title input → View mode (List / Table) → Visibility options →
+  Save / Cancel. Board mode omitted per product decision.
 -->
 <script setup lang="ts">
-import { Smile, Lock, Globe, Users, Check, ChevronDown } from 'lucide-vue-next'
+import { Smile, Lock, Globe, Users, Check, ChevronDown, Rows3, Columns3 } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 
 export type ViewVisibility = 'everyone' | 'selected' | 'me'
+export type ViewMode = 'list' | 'table'
 
 const emit = defineEmits<{
   cancel: []
-  save: [payload: { title: string; visibility: ViewVisibility }]
+  save: [payload: { title: string; visibility: ViewVisibility; mode: ViewMode }]
 }>()
 
 const title = ref('')
 const visibility = ref<ViewVisibility>('me')
+const mode = ref<ViewMode>('list')
 
 const VIS: { key: ViewVisibility; label: string; short: string; desc: string; icon: unknown }[] = [
   { key: 'everyone', label: 'Everyone at Recruitera', short: 'Visible to everyone',    desc: 'Visible to all team members',                icon: Globe },
@@ -24,15 +27,25 @@ const VIS: { key: ViewVisibility; label: string; short: string; desc: string; ic
   { key: 'me',       label: 'Only me',                short: 'Visible only to me',     desc: 'Visible only to you',                        icon: Lock },
 ]
 
+const MODES: { key: ViewMode; label: string; icon: unknown }[] = [
+  { key: 'list',  label: 'List',  icon: Rows3 },
+  { key: 'table', label: 'Table', icon: Columns3 },
+]
+
 const visSummary = computed(() => VIS.find(v => v.key === visibility.value)!)
 
 function reset() {
   title.value = ''
   visibility.value = 'me'
+  mode.value = 'list'
 }
 function onCancel() { reset(); emit('cancel') }
 function onSave() {
-  emit('save', { title: title.value.trim() || 'New view', visibility: visibility.value })
+  emit('save', {
+    title: title.value.trim() || 'New view',
+    visibility: visibility.value,
+    mode: mode.value,
+  })
   reset()
 }
 </script>
@@ -57,6 +70,22 @@ function onSave() {
           placeholder="Enter a view title"
           class="flex-1 bg-transparent outline-none text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)]"
         >
+      </div>
+
+      <!-- View mode (List / Table) -->
+      <div class="grid grid-cols-2 gap-2.5 mb-5">
+        <button
+          v-for="m in MODES"
+          :key="m.key"
+          class="flex flex-col items-center justify-center gap-1.5 py-3 rounded-[10px] border transition"
+          :class="mode === m.key
+            ? 'border-[var(--brand-teal)] bg-[var(--brand-lime-tint)] text-[var(--brand-olive)]'
+            : 'border-[var(--brand-border)] bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint)]/40'"
+          @click="mode = m.key"
+        >
+          <component :is="m.icon" class="w-4 h-4" stroke-width="1.8" />
+          <span class="text-[12.5px] font-semibold">{{ m.label }}</span>
+        </button>
       </div>
 
       <!-- Visibility -->

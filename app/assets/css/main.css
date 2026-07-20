@@ -54,6 +54,7 @@
   --brand-surface-badge: #f0f2ed;                 /* count badge, tag chips */
   --brand-surface-hover: #f2f4ee;                 /* subtle button hover */
   --brand-surface-table-alt: #f7f8f4;             /* table zebra row */
+  --brand-surface-listview: #f9fcfc;               /* jobs table + card list canvas */
 
   /* Text scale */
   --brand-text: #1a2b28;                          /* primary */
