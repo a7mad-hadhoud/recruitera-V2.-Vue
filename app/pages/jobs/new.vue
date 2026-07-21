@@ -32,6 +32,7 @@ import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
 import { BrandButton } from '~/components/brand'
 import { useDepartments } from '~/composables/useDepartments'
 import { useLocations } from '~/composables/useLocations'
+import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -582,6 +583,8 @@ function saveDraft() {
               </button>
             </div>
           </div>
+
+          <JobEditorApplicationTab v-else-if="activeNav === 'app'" />
 
           <div v-else class="max-w-[880px] mx-auto p-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
