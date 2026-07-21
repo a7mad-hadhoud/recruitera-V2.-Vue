@@ -178,15 +178,19 @@ const stageTabs = computed(() => [
   ...props.stages.map(s => ({ key: s.key, label: s.label, dot: s.dot, count: s.candidates.length })),
 ])
 
-/** For the LIST rows we only need light metadata; keep this synchronous. */
+/** For the LIST rows we prefer the card's own fixture metadata so EVERY
+ *  row shows headline / tags / source. If a card lacks those (real API
+ *  hasn't been polished yet), fall back to the fetched profile when it
+ *  happens to match this row's id. */
 function listMetaFor(id: string) {
-  // Cheap lookup — if the profile happens to be cached (recently selected)
-  // we can enrich the row. Otherwise a sparse row is fine.
+  const row = allRows.value.find(r => r.candidate.id === id)
+  const c = row?.candidate
   const p = profile.value?.id === id ? profile.value : null
   return {
-    headline: p?.cv?.title ?? p?.jobs[0]?.title,
-    tags: p?.tags,
-    source: p?.source,
+    headline:  c?.headline  ?? p?.cv?.title ?? p?.jobs[0]?.title,
+    tags:      c?.tags      ?? p?.tags,
+    source:    c?.source    ?? p?.source,
+    createdAt: c?.createdAt,
   }
 }
 </script>
@@ -312,8 +316,8 @@ function listMetaFor(id: string) {
               :headline="listMetaFor(row.candidate.id).headline"
               :tags="listMetaFor(row.candidate.id).tags"
               :source="listMetaFor(row.candidate.id).source"
-              :created-at="'3 months ago'"
-              :online="row.candidate.isNew ?? false"
+              :created-at="listMetaFor(row.candidate.id).createdAt"
+              :online="true"
               :selected="row.candidate.id === selectedCandidateId"
               :checked="props.selected.has(row.candidate.id)"
               @select="selectedCandidateId = $event"

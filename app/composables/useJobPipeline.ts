@@ -89,16 +89,22 @@ const STAGE_DOT: Record<JobStageDot, string> = {
 const DEMO_STAGES: PipelineStage[] = [
   { key: 'sourced',   label: 'Sourced',         dot: STAGE_DOT.sourced,   candidates: [] },
   { key: 'applied',   label: 'Applied',         dot: STAGE_DOT.applied,   candidates: [
-    { id: '17', name: 'John Doe (Sample)',        initials: 'JD', avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',   aiScore: 88, notes: 1, replies: 2, location: 'Amsterdam', isNew: true },
-    { id: '5',  name: 'Mikel Lang (Sample)',      initials: 'ML', avatarUrl: 'https://randomuser.me/api/portraits/men/44.jpg',   aiScore: 75, notes: 1, replies: 2, location: 'Berlin' },
-    { id: '4',  name: 'Kendall McClure (Sample)', initials: 'KM', avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg', aiScore: 71, notes: 1, replies: 2, location: 'Amsterdam' },
+    { id: '17', name: 'John Doe (Sample)',         initials: 'JD', avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',   aiScore: 88, notes: 1, replies: 2, location: 'Amsterdam', isNew: true,
+      headline: 'Senior Marketer', tags: ['sample', 'senior', 'growth'], source: 'indeed.com', createdAt: '3 months ago' },
+    { id: '5',  name: 'Mikel Lang (Sample)',       initials: 'ML', avatarUrl: 'https://randomuser.me/api/portraits/men/44.jpg',   aiScore: 75, notes: 1, replies: 2, location: 'Berlin',
+      headline: 'Backend Engineer', tags: ['nodejs', 'postgres', 'mid_level'], source: 'linkedin.com', createdAt: '3 months ago' },
+    { id: '4',  name: 'Kendall McClure (Sample)',  initials: 'KM', avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg', aiScore: 71, notes: 1, replies: 2, location: 'Amsterdam',
+      headline: 'Account Executive', tags: ['sample', 'junior', 'sales'], source: 'careers page', createdAt: '3 months ago' },
   ]},
   { key: 'phone',     label: 'Phone interview', dot: STAGE_DOT.phone,     candidates: [
-    { id: '12', name: 'Mariela Vasquez (Sample)', initials: 'MV', avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg', aiScore: 62, notes: 1, replies: 2, location: 'Amsterdam' },
-    { id: '8',  name: 'Wilma Roelendsen (Sample)', initials: 'WR', avatarUrl: 'https://randomuser.me/api/portraits/women/45.jpg', aiScore: 71, notes: 0, replies: 1, location: 'Berlin' },
+    { id: '12', name: 'Mariela Vasquez (Sample)',  initials: 'MV', avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg', aiScore: 62, notes: 1, replies: 2, location: 'Amsterdam',
+      headline: 'Senior Marketer', tags: ['sample', 'senior', 'digital'], source: 'careers site', createdAt: '3 months ago' },
+    { id: '8',  name: 'Wilma Roelendsen (Sample)', initials: 'WR', avatarUrl: 'https://randomuser.me/api/portraits/women/45.jpg', aiScore: 71, notes: 0, replies: 1, location: 'Berlin',
+      headline: 'Recruiter', tags: ['sample', 'mid_level', 'people_ops'], source: 'indeed.com', createdAt: '3 months ago' },
   ]},
   { key: 'interview', label: 'Interview',       dot: STAGE_DOT.interview, candidates: [
-    { id: '11', name: 'Kevin Hernandez (Sample)', initials: 'KH', avatarUrl: 'https://randomuser.me/api/portraits/men/73.jpg', aiScore: 82, notes: 3, replies: 4, location: 'Amsterdam' },
+    { id: '11', name: 'Kevin Hernandez (Sample)',  initials: 'KH', avatarUrl: 'https://randomuser.me/api/portraits/men/73.jpg',   aiScore: 82, notes: 3, replies: 4, location: 'Amsterdam',
+      headline: 'Senior Marketer', tags: ['sample', 'senior', 'brand'], source: 'resume sent', createdAt: '3 months ago' },
   ]},
   { key: 'offer',     label: 'Offer',           dot: STAGE_DOT.offer,     candidates: [] },
   { key: 'hired',     label: 'Hired',           dot: STAGE_DOT.hired,     candidates: [] },
