@@ -36,6 +36,7 @@ import CandidatesEmptyState from '~/components/candidates/CandidatesEmptyState.v
 import CandidatesPerPage from '~/components/candidates/CandidatesPerPage.vue'
 import CandidatesFilters from '~/components/candidates/CandidatesFilters.vue'
 import CandidatePipelineCard from '~/components/jobs/CandidatePipelineCard.vue'
+import PipelineScreeningView from '~/components/jobs/pipeline/PipelineScreeningView.vue'
 import ErrorBoundary from '~/components/ErrorBoundary.vue'
 import { BrandPageTitle, BrandSearchBar } from '~/components/brand'
 import { useJobs } from '~/composables/useJobs'
@@ -44,7 +45,7 @@ import { useJobActivity, type JobActivityKind } from '~/composables/useJobActivi
 import { useJobNotes, type NoteVisibility } from '~/composables/useJobNotes'
 import { useJobReferrals, REFERRAL_SOURCE_TAGS } from '~/composables/useJobReferrals'
 import { useCandidates } from '~/composables/useCandidates'
-import { refDebounced } from '@vueuse/core'
+import { refDebounced, useLocalStorage } from '@vueuse/core'
 import type { Job, PipelineStage } from '~/types'
 
 definePageMeta({ layout: 'default' })
@@ -122,12 +123,17 @@ const WORK_MODEL_LABEL: Record<Job['workModel'], string> = {
   hybrid:    'Hybrid',
 }
 
-const TABS = ['Pipeline', 'Filters', 'Activity', 'Notes', 'Referral', 'SEO', 'Reports'] as const
+const TABS = ['Pipeline', 'Filters', 'Activity', 'Notes', 'Referral', 'Reports'] as const
 type Tab = typeof TABS[number]
 const activeTab = ref<Tab>('Pipeline')
 
 const segment = ref<'qual' | 'disq'>('qual')
 const myOn     = ref(true)
+
+// Pipeline sub-view: kanban board (default) vs Recruitee-style 3-pane
+// screening view. Persist per-job so a recruiter's preferred workflow
+// on a specific job survives reloads.
+const pipelineViewMode = useLocalStorage<'kanban' | 'screening'>(`pipeline-view-mode:${jobId.value}`, 'kanban')
 
 // Activity tab — segmented control + kind→icon mapping. See useJobActivity.ts.
 const { grouped: activityGroups } = useJobActivity(jobId.value)
@@ -544,9 +550,37 @@ function clearSelection() { selectedIds.value = new Set() }
             <button class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] transition" aria-label="Sort candidates">
               <ArrowUpDown class="w-4 h-4" stroke-width="1.5" />
             </button>
-            <button class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] transition" aria-label="Change view">
-              <Kanban class="w-4 h-4" stroke-width="1.5" />
-            </button>
+            <!-- Kanban ⇆ Screening view-mode toggle (Recruitee-style).
+                 Same segmented visuals as Qualified/Disqualified above,
+                 so the sub-toolbar reads as a coherent row. -->
+            <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-9" role="tablist" aria-label="Pipeline view mode">
+              <button
+                role="tab"
+                :aria-selected="pipelineViewMode === 'kanban'"
+                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
+                :class="pipelineViewMode === 'kanban'
+                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
+                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                aria-label="Kanban view"
+                @click="pipelineViewMode = 'kanban'"
+              >
+                <Kanban class="w-3.5 h-3.5" stroke-width="1.8" />
+                Kanban
+              </button>
+              <button
+                role="tab"
+                :aria-selected="pipelineViewMode === 'screening'"
+                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
+                :class="pipelineViewMode === 'screening'
+                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
+                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                aria-label="Screening view"
+                @click="pipelineViewMode = 'screening'"
+              >
+                <Users class="w-3.5 h-3.5" stroke-width="1.8" />
+                Screening
+              </button>
+            </div>
           </div>
         </div>
 
@@ -557,8 +591,8 @@ function clearSelection() { selectedIds.value = new Set() }
           {{ moveAnnouncement }}
         </div>
 
-        <!-- ─────────── PIPELINE BOARD ─────────── -->
-        <div v-if="activeTab === 'Pipeline'" class="flex-1 min-h-0 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 items-stretch">
+        <!-- ─────────── PIPELINE BOARD (kanban view) ─────────── -->
+        <div v-if="activeTab === 'Pipeline' && pipelineViewMode === 'kanban'" class="flex-1 min-h-0 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 items-stretch">
 
           <!-- Collapsed rail — 40px, rotated label + dot + count -->
           <template v-for="stage in stages" :key="stage.key">
@@ -692,6 +726,16 @@ function clearSelection() { selectedIds.value = new Set() }
             </section>
           </template>
         </div>
+
+        <!-- ─────────── PIPELINE — SCREENING VIEW (3-pane) ─────────── -->
+        <PipelineScreeningView
+          v-else-if="activeTab === 'Pipeline' && pipelineViewMode === 'screening'"
+          :stages="stages"
+          :selected="selectedIds"
+          @toggle-select="toggleCandidate"
+          @move="(id, from, to) => onMove(id, from, to)"
+          @open-full="(id) => navigateTo(`/candidates/${id}`)"
+        />
 
         <!-- ─────────── FILTERS TAB — candidates scoped to this job ─────────── -->
         <!-- Same shell as /candidates/index.vue: CandidatesFilters sidebar
