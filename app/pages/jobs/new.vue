@@ -35,6 +35,7 @@ import { useLocations } from '~/composables/useLocations'
 import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.vue'
 import JobEditorTeamTab from '~/components/jobs/JobEditorTeamTab.vue'
 import JobEditorSocialSharingTab from '~/components/jobs/JobEditorSocialSharingTab.vue'
+import JobEditorCrossPostingTab from '~/components/jobs/JobEditorCrossPostingTab.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -591,6 +592,8 @@ function saveDraft() {
           <JobEditorTeamTab v-else-if="activeNav === 'team'" />
 
           <JobEditorSocialSharingTab v-else-if="activeNav === 'social'" :job-title="jobTitle" />
+
+          <JobEditorCrossPostingTab v-else-if="activeNav === 'cross'" />
 
           <div v-else class="max-w-[880px] mx-auto p-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
