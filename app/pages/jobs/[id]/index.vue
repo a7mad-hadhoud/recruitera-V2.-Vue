@@ -491,9 +491,10 @@ function clearSelection() { selectedIds.value = new Set() }
                 • unselected pill = transparent + muted text
                 • BOTH count badges get the SAME --brand-canvas bg + secondary text
                   (matches the reference — no darker bg on the inactive one).
-                Only shown for KANBAN view — in Screening mode this pill
-                lives inside the candidate-list column (see PipelineScreeningView). -->
-          <template v-else-if="pipelineViewMode === 'kanban'">
+                Shown in BOTH Kanban and Screening (was gated to Kanban;
+                restored per Wuzzuf-parity feedback — this pill is the
+                top-level qualification split, not a per-view filter). -->
+          <template v-else>
             <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-[37px]">
               <button
                 class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"
@@ -734,8 +735,6 @@ function clearSelection() { selectedIds.value = new Set() }
           v-else-if="activeTab === 'Pipeline' && pipelineViewMode === 'screening'"
           :stages="stages"
           :selected="selectedIds"
-          :qualified-count="qualifiedCount"
-          :disqualified-count="disqualifiedCount"
           @toggle-select="toggleCandidate"
           @move="(id, from, to) => onMove(id, from, to)"
           @open-full="(id) => navigateTo(`/candidates/${id}`)"

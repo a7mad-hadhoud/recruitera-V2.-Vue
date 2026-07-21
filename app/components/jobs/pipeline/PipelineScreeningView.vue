@@ -25,8 +25,6 @@ import ScreeningProfilePane from './ScreeningProfilePane.vue'
 const props = defineProps<{
   stages: PipelineStage[]
   selected: Set<string>
-  qualifiedCount: number
-  disqualifiedCount: number
 }>()
 
 const emit = defineEmits<{
@@ -39,7 +37,6 @@ const activeStageKey = ref<string>('all')
 const selectedCandidateId = ref<string | null>(null)
 const searchText = ref('')
 const listCollapsed = ref(false)
-const segment = ref<'qual' | 'disq'>('qual')
 
 // Keyboard-hint dismissal persists so power users don't see it again.
 // `1` = dismissed. Guard rendering off it AND require a selected candidate.
@@ -185,12 +182,12 @@ function listMetaFor(id: string) {
         class="border-r border-[var(--brand-border-fade)] flex flex-col min-h-0 bg-white transition-[width]"
         :class="listCollapsed ? 'w-[52px]' : 'w-[340px]'"
       >
-        <!-- List column header — collapse toggle + Qualified/Disqualified
-             segmented (moved here from the page-level sub-toolbar to match
-             the Recruitee/Wuzzuf reference where these tabs live above the
-             search inside the candidate list). -->
+        <!-- List column header. Qualified/Disqualified used to live here
+             but the top-level pill in the sub-toolbar is the source of
+             truth (Wuzzuf parity), so this header is now just: collapse
+             toggle + search + filter popover. -->
         <div v-if="!listCollapsed" class="border-b border-[var(--brand-border-fade)]">
-          <div class="flex items-center gap-2 px-3 pt-3">
+          <div class="flex items-center gap-2 px-3 py-3">
             <button
               class="w-8 h-8 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
               aria-label="Collapse candidate list"
@@ -198,35 +195,6 @@ function listMetaFor(id: string) {
             >
               <PanelLeftClose class="w-4 h-4" stroke-width="1.8" />
             </button>
-            <div role="tablist" class="flex-1 inline-flex items-center bg-[var(--brand-canvas)] rounded-[8px] p-[2px] h-[30px]">
-              <button
-                role="tab"
-                :aria-selected="segment === 'qual'"
-                class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-[6px] h-[26px] text-[12.5px] font-bold transition"
-                :class="segment === 'qual'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
-                @click="segment = 'qual'"
-              >
-                Qualified
-                <span class="text-[10.5px] font-bold rounded px-1.5 tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]">{{ props.qualifiedCount }}</span>
-              </button>
-              <button
-                role="tab"
-                :aria-selected="segment === 'disq'"
-                class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-[6px] h-[26px] text-[12.5px] font-bold transition"
-                :class="segment === 'disq'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
-                @click="segment = 'disq'"
-              >
-                Disqualified
-                <span class="text-[10.5px] font-bold rounded px-1.5 tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]">{{ props.disqualifiedCount }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 px-3 py-3">
             <div class="relative flex-1">
               <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--brand-text-quiet)]" stroke-width="2" />
               <input

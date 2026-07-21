@@ -45,10 +45,13 @@ function onKey(e: KeyboardEvent) {
 </script>
 
 <template>
+  <!-- Wuzzuf/Workable-style stage bar: full-width row, clean text labels
+       with a right-aligned count. Active tab = solid dark pill; others are
+       plain text (no colored dot). Scrolls horizontally when narrow. -->
   <div
     role="tablist"
     aria-label="Pipeline stages"
-    class="flex items-center gap-2 overflow-x-auto no-scrollbar px-4 py-3 border-b border-[var(--brand-border-fade)] bg-white"
+    class="flex items-center gap-1 overflow-x-auto no-scrollbar px-2 py-3 border-b border-[var(--brand-border-fade)] bg-white"
     @keydown="onKey"
   >
     <button
@@ -57,19 +60,15 @@ function onKey(e: KeyboardEvent) {
       role="tab"
       :aria-selected="tab.key === props.activeKey"
       :tabindex="tab.key === props.activeKey ? 0 : -1"
-      class="group inline-flex items-center gap-2 shrink-0 rounded-[10px] h-9 px-3 text-[13px] font-bold transition"
+      class="group inline-flex items-center gap-2 shrink-0 rounded-[8px] h-9 px-4 text-[14px] font-bold transition"
       :class="tab.key === props.activeKey
-        ? 'bg-[var(--brand-teal)] text-white shadow-[0_1px_2px_rgba(0,20,18,0.15)]'
-        : 'bg-transparent text-[var(--brand-text-subtle)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-text)]'"
+        ? 'bg-[var(--brand-text)] text-white'
+        : 'bg-transparent text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]'"
       @click="emit('update:activeKey', tab.key)"
     >
-      <span
-        class="w-1.5 h-1.5 rounded-full shrink-0"
-        :style="{ background: tab.key === props.activeKey ? 'var(--brand-lime)' : tab.dot }"
-      />
       <span>{{ tab.label }}</span>
       <span
-        class="text-[11px] font-bold rounded-md px-[6px] py-px tabular-nums"
+        class="text-[11.5px] font-bold rounded-md px-[7px] py-px tabular-nums"
         :class="tab.key === props.activeKey
           ? 'bg-white/15 text-white'
           : 'bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]'"
