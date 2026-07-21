@@ -190,16 +190,6 @@ function listMetaFor(id: string) {
 
 <template>
   <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
-    <!-- Full-width stage bar at the top (sc2 layout). Active tab = solid
-         dark filled pill; others plain text with counts. Tabs distribute
-         evenly across the row via justify-between inside the component. -->
-    <ScreeningStageBar
-      :stages="props.stages"
-      :active-key="activeStageKey"
-      :total-count="totalCount"
-      @update:active-key="activeStageKey = $event"
-    />
-
     <div class="flex-1 min-h-0 flex overflow-hidden">
       <!-- LIST COLUMN -->
       <aside
@@ -241,6 +231,15 @@ function listMetaFor(id: string) {
             />
           </div>
 
+          <!-- Stage bar under the search row (sc1 location, sc2 design):
+               large text tabs with count badges; active = solid dark
+               filled pill. Scrolls horizontally inside the list column. -->
+          <ScreeningStageBar
+            :stages="props.stages"
+            :active-key="activeStageKey"
+            :total-count="totalCount"
+            @update:active-key="activeStageKey = $event"
+          />
         </div>
 
         <!-- Collapsed rail (matches kanban's collapsed column) -->
