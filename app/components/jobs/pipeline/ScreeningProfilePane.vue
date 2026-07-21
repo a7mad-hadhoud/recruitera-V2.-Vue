@@ -110,7 +110,7 @@ const effectiveProfileFields = computed(() => ({
            (r=14) with vertical dividers between semantic groups and the
            Move-to CTA as a solid teal tail-cap. Reference sc2: single
            connected pill, teal Move button rides the right end. -->
-      <div class="sticky top-0 z-20 flex justify-center px-6 pt-4 pb-3">
+      <div class="sticky top-0 z-20 flex justify-end px-6 pt-4 pb-3">
         <div class="inline-flex items-stretch h-11 rounded-[14px] bg-white shadow-[0_1px_3px_rgba(0,20,18,0.10),0_8px_24px_rgba(0,20,18,0.10)] border border-[var(--brand-border-fade)] overflow-hidden">
           <!-- Overflow menu -->
           <DropdownMenu>
