@@ -47,11 +47,12 @@ function onKey(e: KeyboardEvent) {
 <template>
   <!-- Wuzzuf/Workable-style stage bar: full-width row, clean text labels
        with a right-aligned count. Active tab = solid dark pill; others are
-       plain text (no colored dot). Scrolls horizontally when narrow. -->
+       plain text (no colored dot). Tabs distribute evenly across the full
+       width (justify-between); at narrow widths the row scrolls. -->
   <div
     role="tablist"
     aria-label="Pipeline stages"
-    class="flex items-center gap-1 overflow-x-auto no-scrollbar px-2 py-3 border-b border-[var(--brand-border-fade)] bg-white"
+    class="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar px-4 py-3 border-b border-[var(--brand-border-fade)] bg-white"
     @keydown="onKey"
   >
     <button
