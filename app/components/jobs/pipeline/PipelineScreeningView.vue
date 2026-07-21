@@ -18,7 +18,6 @@ import type { PipelineStage } from '~/types'
 import { useCandidateProfile } from '~/composables/useCandidates'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { useLocalStorage } from '@vueuse/core'
-import ScreeningStageBar    from './ScreeningStageBar.vue'
 import ScreeningCandidateRow from './ScreeningCandidateRow.vue'
 import ScreeningProfilePane from './ScreeningProfilePane.vue'
 
@@ -157,8 +156,26 @@ const profileForPane = computed(() => {
   const summary = p.cv?.summary
   const answers = p.screeningQuestions.map(q => ({ q: q.question, a: q.answer }))
   const contact = { location: p.location, phone: p.phone, email: p.email }
-  return { headline, tags, source, summary, answers, contact }
+  const cv = p.cv ? {
+    contactLine: p.cv.contactLine,
+    experience: p.cv.experience?.map(e => ({
+      role: e.role,
+      company: e.company,
+      period: e.period,
+      description: e.description,
+    })),
+    skills: p.cv.skills,
+  } : null
+  return { headline, tags, source, summary, answers, contact, cv }
 })
+
+/** Stage tabs shown INSIDE the list column (mockup structure). "All" tab
+ *  first, then one per stage with dot color + count. Empty stages get
+ *  visually dimmed (opacity) so recruiters focus on stages with volume. */
+const stageTabs = computed(() => [
+  { key: 'all', label: 'All', dot: 'var(--brand-text-quiet)', count: totalCount.value },
+  ...props.stages.map(s => ({ key: s.key, label: s.label, dot: s.dot, count: s.candidates.length })),
+])
 
 /** For the LIST rows we only need light metadata; keep this synchronous. */
 function listMetaFor(id: string) {
@@ -175,63 +192,16 @@ function listMetaFor(id: string) {
 
 <template>
   <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
-    <ScreeningStageBar
-      :stages="props.stages"
-      :active-key="activeStageKey"
-      :total-count="totalCount"
-      @update:active-key="activeStageKey = $event"
-    />
-
     <div class="flex-1 min-h-0 flex overflow-hidden">
       <!-- LIST COLUMN -->
       <aside
-        class="border-r border-[var(--brand-border-fade)] flex flex-col min-h-0 transition-[width]"
-        :class="listCollapsed ? 'w-[52px] bg-white' : 'w-[340px] bg-[var(--brand-canvas)]'"
+        class="border-r border-[var(--brand-border-fade)] flex flex-col min-h-0 bg-white transition-[width]"
+        :class="listCollapsed ? 'w-[52px]' : 'w-[340px]'"
       >
-        <!-- Folder tabs — Qualified / Disqualified. Active tab is the
-             elevated white "folder" that flows into the list content
-             below; the inactive tab is recessed on the same canvas as
-             the list card's surrounding background. Matches sc2/sc3. -->
-        <div v-if="!listCollapsed" role="tablist" class="flex items-end gap-0 shrink-0 pt-1">
-          <button
-            role="tab"
-            :aria-selected="segment === 'qual'"
-            class="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-bold transition"
-            :class="segment === 'qual'
-              ? 'bg-white text-[var(--brand-text)] rounded-t-[14px] h-[46px] shadow-[0_-1px_0_var(--brand-border-fade)]'
-              : 'bg-[color-mix(in_srgb,var(--brand-lime-tint)_60%,white)] text-[var(--brand-text-subtle)] rounded-t-[12px] h-10 hover:text-[var(--brand-text)]'"
-            @click="segment = 'qual'"
-          >
-            Qualified
-            <span
-              class="text-[11.5px] font-bold rounded-md px-[7px] py-px tabular-nums"
-              :class="segment === 'qual'
-                ? 'bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]'
-                : 'bg-white/60 text-[var(--brand-text-quiet)]'"
-            >{{ props.qualifiedCount }}</span>
-          </button>
-          <button
-            role="tab"
-            :aria-selected="segment === 'disq'"
-            class="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-bold transition"
-            :class="segment === 'disq'
-              ? 'bg-white text-[var(--brand-text)] rounded-t-[14px] h-[46px] shadow-[0_-1px_0_var(--brand-border-fade)]'
-              : 'bg-[color-mix(in_srgb,var(--brand-lime-tint)_60%,white)] text-[var(--brand-text-subtle)] rounded-t-[12px] h-10 hover:text-[var(--brand-text)]'"
-            @click="segment = 'disq'"
-          >
-            Disqualified
-            <span
-              class="text-[11.5px] font-bold rounded-md px-[7px] py-px tabular-nums"
-              :class="segment === 'disq'
-                ? 'bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]'
-                : 'bg-white/60 text-[var(--brand-text-quiet)]'"
-            >{{ props.disqualifiedCount }}</span>
-          </button>
-        </div>
-
-        <!-- List column header (below folder tabs). Just: collapse toggle,
-             search, filter popover. -->
-        <div v-if="!listCollapsed" class="bg-white border-b border-[var(--brand-border-fade)]">
+        <!-- List column header — search + filter popover.
+             (Qualified/Disqualified moved back to the page-level pill;
+             stage bar sits below this header, inside the list column.) -->
+        <div v-if="!listCollapsed" class="border-b border-[var(--brand-border-fade)]">
           <div class="flex items-center gap-2 px-3 py-3">
             <button
               class="w-8 h-8 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
@@ -308,6 +278,29 @@ function listMetaFor(id: string) {
               </PopoverContent>
             </Popover>
           </div>
+
+          <!-- Stage bar inside the list column (mockup structure). Small
+               pill buttons; active = dark teal + lime text; empty stages
+               dimmed. Scrolls horizontally on narrow widths. -->
+          <div class="flex items-center gap-1 px-3 pb-3 overflow-x-auto no-scrollbar">
+            <button
+              v-for="tab in stageTabs"
+              :key="tab.key"
+              role="tab"
+              :aria-selected="tab.key === activeStageKey"
+              class="inline-flex items-center gap-1.5 shrink-0 rounded-full h-7 px-3 text-[12px] font-bold border transition"
+              :class="[
+                tab.key === activeStageKey
+                  ? 'bg-[var(--brand-teal)] text-[var(--brand-lime)] border-[var(--brand-teal)]'
+                  : 'bg-white text-[var(--brand-text-secondary)] border-[var(--brand-border-fade)] hover:text-[var(--brand-text)]',
+                tab.count === 0 && tab.key !== activeStageKey ? 'opacity-45' : '',
+              ]"
+              @click="activeStageKey = tab.key"
+            >
+              <span>{{ tab.label }}</span>
+              <span class="tabular-nums opacity-80">{{ tab.count }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- Collapsed rail (matches kanban's collapsed column) -->
@@ -327,10 +320,8 @@ function listMetaFor(id: string) {
               v-for="row in filteredRows"
               :key="row.candidate.id"
               :candidate="row.candidate"
-              :headline="listMetaFor(row.candidate.id).headline"
-              :tags="listMetaFor(row.candidate.id).tags"
-              :source="listMetaFor(row.candidate.id).source"
-              :created-at="'3 months ago'"
+              :stage-dot="row.stage.dot"
+              :stage-label="row.stage.label"
               :selected="row.candidate.id === selectedCandidateId"
               :checked="props.selected.has(row.candidate.id)"
               @select="selectedCandidateId = $event"
@@ -357,6 +348,7 @@ function listMetaFor(id: string) {
             :summary="profileForPane.summary"
             :answers="profileForPane.answers"
             :contact="profileForPane.contact ?? { location: selectedRow.candidate.location ?? undefined }"
+            :cv="profileForPane.cv"
             @move="(id, from, to) => emit('move', id, from, to)"
             @disqualify="(id) => emit('move', id, selectedRow!.stage.key, 'rejected')"
             @open-full="(id) => emit('open-full', id)"

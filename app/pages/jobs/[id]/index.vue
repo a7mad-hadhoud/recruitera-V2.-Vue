@@ -485,11 +485,10 @@ function clearSelection() { selectedIds.value = new Set() }
             </button>
           </template>
 
-          <!-- Segmented Qualified/Disqualified. Kanban only — Screening
-                view renders these as FOLDER TABS at the top of the list
-                column (see PipelineScreeningView) so they read as scoping
-                the visible list rather than the whole page. -->
-          <template v-else-if="pipelineViewMode === 'kanban'">
+          <!-- Segmented Qualified/Disqualified. Shown in BOTH Kanban and
+                Screening — mockup keeps this compact pill at the top of
+                the sub-toolbar for both views. -->
+          <template v-else>
             <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-[37px]">
               <button
                 class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"

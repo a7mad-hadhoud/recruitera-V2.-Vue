@@ -27,6 +27,14 @@ const props = defineProps<{
   summary?: string
   answers?: Array<{ q: string; a: string }>
   contact?: { location?: string; phone?: string; email?: string }
+  /** Optional CV/resume structured content (mockup structure). If provided,
+   *  we render experience + skills inline in the Resume section instead of
+   *  the placeholder box. */
+  cv?: {
+    contactLine?: string
+    experience?: Array<{ role: string; company: string; period: string; description?: string }>
+    skills?: string[]
+  } | null
 }>()
 
 const emit = defineEmits<{
@@ -183,6 +191,13 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
           </button>
         </div>
       </div>
+
+      <!-- AI SCORE badge — large lime tile pinned top-right of the header,
+           mirrors the mockup. -->
+      <div class="shrink-0 text-center rounded-[10px] bg-[var(--brand-lime)] px-3.5 py-1.5">
+        <div class="text-[9.5px] font-bold tracking-[0.08em] text-[var(--brand-teal)]">AI SCORE</div>
+        <div class="text-[22px] font-bold text-[var(--brand-teal)] leading-tight tabular-nums">{{ props.candidate.aiScore }}%</div>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -222,15 +237,39 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
 
         <section class="mb-6">
           <h3 class="text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-2">Resume</h3>
-          <div class="border border-dashed border-[var(--brand-border)] rounded-[10px] p-8 text-center">
-            <div class="text-[13px] text-[var(--brand-text-quiet)]">Resume preview loads here</div>
-            <button
-              class="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition"
-              @click="emit('open-full', props.candidate.id)"
-            >
-              View full profile
-              <ArrowRight class="w-3.5 h-3.5" stroke-width="2" />
-            </button>
+          <div class="border border-[var(--brand-border-fade)] rounded-[10px] p-5 bg-white">
+            <div class="text-[15px] font-bold text-[var(--brand-text)]">{{ props.candidate.name }}</div>
+            <div v-if="props.cv?.contactLine || props.contact?.email"
+                 class="text-[12px] text-[var(--brand-text-secondary)] mt-0.5">
+              {{ props.cv?.contactLine ?? [props.headline, props.contact?.email, props.contact?.phone].filter(Boolean).join(' · ') }}
+            </div>
+
+            <div class="h-px bg-[var(--brand-border-fade)] my-4" />
+
+            <div class="text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-secondary)] mb-2">Experience</div>
+            <template v-if="props.cv?.experience?.length">
+              <div v-for="(exp, i) in props.cv.experience" :key="i" class="mb-3.5 last:mb-0">
+                <div class="text-[13px] font-bold text-[var(--brand-text)]">{{ exp.role }} — {{ exp.company }}</div>
+                <div class="text-[11.5px] text-[var(--brand-text-quiet)] mt-0.5">{{ exp.period }}</div>
+                <div v-if="exp.description" class="text-[12.5px] text-[var(--brand-text-secondary)] leading-relaxed mt-1">
+                  {{ exp.description }}
+                </div>
+              </div>
+            </template>
+            <div v-else class="text-[12.5px] text-[var(--brand-text-quiet)]">
+              No experience on file yet.
+              <button
+                class="ml-1 text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] font-semibold transition"
+                @click="emit('open-full', props.candidate.id)"
+              >View full profile →</button>
+            </div>
+
+            <template v-if="props.cv?.skills?.length">
+              <div class="text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-secondary)] mt-4 mb-2">Skills</div>
+              <div class="text-[12.5px] text-[var(--brand-text-secondary)]">
+                {{ props.cv.skills.join(' · ') }}
+              </div>
+            </template>
           </div>
         </section>
       </template>
