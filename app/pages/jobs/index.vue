@@ -64,12 +64,19 @@ const newViewOpen = ref(false)
 // Table vs card view mode — persisted so the choice sticks across visits.
 const viewMode = useLocalStorage<'table' | 'cards'>('recruitera:jobs:view-mode', 'table')
 
-// Add-job modal — two-step chooser (template ↔ blank). Payload lands
-// here today via console; wire to POST /api/jobs when the API is ready.
+// Add-job modal — two-step chooser (template ↔ blank). Submitting the
+// modal routes into /jobs/new pre-filled from query params; the editor
+// page owns creation via POST /api/jobs when the endpoint lands.
 const addJobOpen = ref(false)
-function onCreateJob(payload: AddJobPayload) {
-  // eslint-disable-next-line no-console
-  console.info('[jobs] create-job payload', payload)
+async function onCreateJob(payload: AddJobPayload) {
+  const query: Record<string, string> = {}
+  if (payload.source === 'blank') {
+    if (payload.title)  query.title = payload.title
+    if (payload.collar) query.collar = payload.collar
+  } else if (payload.source === 'template' && payload.templateId) {
+    query.template = payload.templateId
+  }
+  await navigateTo({ path: '/jobs/new', query })
 }
 
 // Saved views (in-memory for now).
