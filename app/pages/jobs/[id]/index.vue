@@ -525,8 +525,11 @@ function clearSelection() { selectedIds.value = new Set() }
 
           <span class="flex-1" />
 
-          <!-- Scope toggles + Add candidates -->
-          <div class="inline-flex items-center gap-4 mr-3">
+          <!-- Scope toggles + Add candidates — KANBAN ONLY.
+               In Screening view these controls move into the list column
+               (search, filter popover, per-row bulk actions), so the
+               top-level sub-toolbar stays clean. -->
+          <div v-if="pipelineViewMode === 'kanban'" class="inline-flex items-center gap-4 mr-3">
             <label class="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap">
               <span class="relative inline-flex w-[34px] h-5 rounded-full transition-colors" :style="{ background: myOn ? 'var(--brand-teal)' : 'var(--brand-border)' }">
                 <span class="absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-[0_1px_2px_rgba(0,20,18,0.25)] transition-[left]" :style="{ left: myOn ? '16px' : '2px' }" />
@@ -546,11 +549,12 @@ function clearSelection() { selectedIds.value = new Set() }
 
           <!-- Shared Add-candidates flow (same component as /candidates).
                preselectedJobId pre-checks THIS job in Step 3's Assign list
-               so the user knows the candidate will land in this pipeline. -->
-          <AddCandidatesModal :preselected-job-id="jobId" />
+               so the user knows the candidate will land in this pipeline.
+               Kanban only — Screening uses its own list-scoped affordances. -->
+          <AddCandidatesModal v-if="pipelineViewMode === 'kanban'" :preselected-job-id="jobId" />
 
           <div class="inline-flex items-center gap-1.5">
-            <button class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] transition" aria-label="Sort candidates">
+            <button v-if="pipelineViewMode === 'kanban'" class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] transition" aria-label="Sort candidates">
               <ArrowUpDown class="w-4 h-4" stroke-width="1.5" />
             </button>
             <!-- Kanban ⇆ Screening view-mode toggle (Recruitee-style).
