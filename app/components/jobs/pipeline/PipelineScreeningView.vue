@@ -18,6 +18,7 @@ import type { PipelineStage } from '~/types'
 import { useCandidateProfile } from '~/composables/useCandidates'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { useLocalStorage } from '@vueuse/core'
+import ScreeningStageBar    from './ScreeningStageBar.vue'
 import ScreeningCandidateRow from './ScreeningCandidateRow.vue'
 import ScreeningProfilePane from './ScreeningProfilePane.vue'
 
@@ -192,6 +193,16 @@ function listMetaFor(id: string) {
 
 <template>
   <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+    <!-- Full-width stage bar at the top (sc2 layout). Active tab = solid
+         dark filled pill; others plain text with counts. Tabs distribute
+         evenly across the row via justify-between inside the component. -->
+    <ScreeningStageBar
+      :stages="props.stages"
+      :active-key="activeStageKey"
+      :total-count="totalCount"
+      @update:active-key="activeStageKey = $event"
+    />
+
     <div class="flex-1 min-h-0 flex overflow-hidden">
       <!-- LIST COLUMN -->
       <aside
@@ -279,28 +290,6 @@ function listMetaFor(id: string) {
             </Popover>
           </div>
 
-          <!-- Stage bar inside the list column (mockup structure). Small
-               pill buttons; active = dark teal + lime text; empty stages
-               dimmed. Scrolls horizontally on narrow widths. -->
-          <div class="flex items-center gap-1 px-3 pb-3 overflow-x-auto no-scrollbar">
-            <button
-              v-for="tab in stageTabs"
-              :key="tab.key"
-              role="tab"
-              :aria-selected="tab.key === activeStageKey"
-              class="inline-flex items-center gap-1.5 shrink-0 rounded-full h-7 px-3 text-[12px] font-bold border transition"
-              :class="[
-                tab.key === activeStageKey
-                  ? 'bg-[var(--brand-teal)] text-[var(--brand-lime)] border-[var(--brand-teal)]'
-                  : 'bg-white text-[var(--brand-text-secondary)] border-[var(--brand-border-fade)] hover:text-[var(--brand-text)]',
-                tab.count === 0 && tab.key !== activeStageKey ? 'opacity-45' : '',
-              ]"
-              @click="activeStageKey = tab.key"
-            >
-              <span>{{ tab.label }}</span>
-              <span class="tabular-nums opacity-80">{{ tab.count }}</span>
-            </button>
-          </div>
         </div>
 
         <!-- Collapsed rail (matches kanban's collapsed column) -->
@@ -320,8 +309,11 @@ function listMetaFor(id: string) {
               v-for="row in filteredRows"
               :key="row.candidate.id"
               :candidate="row.candidate"
-              :stage-dot="row.stage.dot"
-              :stage-label="row.stage.label"
+              :headline="listMetaFor(row.candidate.id).headline"
+              :tags="listMetaFor(row.candidate.id).tags"
+              :source="listMetaFor(row.candidate.id).source"
+              :created-at="'3 months ago'"
+              :online="row.candidate.isNew ?? false"
               :selected="row.candidate.id === selectedCandidateId"
               :checked="props.selected.has(row.candidate.id)"
               @select="selectedCandidateId = $event"
