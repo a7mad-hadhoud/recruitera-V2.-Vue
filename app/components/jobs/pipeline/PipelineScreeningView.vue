@@ -15,6 +15,7 @@
 <script setup lang="ts">
 import { Search, ArrowUpDown, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import type { PipelineStage } from '~/types'
+import { useCandidateProfile } from '~/composables/useCandidates'
 import ScreeningStageBar    from './ScreeningStageBar.vue'
 import ScreeningCandidateRow from './ScreeningCandidateRow.vue'
 import ScreeningProfilePane from './ScreeningProfilePane.vue'
@@ -107,28 +108,39 @@ function onKey(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
-// Sample profile data — fixture until the real candidate endpoint is wired.
-// Keyed by candidate id so demo names show a plausible summary + answers.
-const PROFILE_STUB: Record<string, {
-  headline?: string; tags?: string[]; source?: string
-  summary?: string
-  answers?: Array<{ q: string; a: string }>
-  contact?: { location?: string; phone?: string }
-}> = {
-  c1: {
-    headline: 'Senior Backend Engineer',
-    tags: ['nodejs', 'postgres', 'senior'],
-    source: 'monster.com',
-    summary: 'Backend engineer with 8+ years shipping high-throughput services. Strong in Node.js, PostgreSQL, and event-driven architecture. Led two on-call rotations at previous role.',
-    answers: [
-      { q: 'Explain one aspect of this role you believe you will excel at.', a: 'Owning services end-to-end and driving on-call quality.' },
-      { q: 'Experience managing a team of 3+ engineers?', a: 'Yes' },
-      { q: 'Notice period (weeks)?', a: '4' },
-    ],
-    contact: { location: 'Amsterdam, Netherlands', phone: '+31 6 1234 5678' },
-  },
+// Real candidate profile via the same query the /candidates/[id] page uses.
+// Cached under ['candidate', id, 'profile'] so navigating from the pipeline
+// list to the standalone page or vice-versa is instant. Nullable while the
+// query is pending or when no row is selected.
+const selectedIdRef = computed(() => selectedCandidateId.value ?? '')
+const { data: profile } = useCandidateProfile(selectedIdRef)
+
+/** Rich fields for the right pane, resolved from the fetched profile. Falls
+ *  back to the pipeline-card fields when the profile hasn't loaded yet so
+ *  the pane never shows an empty header. */
+const profileForPane = computed(() => {
+  const p = profile.value
+  if (!p) return {}
+  const headline = p.cv?.title ?? p.jobs[0]?.title
+  const tags = p.tags
+  const source = p.source
+  const summary = p.cv?.summary
+  const answers = p.screeningQuestions.map(q => ({ q: q.question, a: q.answer }))
+  const contact = { location: p.location, phone: p.phone, email: p.email }
+  return { headline, tags, source, summary, answers, contact }
+})
+
+/** For the LIST rows we only need light metadata; keep this synchronous. */
+function listMetaFor(id: string) {
+  // Cheap lookup — if the profile happens to be cached (recently selected)
+  // we can enrich the row. Otherwise a sparse row is fine.
+  const p = profile.value?.id === id ? profile.value : null
+  return {
+    headline: p?.cv?.title ?? p?.jobs[0]?.title,
+    tags: p?.tags,
+    source: p?.source,
+  }
 }
-function stubFor(id: string) { return PROFILE_STUB[id] ?? {} }
 </script>
 
 <template>
@@ -179,9 +191,9 @@ function stubFor(id: string) { return PROFILE_STUB[id] ?? {} }
               v-for="row in filteredRows"
               :key="row.candidate.id"
               :candidate="row.candidate"
-              :headline="stubFor(row.candidate.id).headline"
-              :tags="stubFor(row.candidate.id).tags"
-              :source="stubFor(row.candidate.id).source"
+              :headline="listMetaFor(row.candidate.id).headline"
+              :tags="listMetaFor(row.candidate.id).tags"
+              :source="listMetaFor(row.candidate.id).source"
               :created-at="'3 months ago'"
               :selected="row.candidate.id === selectedCandidateId"
               :checked="props.selected.has(row.candidate.id)"
@@ -203,12 +215,12 @@ function stubFor(id: string) { return PROFILE_STUB[id] ?? {} }
             :current-stage="selectedRow.stage"
             :move-targets="moveTargets"
             :next-stage="nextStage"
-            :headline="stubFor(selectedRow.candidate.id).headline"
-            :tags="stubFor(selectedRow.candidate.id).tags"
-            :source="stubFor(selectedRow.candidate.id).source"
-            :summary="stubFor(selectedRow.candidate.id).summary ?? `Highly self motivated, results driven with excellent organisational skills.`"
-            :answers="stubFor(selectedRow.candidate.id).answers"
-            :contact="stubFor(selectedRow.candidate.id).contact ?? { location: selectedRow.candidate.location }"
+            :headline="profileForPane.headline"
+            :tags="profileForPane.tags"
+            :source="profileForPane.source"
+            :summary="profileForPane.summary"
+            :answers="profileForPane.answers"
+            :contact="profileForPane.contact ?? { location: selectedRow.candidate.location ?? undefined }"
             @move="(id, from, to) => emit('move', id, from, to)"
             @disqualify="(id) => emit('move', id, selectedRow!.stage.key, 'rejected')"
             @open-full="(id) => emit('open-full', id)"

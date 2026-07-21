@@ -54,7 +54,16 @@ const emit = defineEmits<{
 
     <!-- Avatar ↔ checkbox swap (matches CandidatePipelineCard pattern) -->
     <span class="relative inline-flex w-9 h-9 shrink-0 mt-px">
+      <img
+        v-if="props.candidate.avatarUrl"
+        :src="props.candidate.avatarUrl"
+        :alt="props.candidate.name"
+        class="absolute inset-0 w-9 h-9 rounded-full object-cover bg-[var(--brand-canvas)] transition-opacity"
+        :class="props.checked ? 'opacity-0' : 'group-hover:opacity-0'"
+        :aria-hidden="props.checked ? 'true' : undefined"
+      >
       <span
+        v-else
         class="absolute inset-0 rounded-full bg-[var(--brand-teal)] text-white inline-flex items-center justify-center font-bold text-[12px] transition-opacity"
         :class="props.checked ? 'opacity-0' : 'group-hover:opacity-0'"
         :aria-hidden="props.checked ? 'true' : undefined"

@@ -128,7 +128,16 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
     <!-- Header -->
     <div class="flex items-start gap-4 px-6 pt-5">
       <span class="relative inline-flex w-16 h-16 shrink-0">
-        <span class="absolute inset-0 rounded-full bg-[var(--brand-teal)] text-white inline-flex items-center justify-center font-bold text-[22px]">
+        <img
+          v-if="props.candidate.avatarUrl"
+          :src="props.candidate.avatarUrl"
+          :alt="props.candidate.name"
+          class="w-16 h-16 rounded-full object-cover bg-[var(--brand-canvas)]"
+        >
+        <span
+          v-else
+          class="absolute inset-0 rounded-full bg-[var(--brand-teal)] text-white inline-flex items-center justify-center font-bold text-[22px]"
+        >
           {{ props.candidate.initials }}
         </span>
       </span>

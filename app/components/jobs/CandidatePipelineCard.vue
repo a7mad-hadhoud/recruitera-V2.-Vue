@@ -65,7 +65,16 @@ function onDragStart(e: DragEvent) {
            Kept inline (not BrandAvatarInitials) so we can absolute-overlay
            the checkbox at the exact same slot. -->
       <span class="relative inline-flex w-6 h-6 shrink-0 mt-px">
+        <img
+          v-if="props.candidate.avatarUrl"
+          :src="props.candidate.avatarUrl"
+          :alt="props.candidate.name"
+          class="absolute inset-0 w-6 h-6 rounded-full object-cover bg-[var(--brand-canvas)] transition-opacity"
+          :class="props.selected ? 'opacity-0' : 'group-hover:opacity-0'"
+          :aria-hidden="props.selected ? 'true' : undefined"
+        >
         <span
+          v-else
           class="absolute inset-0 rounded-full bg-[var(--brand-teal)] text-white inline-flex items-center justify-center font-bold text-[10px] transition-opacity"
           :class="props.selected ? 'opacity-0' : 'group-hover:opacity-0'"
           :aria-hidden="props.selected ? 'true' : undefined"
