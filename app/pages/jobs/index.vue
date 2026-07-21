@@ -15,6 +15,7 @@ import JobsFiltersPanel from '~/components/jobs/JobsFiltersPanel.vue'
 import JobsNewViewPanel, { type ViewVisibility, type ViewMode as SavedViewMode } from '~/components/jobs/JobsNewViewSheet.vue'
 import JobCard from '~/components/jobs/JobCard.vue'
 import JobStatusMenu from '~/components/jobs/JobStatusMenu.vue'
+import AddJobModal, { type AddJobPayload } from '~/components/jobs/AddJobModal.vue'
 import type { Job, JobStatus, CollarType } from '~/types'
 import { useJobs } from '~/composables/useJobs'
 import { useJobsColumns, type JobColumnKey } from '~/composables/useJobsColumns'
@@ -62,6 +63,14 @@ const newViewOpen = ref(false)
 
 // Table vs card view mode — persisted so the choice sticks across visits.
 const viewMode = useLocalStorage<'table' | 'cards'>('recruitera:jobs:view-mode', 'table')
+
+// Add-job modal — two-step chooser (template ↔ blank). Payload lands
+// here today via console; wire to POST /api/jobs when the API is ready.
+const addJobOpen = ref(false)
+function onCreateJob(payload: AddJobPayload) {
+  // eslint-disable-next-line no-console
+  console.info('[jobs] create-job payload', payload)
+}
 
 // Saved views (in-memory for now).
 type SavedView = { id: string; title: string; visibility: ViewVisibility; mode: SavedViewMode }
@@ -197,11 +206,15 @@ const slotsLeft = 5
           {{ slotsLeft }} slots left
           <ChevronDown class="w-3.5 h-3.5 ml-1.5 text-[var(--brand-text-quiet)]" stroke-width="1.8" />
         </BrandButton>
-        <BrandButton variant="primary-teal">
+        <BrandButton variant="primary-teal" @click="addJobOpen = true">
           <Plus class="w-4 h-4 mr-1" stroke-width="2.5" />
           Add job
         </BrandButton>
       </div>
+
+      <!-- Add-job chooser (Template ↔ Blank). Rendered here so it's
+           reachable from anywhere on the page; state lives in setup. -->
+      <AddJobModal v-model:open="addJobOpen" @create="onCreateJob" />
 
       <!-- Collar tabs + search + Filters/Columns + view-mode toggle -->
       <div class="flex items-center gap-3 px-6 pt-3 pb-3">
