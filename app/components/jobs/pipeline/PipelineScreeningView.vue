@@ -18,9 +18,11 @@ import type { PipelineStage } from '~/types'
 import { useCandidateProfile } from '~/composables/useCandidates'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { useLocalStorage } from '@vueuse/core'
-import ScreeningStageBar    from './ScreeningStageBar.vue'
+import ScreeningStageBar     from './ScreeningStageBar.vue'
 import ScreeningCandidateRow from './ScreeningCandidateRow.vue'
-import ScreeningProfilePane from './ScreeningProfilePane.vue'
+import ScreeningProfilePane  from './ScreeningProfilePane.vue'
+import ScreeningFiltersPanel from './ScreeningFiltersPanel.vue'
+import { useScreeningFilters } from '~/composables/useScreeningFilters'
 
 const props = defineProps<{
   stages: PipelineStage[]
@@ -50,21 +52,12 @@ const kbdHintDismissed = useLocalStorage<0 | 1>('pipeline-screening-kbd-hint', 0
 const showKbdHint = computed(() => kbdHintDismissed.value !== 1)
 function dismissKbdHint() { kbdHintDismissed.value = 1 }
 
-// Filter popover state — simple client-side filters over the list
-const filtersOpen = ref(false)
-const sortBy = ref<'newest' | 'oldest' | 'name' | 'aiScore'>('newest')
-const sourceFilter = ref<string>('all')
-const dateFilter = ref<'any' | 'week' | 'month' | '3months'>('any')
-const availableSources = computed<string[]>(() => {
-  const set = new Set<string>()
-  for (const s of props.stages) for (const _c of s.candidates) set.add('any')
-  return ['all', ...Array.from(set).sort()]
-})
-const activeFilterCount = computed(() =>
-  (sourceFilter.value !== 'all' ? 1 : 0) +
-  (dateFilter.value !== 'any' ? 1 : 0) +
-  (sortBy.value !== 'newest' ? 1 : 0),
-)
+// Row-based filter builder — matches the Jobs "All filters" experience.
+// See useScreeningFilters + ScreeningFiltersPanel.
+const {
+  rows: filterRows, add: addFilterRow, remove: removeFilterRow,
+  update: updateFilterRow, clear: clearFilterRows,
+} = useScreeningFilters()
 
 const totalCount = computed(() =>
   props.stages.reduce((n, s) => n + s.candidates.length, 0),
@@ -234,64 +227,18 @@ function listMetaFor(id: string) {
                 class="w-full h-9 pl-8 pr-2 text-[13px] rounded-[10px] bg-[var(--brand-canvas)] border border-transparent focus:border-[var(--brand-teal)] focus:bg-white focus:outline-none transition"
               >
             </div>
-            <!-- Filter popover — Sort, Source, Date range. Client-side today;
-                 when the API lands these fold into the ['pipeline', jobId,
-                 stageKey, filters] query key. -->
-            <Popover v-model:open="filtersOpen">
-              <PopoverTrigger as-child>
-                <button
-                  class="relative w-9 h-9 rounded-[10px] inline-flex items-center justify-center transition"
-                  :class="activeFilterCount > 0
-                    ? 'bg-[var(--brand-teal)] text-white'
-                    : 'bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint)] hover:text-[var(--brand-text)]'"
-                  aria-label="Sort and filter"
-                >
-                  <SlidersHorizontal class="w-4 h-4" stroke-width="1.7" />
-                  <span
-                    v-if="activeFilterCount > 0"
-                    class="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-[var(--brand-lime)] text-[var(--brand-teal)] text-[10px] font-bold inline-flex items-center justify-center px-1"
-                  >{{ activeFilterCount }}</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" class="w-[280px] p-4">
-                <div class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-1.5">Sort by</div>
-                <select v-model="sortBy" class="w-full h-9 px-2.5 mb-4 text-[13px] rounded-[8px] bg-[var(--brand-canvas)] border border-transparent focus:border-[var(--brand-teal)] focus:outline-none">
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  <option value="name">Name (A-Z)</option>
-                  <option value="aiScore">AI score</option>
-                </select>
-
-                <div class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-1.5">Source</div>
-                <select v-model="sourceFilter" class="w-full h-9 px-2.5 mb-4 text-[13px] rounded-[8px] bg-[var(--brand-canvas)] border border-transparent focus:border-[var(--brand-teal)] focus:outline-none">
-                  <option value="all">Any source</option>
-                  <option value="Indeed">Indeed</option>
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Careers site">Careers site</option>
-                  <option value="Facebook">Facebook</option>
-                </select>
-
-                <div class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-1.5">Applied</div>
-                <select v-model="dateFilter" class="w-full h-9 px-2.5 mb-4 text-[13px] rounded-[8px] bg-[var(--brand-canvas)] border border-transparent focus:border-[var(--brand-teal)] focus:outline-none">
-                  <option value="any">Any time</option>
-                  <option value="week">Past week</option>
-                  <option value="month">Past month</option>
-                  <option value="3months">Past 3 months</option>
-                </select>
-
-                <div class="flex items-center gap-2 pt-2 border-t border-[var(--brand-border-fade)]">
-                  <button
-                    class="flex-1 h-8 rounded-[8px] text-[12.5px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)] transition"
-                    @click="sortBy = 'newest'; sourceFilter = 'all'; dateFilter = 'any'"
-                  >Reset</button>
-                  <button
-                    class="flex-1 h-8 rounded-[8px] text-[12.5px] font-bold bg-[var(--brand-teal)] text-white hover:bg-[color-mix(in_srgb,var(--brand-teal)_92%,white)] transition"
-                    @click="filtersOpen = false"
-                  >Apply</button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <!-- Row-based "All filters" panel — same visual system as the
+                 Jobs page (see JobsFiltersPanel). Client-side today; rows
+                 fold into the ['pipeline', jobId, stageKey, filters] query
+                 key when the API lands. -->
+            <ScreeningFiltersPanel
+              :rows="filterRows"
+              :result-count="filteredRows.length"
+              @add="addFilterRow"
+              @remove="removeFilterRow"
+              @update="updateFilterRow"
+              @clear="clearFilterRows"
+            />
           </div>
 
         </div>
