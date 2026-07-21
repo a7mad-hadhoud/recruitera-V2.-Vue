@@ -306,45 +306,11 @@ const effectiveProfileFields = computed(() => ({
          only the sticky action row stays pinned. -->
     <div class="px-6 py-5 bg-[var(--brand-canvas)]">
       <template v-if="activeTab === 'Overview'">
-        <!-- Order (per Wuzzuf-parity spec):
-             Contact → AI Summary → Application form → CV → Profile fields
-             (Tags row + Details removed per feedback; every section has
-             dummy content when the profile fetch is sparse so the layout
-             never reads as "empty"). -->
-
-        <!-- Contact -->
-        <CandidateCollapsibleCard title="Contact" class="mb-4">
-          <template #actions>
-            <button class="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition">
-              <MessageSquare class="w-3.5 h-3.5" stroke-width="1.8" />
-              Send message
-            </button>
-          </template>
-          <div class="grid grid-cols-[80px_1fr_auto] gap-y-3 gap-x-3 items-center text-[13.5px]">
-            <span class="text-[var(--brand-text-quiet)]">Email</span>
-            <a
-              :href="`mailto:${props.profile?.email ?? 'candidate@example.com'}`"
-              class="text-[var(--brand-teal-secondary)] hover:underline truncate"
-            >{{ props.profile?.email ?? 'candidate@example.com' }}</a>
-            <button
-              class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
-              aria-label="Copy email"
-              @click="navigator.clipboard.writeText(props.profile?.email ?? 'candidate@example.com')"
-            ><Copy class="w-3.5 h-3.5" stroke-width="1.8" /></button>
-
-            <span class="text-[var(--brand-text-quiet)]">Phone</span>
-            <span class="text-[var(--brand-text)]">{{ props.profile?.phone ?? '+1 (555) 019-2837' }}</span>
-            <button
-              class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
-              aria-label="Copy phone"
-              @click="navigator.clipboard.writeText(props.profile?.phone ?? '+1 (555) 019-2837')"
-            ><Copy class="w-3.5 h-3.5" stroke-width="1.8" /></button>
-
-            <span class="text-[var(--brand-text-quiet)]">Location</span>
-            <span class="text-[var(--brand-text)]">{{ props.profile?.location ?? props.candidate.location ?? 'Remote' }}</span>
-            <span />
-          </div>
-        </CandidateCollapsibleCard>
+        <!-- Order in Screening mode:
+             AI Summary → Application form → CV → Profile fields
+             (Contact, Tags, and Details removed — contact info already
+             shows as pills inside the header hero above, so repeating
+             it here was noise.) -->
 
         <!-- AI Summary -->
         <CandidateCollapsibleCard title="AI Summary" class="mb-4">

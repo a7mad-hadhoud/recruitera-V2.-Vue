@@ -517,10 +517,10 @@ function clearSelection() { selectedIds.value = new Set() }
               </button>
             </div>
 
-            <!-- Focus mode toggle. ON = screening (one candidate at a
-                 time), OFF = kanban (pipeline overview). Same visual
+            <!-- Screening mode toggle. ON = screening (one candidate at
+                 a time), OFF = kanban (pipeline overview). Same visual
                  switch used elsewhere on the toolbar so the intent
-                 reads as "turn focus on/off", not "pick a view". -->
+                 reads as "turn screening on/off", not "pick a view". -->
             <label class="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap" role="switch" :aria-checked="pipelineViewMode === 'screening'">
               <span
                 class="relative inline-flex w-[34px] h-5 rounded-full transition-colors"
@@ -535,12 +535,12 @@ function clearSelection() { selectedIds.value = new Set() }
                 :checked="pipelineViewMode === 'screening'"
                 type="checkbox"
                 class="sr-only"
-                aria-label="Focus mode"
+                aria-label="Screening mode"
                 @change="(e) => pipelineViewMode = (e.target as HTMLInputElement).checked ? 'screening' : 'kanban'"
               >
               <span class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand-text)]">
                 <Users class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.8" />
-                Focus mode
+                Screening mode
               </span>
             </label>
           </template>
