@@ -486,10 +486,37 @@ function clearSelection() { selectedIds.value = new Set() }
           </template>
 
           <!-- Segmented Qualified/Disqualified. Shown in BOTH Kanban and
-                Screening — mockup keeps this compact pill at the top of
-                the sub-toolbar for both views. The Kanban⇆Screening
-                view toggle sits to the LEFT of it per the ref. -->
+                Screening. Order: [Qual/Disq]  [Kanban⇆Screening] — the
+                qualification split reads as the primary scope; the view
+                toggle is the secondary control. -->
           <template v-else>
+            <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-[37px]">
+              <button
+                class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"
+                :class="segment === 'qual'
+                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
+                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                @click="segment = 'qual'"
+              >
+                Qualified
+                <span
+                  class="text-[11px] font-bold rounded-md px-[7px] py-px tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]"
+                >{{ qualifiedCount }}</span>
+              </button>
+              <button
+                class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"
+                :class="segment === 'disq'
+                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
+                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                @click="segment = 'disq'"
+              >
+                Disqualified
+                <span
+                  class="text-[11px] font-bold rounded-md px-[7px] py-px tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]"
+                >{{ disqualifiedCount }}</span>
+              </button>
+            </div>
+
             <!-- Kanban ⇆ Screening view-mode toggle. -->
             <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-9" role="tablist" aria-label="Pipeline view mode">
               <button
@@ -517,33 +544,6 @@ function clearSelection() { selectedIds.value = new Set() }
               >
                 <Users class="w-3.5 h-3.5" stroke-width="1.8" />
                 Screening
-              </button>
-            </div>
-
-            <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-[37px]">
-              <button
-                class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"
-                :class="segment === 'qual'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
-                @click="segment = 'qual'"
-              >
-                Qualified
-                <span
-                  class="text-[11px] font-bold rounded-md px-[7px] py-px tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]"
-                >{{ qualifiedCount }}</span>
-              </button>
-              <button
-                class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"
-                :class="segment === 'disq'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
-                @click="segment = 'disq'"
-              >
-                Disqualified
-                <span
-                  class="text-[11px] font-bold rounded-md px-[7px] py-px tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]"
-                >{{ disqualifiedCount }}</span>
               </button>
             </div>
           </template>
