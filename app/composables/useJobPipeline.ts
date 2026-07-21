@@ -83,21 +83,22 @@ const STAGE_DOT: Record<JobStageDot, string> = {
 // mocks/handlers/candidates.handlers.ts so useCandidateProfile(id) hits
 // the same profile the /candidates/[id] page shows. When the real API
 // lands, both surfaces resolve through one ['candidate', id] cache key.
-// avatarUrl uses dicebear (deterministic + no auth); replace with real
-// photo URLs when they exist in the API response.
+// avatarUrl uses randomuser.me (realistic human portrait photos, no
+// auth); replace with real photo URLs when they exist in the API
+// response.
 const DEMO_STAGES: PipelineStage[] = [
   { key: 'sourced',   label: 'Sourced',         dot: STAGE_DOT.sourced,   candidates: [] },
   { key: 'applied',   label: 'Applied',         dot: STAGE_DOT.applied,   candidates: [
-    { id: '17', name: 'John Doe (Sample)',        initials: 'JD', avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=John+Doe',        aiScore: 88, notes: 1, replies: 2, location: 'Amsterdam', isNew: true },
-    { id: '5',  name: 'Mikel Lang (Sample)',      initials: 'ML', avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=Mikel+Lang',      aiScore: 75, notes: 1, replies: 2, location: 'Berlin' },
-    { id: '4',  name: 'Kendall McClure (Sample)', initials: 'KM', avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=Kendall+McClure', aiScore: 71, notes: 1, replies: 2, location: 'Amsterdam' },
+    { id: '17', name: 'John Doe (Sample)',        initials: 'JD', avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',   aiScore: 88, notes: 1, replies: 2, location: 'Amsterdam', isNew: true },
+    { id: '5',  name: 'Mikel Lang (Sample)',      initials: 'ML', avatarUrl: 'https://randomuser.me/api/portraits/men/44.jpg',   aiScore: 75, notes: 1, replies: 2, location: 'Berlin' },
+    { id: '4',  name: 'Kendall McClure (Sample)', initials: 'KM', avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg', aiScore: 71, notes: 1, replies: 2, location: 'Amsterdam' },
   ]},
   { key: 'phone',     label: 'Phone interview', dot: STAGE_DOT.phone,     candidates: [
-    { id: '12', name: 'Mariela Vasquez (Sample)', initials: 'MV', avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=Mariela+Vasquez', aiScore: 62, notes: 1, replies: 2, location: 'Amsterdam' },
-    { id: '8',  name: 'Wilma Roelendsen (Sample)', initials: 'WR', avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=Wilma+Roelendsen', aiScore: 71, notes: 0, replies: 1, location: 'Berlin' },
+    { id: '12', name: 'Mariela Vasquez (Sample)', initials: 'MV', avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg', aiScore: 62, notes: 1, replies: 2, location: 'Amsterdam' },
+    { id: '8',  name: 'Wilma Roelendsen (Sample)', initials: 'WR', avatarUrl: 'https://randomuser.me/api/portraits/women/45.jpg', aiScore: 71, notes: 0, replies: 1, location: 'Berlin' },
   ]},
   { key: 'interview', label: 'Interview',       dot: STAGE_DOT.interview, candidates: [
-    { id: '11', name: 'Kevin Hernandez (Sample)', initials: 'KH', avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=Kevin+Hernandez', aiScore: 82, notes: 3, replies: 4, location: 'Amsterdam' },
+    { id: '11', name: 'Kevin Hernandez (Sample)', initials: 'KH', avatarUrl: 'https://randomuser.me/api/portraits/men/73.jpg', aiScore: 82, notes: 3, replies: 4, location: 'Amsterdam' },
   ]},
   { key: 'offer',     label: 'Offer',           dot: STAGE_DOT.offer,     candidates: [] },
   { key: 'hired',     label: 'Hired',           dot: STAGE_DOT.hired,     candidates: [] },
