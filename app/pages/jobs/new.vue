@@ -28,8 +28,10 @@
 import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
          Trash2, Briefcase, Wrench, Sparkles, ArrowRight,
          Bold, Italic, Underline, Strikethrough, List, ListOrdered, Link2, Image,
-         MapPin, Building2, ClipboardList, Users, Layers, Share, Send } from 'lucide-vue-next'
+         MapPin, Building2, ClipboardList, Users, Layers, Share, Send, ChevronUp, Copy, Check } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { useDepartments } from '~/composables/useDepartments'
 import { useLocations } from '~/composables/useLocations'
 import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.vue'
@@ -129,11 +131,46 @@ function saveDraft() {
   if (savedTimer) clearTimeout(savedTimer)
   savedTimer = setTimeout(() => (savedToast.value = false), 2500)
 }
+
+// ─── Header status pill ────────────────────────────────────────
+// Matches the Recruitee/Tellent status dropdown next to the Publish
+// button — 'internal' | 'closed' | 'archived' with distinct dots.
+type PublishStatus = 'internal' | 'closed' | 'archived'
+const publishStatus = ref<PublishStatus>('internal')
+const STATUS_OPTIONS: Array<{ key: PublishStatus; label: string; hint?: string; dot: string }> = [
+  { key: 'internal', label: 'Use internally',           hint: 'Anyone with the link can view.', dot: 'var(--brand-status-approved-text)' },
+  { key: 'closed',   label: 'Close for new candidates', hint: 'Candidates cannot apply.',       dot: 'var(--brand-status-closed-text)' },
+  { key: 'archived', label: 'Archive',                  dot: 'var(--brand-text-quiet)' },
+]
+const statusLabel = computed(() => {
+  const l = STATUS_OPTIONS.find(o => o.key === publishStatus.value)?.label
+  return publishStatus.value === 'internal' ? 'Published' : (l ?? 'Draft')
+})
+const statusDot = computed(() =>
+  STATUS_OPTIONS.find(o => o.key === publishStatus.value)?.dot ?? 'var(--brand-text-quiet)',
+)
+
+// Short id for the header chip. Stable per pageload so it doesn't
+// bounce on every render (was Math.random() in the template previously).
+const shortId = computed(() => String(route.params.id ?? '').slice(-5) || Math.random().toString(36).slice(2, 7))
+
+// Share popover — matches the one on /jobs/[id]. Job URL + Copy.
+const jobUrl = computed(() =>
+  `https://recruitera.ai/o/${(jobTitle.value || 'new-job').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`,
+)
+const copied = ref(false)
+let copyTimer: ReturnType<typeof setTimeout> | null = null
+async function copyJobUrl() {
+  try { await navigator.clipboard.writeText(jobUrl.value) } catch {}
+  copied.value = true
+  if (copyTimer) clearTimeout(copyTimer)
+  copyTimer = setTimeout(() => (copied.value = false), 1600)
+}
 </script>
 
 <template>
   <div class="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
-    <div class="absolute inset-6 md:inset-14 flex flex-col rounded-[14px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
+    <div class="absolute inset-3 md:inset-6 flex flex-col rounded-[14px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
       <!-- Sample-data banner -->
       <div class="flex items-center justify-center gap-2 h-9 bg-[var(--brand-text)] text-white text-[12.5px] shrink-0">
         Sample data active —
@@ -142,31 +179,107 @@ function saveDraft() {
         <button class="ml-2 opacity-70 hover:opacity-100" aria-label="Dismiss banner"><X class="w-3.5 h-3.5" stroke-width="2" /></button>
       </div>
 
-      <!-- Header -->
-      <div class="flex items-center gap-3 px-6 py-4 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
+      <!-- Header — Recruitee/Tellent parity: title + short id + Last-edit
+           timestamp on the left; Share popover, Preview, status dropdown,
+           Publish changes primary, ⋯, close on the right. -->
+      <div class="flex items-center gap-2 px-6 py-4 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <h1 class="text-[17px] font-bold text-[var(--brand-text)] leading-tight truncate">{{ jobTitle || 'Untitled job' }}</h1>
-            <span class="text-[11.5px] font-semibold rounded-md px-1.5 py-0.5 tabular-nums bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]">#{{ Math.random().toString(36).slice(2, 7) }}</span>
+            <h1 class="text-[18px] font-bold text-[var(--brand-text)] leading-tight truncate">{{ jobTitle || 'Untitled job' }}</h1>
+            <span class="text-[12px] font-semibold text-[var(--brand-text-quiet)] tabular-nums">#{{ shortId }}</span>
           </div>
-          <div class="text-[11.5px] text-[var(--brand-text-quiet)] mt-0.5">Saved just now</div>
+          <div class="text-[12px] text-[var(--brand-text-quiet)] mt-0.5">Last edit a moment ago</div>
         </div>
-        <BrandButton variant="outline">
-          <Share2 class="w-3.5 h-3.5 mr-1.5" stroke-width="1.8" />
-          Share
-          <ChevronDown class="w-3 h-3 ml-1 text-[var(--brand-text-quiet)]" stroke-width="2" />
-        </BrandButton>
-        <BrandButton variant="outline">
-          <Eye class="w-3.5 h-3.5 mr-1.5" stroke-width="1.8" />
+
+        <!-- Share popover — reuses the same shape as the kanban Share (see
+             /jobs/[id]). Job URL + copy + social buttons. -->
+        <Popover>
+          <PopoverTrigger as-child>
+            <button
+              class="inline-flex items-center gap-1.5 h-9 px-3 rounded-[9px] text-[13.5px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint-hover)] transition"
+              aria-label="Share job"
+            >
+              <Share2 class="w-4 h-4" stroke-width="1.5" />
+              Share
+              <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            :side-offset="6"
+            class="w-[320px] p-[18px] rounded-[14px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-bold text-[13px] text-[var(--brand-text)] mb-1.5">Job URL</div>
+                <div class="text-[13px] leading-[1.5] text-[var(--brand-text-quiet)] break-all">{{ jobUrl }}</div>
+              </div>
+              <button
+                class="shrink-0 w-[34px] h-[34px] rounded-[9px] inline-flex items-center justify-center text-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint-hover)] transition"
+                :aria-label="copied ? 'Copied' : 'Copy job URL'"
+                :title="copied ? 'Copied' : 'Copy link'"
+                @click="copyJobUrl"
+              >
+                <Check v-if="copied" class="w-[17px] h-[17px]" stroke-width="2.2" />
+                <Copy v-else class="w-[17px] h-[17px]" stroke-width="1.7" />
+              </button>
+            </div>
+            <div class="h-px bg-[var(--brand-border-fade)] my-4" />
+            <div class="font-bold text-[13px] text-[var(--brand-text)] mb-3">Share Job on Social Media</div>
+            <!-- eslint-disable local/no-hex-colors -- third-party brand marks -->
+            <div class="flex items-center gap-2.5">
+              <a href="#" title="Facebook" aria-label="Share on Facebook" class="w-6 h-6 rounded-md inline-flex items-center justify-center" style="background:#1877F2" @click.prevent>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M14 8.5V7c0-.7.5-.9.9-.9H16V3.2l-2.2-.01c-2.5 0-3.1 1.86-3.1 3.06V8.5H9v3h1.7V21h3.3v-9.5h2.3l.35-3H14z" /></svg>
+              </a>
+              <a href="#" title="X" aria-label="Share on X" class="w-6 h-6 rounded-md inline-flex items-center justify-center" style="background:#000" @click.prevent>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M17.53 3h3.02l-6.6 7.54L21.75 21h-6.07l-4.76-6.22L5.48 21H2.46l7.06-8.07L2.25 3h6.23l4.3 5.69L17.53 3zm-1.06 16.2h1.67L7.6 4.7H5.8l10.67 14.5z" /></svg>
+              </a>
+              <a href="#" title="LinkedIn" aria-label="Share on LinkedIn" class="w-6 h-6 rounded-md inline-flex items-center justify-center" style="background:#0A66C2" @click.prevent>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M6.94 5A1.94 1.94 0 1 1 3.06 5a1.94 1.94 0 0 1 3.88 0zM3.3 8.4h3.28V21H3.3V8.4zm5.5 0h3.14v1.72h.05c.44-.83 1.5-1.72 3.1-1.72 3.31 0 3.92 2.18 3.92 5.02V21h-3.28v-5.6c0-1.34-.03-3.06-1.86-3.06-1.87 0-2.15 1.45-2.15 2.96V21H8.8V8.4z" /></svg>
+              </a>
+            </div>
+            <!-- eslint-enable local/no-hex-colors -->
+          </PopoverContent>
+        </Popover>
+
+        <button
+          class="inline-flex items-center gap-1.5 h-9 px-3 rounded-[9px] text-[13.5px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-lime-tint-hover)] transition"
+        >
+          <Eye class="w-4 h-4" stroke-width="1.5" />
           Preview
-        </BrandButton>
-        <BrandButton variant="outline" @click="saveDraft">Save changes</BrandButton>
-        <div class="inline-flex items-stretch h-9 rounded-[9px] overflow-hidden bg-[var(--brand-teal)]">
-          <button class="inline-flex items-center px-4 h-full text-[13px] font-bold text-white hover:bg-[color-mix(in_srgb,var(--brand-teal)_92%,white)] transition">Publish</button>
-          <button class="inline-flex items-center px-2 h-full text-white border-l border-white/15 hover:bg-[color-mix(in_srgb,var(--brand-teal)_88%,white)] transition" aria-label="More publish options">
-            <ChevronDown class="w-4 h-4" stroke-width="2" />
-          </button>
-        </div>
+        </button>
+
+        <!-- Status pill dropdown (● Published / Use internally / Close for
+             new candidates / Archive). Matches the Recruitee ref. -->
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <button
+              class="inline-flex items-center gap-1.5 h-9 px-3 rounded-[9px] text-[13px] font-semibold text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)] transition"
+              aria-label="Change status"
+            >
+              <span class="w-2 h-2 rounded-full" :style="{ background: statusDot }" />
+              {{ statusLabel }}
+              <ChevronUp class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" :side-offset="6" class="w-[280px] p-2 rounded-[14px]">
+            <DropdownMenuItem
+              v-for="opt in STATUS_OPTIONS"
+              :key="opt.key"
+              class="flex items-start gap-2.5 px-2.5 py-2 rounded-[9px] cursor-pointer"
+              @select="publishStatus = opt.key"
+            >
+              <span class="w-2 h-2 rounded-full mt-1.5 shrink-0" :style="{ background: opt.dot }" />
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-bold text-[var(--brand-text)]">{{ opt.label }}</div>
+                <div v-if="opt.hint" class="text-[12px] text-[var(--brand-text-quiet)] mt-0.5">{{ opt.hint }}</div>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <BrandButton variant="primary-teal" @click="saveDraft">Publish changes</BrandButton>
+
         <button class="w-9 h-9 rounded-[8px] inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="More actions">
           <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
         </button>
