@@ -517,33 +517,34 @@ function clearSelection() { selectedIds.value = new Set() }
               </button>
             </div>
 
-            <!-- Kanban ⇆ Screening view-mode toggle. -->
-            <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-9" role="tablist" aria-label="Pipeline view mode">
+            <!-- Kanban ⇆ Screening view-mode toggle.
+                 Intentionally styled DIFFERENTLY from the Qualified/
+                 Disqualified pill above: icon-only bordered button pair,
+                 like a view switcher (grid ↔ list) — communicates it's
+                 a display mode, not a data scope. -->
+            <div class="inline-flex items-center rounded-[10px] border border-[var(--brand-border)] overflow-hidden h-9" role="group" aria-label="Pipeline view mode">
               <button
-                role="tab"
-                :aria-selected="pipelineViewMode === 'kanban'"
-                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
+                :aria-pressed="pipelineViewMode === 'kanban'"
+                class="inline-flex items-center justify-center w-9 h-full transition"
                 :class="pipelineViewMode === 'kanban'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                  ? 'bg-[var(--brand-text)] text-[var(--brand-lime)]'
+                  : 'bg-white text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]'"
                 aria-label="Kanban view"
                 @click="pipelineViewMode = 'kanban'"
               >
-                <Kanban class="w-3.5 h-3.5" stroke-width="1.8" />
-                Kanban
+                <Kanban class="w-4 h-4" stroke-width="1.8" />
               </button>
+              <span class="w-px h-full bg-[var(--brand-border)]" aria-hidden="true" />
               <button
-                role="tab"
-                :aria-selected="pipelineViewMode === 'screening'"
-                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
+                :aria-pressed="pipelineViewMode === 'screening'"
+                class="inline-flex items-center justify-center w-9 h-full transition"
                 :class="pipelineViewMode === 'screening'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                  ? 'bg-[var(--brand-text)] text-[var(--brand-lime)]'
+                  : 'bg-white text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]'"
                 aria-label="Screening view"
                 @click="pipelineViewMode = 'screening'"
               >
-                <Users class="w-3.5 h-3.5" stroke-width="1.8" />
-                Screening
+                <Users class="w-4 h-4" stroke-width="1.8" />
               </button>
             </div>
           </template>
