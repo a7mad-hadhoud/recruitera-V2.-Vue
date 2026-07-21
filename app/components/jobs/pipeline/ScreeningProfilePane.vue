@@ -43,9 +43,13 @@ const emit = defineEmits<{
   'open-full':   [id: string]
 }>()
 
-const TABS = ['Profile', 'Timeline', 'Communication', 'Review', 'Comments'] as const
+// Tabs mirror the standalone /candidates/[id] profile page so the two
+// surfaces read as one system (Overview / Emails / WhatsApp / Events /
+// Evaluation / Files / Activity). Only Overview has real content in
+// the triage pane — the deeper tabs redirect to the full profile.
+const TABS = ['Overview', 'Emails', 'WhatsApp', 'Events', 'Evaluation', 'Files', 'Activity'] as const
 type Tab = typeof TABS[number]
-const activeTab = ref<Tab>('Profile')
+const activeTab = ref<Tab>('Overview')
 const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? null)
 </script>
 
@@ -218,7 +222,7 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
 
     <!-- Tab bodies (only Profile has real content in v1) -->
     <div class="flex-1 min-h-0 overflow-y-auto px-6 py-5">
-      <template v-if="activeTab === 'Profile'">
+      <template v-if="activeTab === 'Overview'">
         <section v-if="props.summary" class="mb-6">
           <h3 class="text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-2">Summary</h3>
           <p class="text-[13.5px] text-[var(--brand-text-secondary)] leading-relaxed">{{ props.summary }}</p>
