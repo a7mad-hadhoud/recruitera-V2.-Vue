@@ -60,135 +60,133 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
 
 <template>
   <div class="flex flex-col min-h-0 h-full bg-white relative">
-    <!-- Warm gradient behind the action row + header — matches Wuzzuf/
-         Recruitee reference. Kept low-opacity so brand palette stays lead. -->
-    <div
-      class="pointer-events-none absolute top-0 left-0 right-0 h-[220px]"
-      aria-hidden="true"
-      :style="{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--brand-lime-tint) 60%, white) 0%, color-mix(in srgb, var(--brand-pipeline-purple) 6%, white) 55%, transparent 100%)' }"
-    />
+    <!-- Whole pane is ONE scroll container so header/tags/AI-score
+         scroll away and only the sticky action bar stays pinned. -->
+    <div class="flex-1 min-h-0 overflow-y-auto relative">
+      <!-- Warm gradient behind the header — sits inside the scroll
+           container so it moves with the hero content on scroll. -->
+      <div
+        class="pointer-events-none absolute top-0 left-0 right-0 h-[220px]"
+        aria-hidden="true"
+        :style="{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--brand-lime-tint) 60%, white) 0%, color-mix(in srgb, var(--brand-pipeline-purple) 6%, white) 55%, transparent 100%)' }"
+      />
 
-    <!-- Action row — sticky so it stays on screen while the profile
-         scrolls. LEFT chunk: single white rounded pill with vertical
-         dividers between icon groups (⋯ | mail schedule | comment share
-         | disqualify), matching the reference. RIGHT chunk: Move-to
-         split-button, kept separate as the primary CTA. -->
-    <div class="sticky top-0 z-10 flex items-center gap-3 px-6 pt-5 pb-3 flex-wrap">
-      <div class="inline-flex items-stretch h-11 rounded-[14px] bg-white shadow-[0_1px_3px_rgba(0,20,18,0.08),0_6px_18px_rgba(0,20,18,0.06)] border border-[var(--brand-border-fade)] overflow-hidden">
-        <!-- Overflow menu -->
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <button
-              class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
-              aria-label="More actions"
-            >
-              <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="w-[200px] p-1">
-            <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer" @select="emit('open-full', props.candidate.id)">
-              <ArrowRight class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" />
-              View full profile
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <!-- Sticky action row. ALL actions live inside ONE white pill
+           (r=14) with vertical dividers between semantic groups and the
+           Move-to CTA as a solid teal tail-cap. Reference sc2: single
+           connected pill, teal Move button rides the right end. -->
+      <div class="sticky top-0 z-20 flex justify-center px-6 pt-4 pb-3">
+        <div class="inline-flex items-stretch h-11 rounded-[14px] bg-white shadow-[0_1px_3px_rgba(0,20,18,0.10),0_8px_24px_rgba(0,20,18,0.10)] border border-[var(--brand-border-fade)] overflow-hidden">
+          <!-- Overflow menu -->
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <button
+                class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+                aria-label="More actions"
+              >
+                <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" class="w-[200px] p-1">
+              <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer" @select="emit('open-full', props.candidate.id)">
+                <ArrowRight class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" />
+                View full profile
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+          <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
 
-        <!-- Communication group -->
-        <button
-          class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
-          aria-label="Send email"
-        ><Mail class="w-4 h-4" stroke-width="1.7" /></button>
-        <button
-          class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
-          aria-label="Schedule event"
-        ><Calendar class="w-4 h-4" stroke-width="1.7" /></button>
+          <!-- Communication -->
+          <button
+            class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+            aria-label="Send email"
+          ><Mail class="w-4 h-4" stroke-width="1.7" /></button>
+          <button
+            class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+            aria-label="Schedule event"
+          ><Calendar class="w-4 h-4" stroke-width="1.7" /></button>
 
-        <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+          <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
 
-        <!-- Collaboration group -->
-        <button
-          class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
-          aria-label="Add comment"
-        ><MessageSquare class="w-4 h-4" stroke-width="1.7" /></button>
+          <!-- Collaboration -->
+          <button
+            class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+            aria-label="Add comment"
+          ><MessageSquare class="w-4 h-4" stroke-width="1.7" /></button>
 
-        <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+          <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
 
-        <!-- Disqualify — icon + text + reasons chevron, styled as a
-             split action inside the pill. Red on hover to reinforce
-             destructive semantics without shouting from idle state. -->
-        <button
-          class="inline-flex items-center gap-1.5 px-3.5 h-full text-[13px] font-bold text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition"
-          @click="emit('disqualify', props.candidate.id)"
-        >
-          <Hand class="w-3.5 h-3.5" stroke-width="1.9" />
-          Disqualify
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <button
-              class="inline-flex items-center justify-center w-8 h-full text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition border-l border-[var(--brand-border-fade)]"
-              aria-label="Disqualify with reason"
-            >
-              <ChevronDown class="w-3.5 h-3.5" stroke-width="2" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" class="w-[220px] p-1">
-            <div class="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">
-              Disqualify reason
-            </div>
-            <DropdownMenuItem
-              v-for="reason in ['Knockout question', 'Not a fit', 'Withdrew', 'Ghosted', 'Other']"
-              :key="reason"
-              class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer"
-              @select="emit('disqualify', props.candidate.id)"
-            >
-              {{ reason }}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <!-- Disqualify — icon + text + reasons chevron. Red on hover
+               so destructive intent reads at rest calmly. -->
+          <button
+            class="inline-flex items-center gap-1.5 px-3.5 h-full text-[13px] font-bold text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition"
+            @click="emit('disqualify', props.candidate.id)"
+          >
+            <Hand class="w-3.5 h-3.5" stroke-width="1.9" />
+            Disqualify
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <button
+                class="inline-flex items-center justify-center w-8 h-full text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition border-l border-[var(--brand-border-fade)]"
+                aria-label="Disqualify with reason"
+              >
+                <ChevronDown class="w-3.5 h-3.5" stroke-width="2" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="w-[220px] p-1">
+              <div class="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">
+                Disqualify reason
+              </div>
+              <DropdownMenuItem
+                v-for="reason in ['Knockout question', 'Not a fit', 'Withdrew', 'Ghosted', 'Other']"
+                :key="reason"
+                class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer"
+                @select="emit('disqualify', props.candidate.id)"
+              >
+                {{ reason }}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+
+          <!-- Move-to primary — teal solid inside the same pill (tail
+               cap). truncate + max-w keeps long stage names on one line. -->
+          <button
+            v-if="primaryTarget"
+            class="inline-flex items-center gap-1.5 px-4 h-full text-[13px] font-bold text-white bg-[var(--brand-teal)] hover:bg-[color-mix(in_srgb,var(--brand-teal)_92%,white)] transition whitespace-nowrap max-w-[220px]"
+            @click="emit('move', props.candidate.id, props.currentStage.key, primaryTarget.key)"
+          >
+            <span class="truncate">Move to {{ primaryTarget.label }}</span>
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <button
+                class="inline-flex items-center px-2.5 h-full text-white bg-[var(--brand-teal)] border-l border-white/15 hover:bg-[color-mix(in_srgb,var(--brand-teal)_88%,white)] transition"
+                aria-label="Move to another stage"
+              >
+                <ChevronDown class="w-4 h-4" stroke-width="2" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="w-[220px] p-1">
+              <div class="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">
+                Move to
+              </div>
+              <DropdownMenuItem
+                v-for="target in props.moveTargets"
+                :key="target.key"
+                class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer"
+                @select="emit('move', props.candidate.id, props.currentStage.key, target.key)"
+              >
+                <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: target.dot }" />
+                <span class="flex-1">{{ target.label }}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-
-      <span class="flex-1" />
-
-      <!-- Move-to-<next> split-button. Same h-11 as the icon pill so the
-           row reads as one strip. `truncate` + `max-w-[220px]` keeps long
-           stage names ("Phone interview") on a single line at narrow widths. -->
-      <div class="inline-flex items-stretch h-11 rounded-[14px] overflow-hidden bg-[var(--brand-teal)] min-w-0 shadow-[0_1px_3px_rgba(0,20,18,0.08),0_6px_18px_rgba(0,20,18,0.06)]">
-        <button
-          v-if="primaryTarget"
-          class="inline-flex items-center gap-1.5 px-5 h-full text-[13px] font-bold text-white hover:bg-[color-mix(in_srgb,var(--brand-teal)_92%,white)] transition whitespace-nowrap max-w-[220px]"
-          @click="emit('move', props.candidate.id, props.currentStage.key, primaryTarget.key)"
-        >
-          <span class="truncate">Move to {{ primaryTarget.label }}</span>
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <button
-              class="inline-flex items-center px-2.5 h-full text-white border-l border-white/15 hover:bg-[color-mix(in_srgb,var(--brand-teal)_88%,white)] transition"
-              aria-label="Move to another stage"
-            >
-              <ChevronDown class="w-4 h-4" stroke-width="2" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" class="w-[220px] p-1">
-            <div class="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">
-              Move to
-            </div>
-            <DropdownMenuItem
-              v-for="target in props.moveTargets"
-              :key="target.key"
-              class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer"
-              @select="emit('move', props.candidate.id, props.currentStage.key, target.key)"
-            >
-              <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: target.dot }" />
-              <span class="flex-1">{{ target.label }}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
 
     <!-- Header -->
     <div class="relative flex items-start gap-4 px-6 pt-5">
@@ -267,8 +265,11 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
 
     <!-- Tab bodies. Overview mirrors the standalone /candidates/[id]
          Overview tab: Tags, Details, Contact, Profile fields, AI Summary
-         (read-mostly here; deep edits happen on the full page). -->
-    <div class="flex-1 min-h-0 overflow-y-auto px-6 py-5 bg-[var(--brand-canvas)]">
+         (read-mostly here; deep edits happen on the full page).
+         No independent overflow — the OUTER pane container is the single
+         scroll surface, so the header/tags/AI-score scroll off screen and
+         only the sticky action row stays pinned. -->
+    <div class="px-6 py-5 bg-[var(--brand-canvas)]">
       <template v-if="activeTab === 'Overview'">
         <!-- Tags row -->
         <div class="flex items-center flex-wrap gap-2 mb-4">
@@ -417,5 +418,6 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
         </div>
       </template>
     </div>
+    </div><!-- /outer scroll container -->
   </div>
 </template>
