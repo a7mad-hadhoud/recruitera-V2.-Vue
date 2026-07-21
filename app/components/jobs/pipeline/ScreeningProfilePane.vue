@@ -68,57 +68,97 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
       :style="{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--brand-lime-tint) 60%, white) 0%, color-mix(in srgb, var(--brand-pipeline-purple) 6%, white) 55%, transparent 100%)' }"
     />
 
-    <!-- Action row (top) -->
-    <div class="relative flex items-center gap-2 px-6 pt-5">
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <button
-            class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] hover:text-[var(--brand-text)] transition"
-            aria-label="More actions"
-          >
-            <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" class="w-[200px] p-1">
-          <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer" @select="emit('open-full', props.candidate.id)">
-            <ArrowRight class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" />
-            View full profile
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <button
-        class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] hover:text-[var(--brand-text)] transition"
-        aria-label="Send email"
-      ><Mail class="w-4 h-4" stroke-width="1.7" /></button>
-      <button
-        class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] hover:text-[var(--brand-text)] transition"
-        aria-label="Schedule event"
-      ><Calendar class="w-4 h-4" stroke-width="1.7" /></button>
-      <button
-        class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] hover:text-[var(--brand-text)] transition"
-        aria-label="Add comment"
-      ><MessageSquare class="w-4 h-4" stroke-width="1.7" /></button>
+    <!-- Action row — sticky so it stays on screen while the profile
+         scrolls. LEFT chunk: single white rounded pill with vertical
+         dividers between icon groups (⋯ | mail schedule | comment share
+         | disqualify), matching the reference. RIGHT chunk: Move-to
+         split-button, kept separate as the primary CTA. -->
+    <div class="sticky top-0 z-10 flex items-center gap-3 px-6 pt-5 pb-3 flex-wrap">
+      <div class="inline-flex items-stretch h-11 rounded-[14px] bg-white shadow-[0_1px_3px_rgba(0,20,18,0.08),0_6px_18px_rgba(0,20,18,0.06)] border border-[var(--brand-border-fade)] overflow-hidden">
+        <!-- Overflow menu -->
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <button
+              class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+              aria-label="More actions"
+            >
+              <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" class="w-[200px] p-1">
+            <DropdownMenuItem class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer" @select="emit('open-full', props.candidate.id)">
+              <ArrowRight class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" />
+              View full profile
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+
+        <!-- Communication group -->
+        <button
+          class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+          aria-label="Send email"
+        ><Mail class="w-4 h-4" stroke-width="1.7" /></button>
+        <button
+          class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+          aria-label="Schedule event"
+        ><Calendar class="w-4 h-4" stroke-width="1.7" /></button>
+
+        <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+
+        <!-- Collaboration group -->
+        <button
+          class="inline-flex items-center justify-center w-11 h-full text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+          aria-label="Add comment"
+        ><MessageSquare class="w-4 h-4" stroke-width="1.7" /></button>
+
+        <span class="w-px my-2 bg-[var(--brand-border-fade)]" aria-hidden="true" />
+
+        <!-- Disqualify — icon + text + reasons chevron, styled as a
+             split action inside the pill. Red on hover to reinforce
+             destructive semantics without shouting from idle state. -->
+        <button
+          class="inline-flex items-center gap-1.5 px-3.5 h-full text-[13px] font-bold text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition"
+          @click="emit('disqualify', props.candidate.id)"
+        >
+          <Hand class="w-3.5 h-3.5" stroke-width="1.9" />
+          Disqualify
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <button
+              class="inline-flex items-center justify-center w-8 h-full text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition border-l border-[var(--brand-border-fade)]"
+              aria-label="Disqualify with reason"
+            >
+              <ChevronDown class="w-3.5 h-3.5" stroke-width="2" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-[220px] p-1">
+            <div class="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">
+              Disqualify reason
+            </div>
+            <DropdownMenuItem
+              v-for="reason in ['Knockout question', 'Not a fit', 'Withdrew', 'Ghosted', 'Other']"
+              :key="reason"
+              class="flex items-center gap-2.5 px-2 py-1.5 text-[13.5px] cursor-pointer"
+              @select="emit('disqualify', props.candidate.id)"
+            >
+              {{ reason }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <span class="flex-1" />
 
-      <!-- Disqualify split-button (icon + chevron for reasons) -->
-      <div class="inline-flex items-stretch rounded-[10px] overflow-hidden border border-[var(--brand-border)] bg-white">
-        <button
-          class="inline-flex items-center gap-1.5 px-3 h-9 text-[13px] font-semibold text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-status-closed-bg)] transition"
-          @click="emit('disqualify', props.candidate.id)"
-        >
-          <Hand class="w-3.5 h-3.5" stroke-width="1.8" />
-          Disqualify
-        </button>
-      </div>
-
-      <!-- Move-to-<next> split-button. `truncate` + `max-w-[220px]` keeps
-           long stage names ("Phone interview") on a single line even when
-           the right pane is narrow. -->
-      <div class="inline-flex items-stretch rounded-[10px] overflow-hidden bg-[var(--brand-teal)] min-w-0">
+      <!-- Move-to-<next> split-button. Same h-11 as the icon pill so the
+           row reads as one strip. `truncate` + `max-w-[220px]` keeps long
+           stage names ("Phone interview") on a single line at narrow widths. -->
+      <div class="inline-flex items-stretch h-11 rounded-[14px] overflow-hidden bg-[var(--brand-teal)] min-w-0 shadow-[0_1px_3px_rgba(0,20,18,0.08),0_6px_18px_rgba(0,20,18,0.06)]">
         <button
           v-if="primaryTarget"
-          class="inline-flex items-center gap-1.5 px-4 h-9 text-[13px] font-bold text-white hover:bg-[color-mix(in_srgb,var(--brand-teal)_92%,white)] transition whitespace-nowrap max-w-[220px]"
+          class="inline-flex items-center gap-1.5 px-5 h-full text-[13px] font-bold text-white hover:bg-[color-mix(in_srgb,var(--brand-teal)_92%,white)] transition whitespace-nowrap max-w-[220px]"
           @click="emit('move', props.candidate.id, props.currentStage.key, primaryTarget.key)"
         >
           <span class="truncate">Move to {{ primaryTarget.label }}</span>
@@ -126,7 +166,7 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <button
-              class="inline-flex items-center px-2 h-9 text-white border-l border-white/15 hover:bg-[color-mix(in_srgb,var(--brand-teal)_88%,white)] transition"
+              class="inline-flex items-center px-2.5 h-full text-white border-l border-white/15 hover:bg-[color-mix(in_srgb,var(--brand-teal)_88%,white)] transition"
               aria-label="Move to another stage"
             >
               <ChevronDown class="w-4 h-4" stroke-width="2" />
