@@ -11,9 +11,10 @@
   useJobPipeline. Emits `open-full` for the "View full profile" link.
 -->
 <script setup lang="ts">
-import { Mail, Calendar, MessageSquare, MoreHorizontal, Hand, ChevronDown, ArrowRight, Ban, MapPin, Phone, Plus } from 'lucide-vue-next'
+import { Mail, Calendar, MessageSquare, MoreHorizontal, Hand, ChevronDown, ArrowRight, Ban, MapPin, Phone, Plus, Copy, Sparkles } from 'lucide-vue-next'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import type { PipelineCandidate, PipelineStage } from '~/types'
+import CandidateCollapsibleCard from '~/components/candidates/CandidateCollapsibleCard.vue'
+import type { PipelineCandidate, PipelineStage, CandidateProfile } from '~/types'
 
 const props = defineProps<{
   candidate: PipelineCandidate
@@ -35,6 +36,10 @@ const props = defineProps<{
     experience?: Array<{ role: string; company: string; period: string; description?: string }>
     skills?: string[]
   } | null
+  /** Full candidate profile — powers the Overview tab sections (Tags,
+   *  Details, Contact, Profile fields, AI Summary). Read-mostly here;
+   *  editing lives on the standalone /candidates/[id] page. */
+  profile?: CandidateProfile | null
 }>()
 
 const emit = defineEmits<{
@@ -220,62 +225,150 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
       </button>
     </div>
 
-    <!-- Tab bodies (only Profile has real content in v1) -->
-    <div class="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+    <!-- Tab bodies. Overview mirrors the standalone /candidates/[id]
+         Overview tab: Tags, Details, Contact, Profile fields, AI Summary
+         (read-mostly here; deep edits happen on the full page). -->
+    <div class="flex-1 min-h-0 overflow-y-auto px-6 py-5 bg-[var(--brand-canvas)]">
       <template v-if="activeTab === 'Overview'">
-        <section v-if="props.summary" class="mb-6">
-          <h3 class="text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-2">Summary</h3>
-          <p class="text-[13.5px] text-[var(--brand-text-secondary)] leading-relaxed">{{ props.summary }}</p>
-        </section>
+        <!-- Tags row -->
+        <div class="flex items-center flex-wrap gap-2 mb-4">
+          <span class="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[var(--brand-text)]">
+            <span class="w-4 h-4 inline-flex items-center justify-center text-[var(--brand-text-quiet)]">🏷</span>
+            Tags
+          </span>
+          <span
+            v-for="tag in props.tags"
+            :key="tag"
+            class="inline-flex items-center gap-1.5 rounded-full bg-white border border-[var(--brand-border)] px-2.5 h-7 text-[12.5px] font-semibold text-[var(--brand-text)]"
+          >
+            {{ tag }}
+            <button class="text-[var(--brand-text-faint)] hover:text-[var(--brand-text-secondary)]" aria-label="Remove tag">
+              <Ban class="w-3 h-3 rotate-45" stroke-width="2" />
+            </button>
+          </span>
+          <button
+            class="inline-flex items-center justify-center rounded-full w-7 h-7 bg-white border border-dashed border-[var(--brand-border)] text-[var(--brand-text-quiet)] hover:border-[var(--brand-teal)] hover:text-[var(--brand-teal)] transition"
+            aria-label="Add tag"
+          >
+            <Plus class="w-3.5 h-3.5" stroke-width="2" />
+          </button>
+        </div>
 
-        <section v-if="props.answers?.length" class="mb-6">
-          <h3 class="text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-2">Screening answers</h3>
+        <!-- Details -->
+        <CandidateCollapsibleCard title="Details" class="mb-4">
+          <div class="grid grid-cols-[110px_1fr] gap-y-3 text-[13.5px]">
+            <span class="text-[var(--brand-text-quiet)]">Date created</span>
+            <span class="text-[var(--brand-text)]">{{ props.profile?.dateCreated ?? '—' }}</span>
+            <span class="text-[var(--brand-text-quiet)]">Source</span>
+            <span>
+              <span
+                v-if="props.profile?.source"
+                class="inline-flex items-center h-6 rounded-md bg-[var(--brand-lime-tint)] text-[var(--brand-teal-secondary)] px-2 text-[12.5px] font-semibold"
+              >{{ props.profile.source }}</span>
+              <span v-else class="text-[var(--brand-text-quiet)]">—</span>
+            </span>
+            <span class="text-[var(--brand-text-quiet)]">Last activity</span>
+            <span class="text-[var(--brand-text)]">
+              <template v-if="props.profile?.lastActivityDetail">
+                <strong class="font-semibold">{{ props.profile.lastActivityDetail.actor }}</strong>
+                {{ ' ' + props.profile.lastActivityDetail.action }}
+              </template>
+              <template v-else>—</template>
+            </span>
+          </div>
+        </CandidateCollapsibleCard>
+
+        <!-- Contact -->
+        <CandidateCollapsibleCard title="Contact" class="mb-4">
+          <template #actions>
+            <button class="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition">
+              <MessageSquare class="w-3.5 h-3.5" stroke-width="1.8" />
+              Send message
+            </button>
+          </template>
+          <div class="grid grid-cols-[80px_1fr_auto] gap-y-3 gap-x-3 items-center text-[13.5px]">
+            <span class="text-[var(--brand-text-quiet)]">Email</span>
+            <a
+              v-if="props.profile?.email"
+              :href="`mailto:${props.profile.email}`"
+              class="text-[var(--brand-teal-secondary)] hover:underline truncate"
+            >{{ props.profile.email }}</a>
+            <span v-else class="text-[var(--brand-text-quiet)]">—</span>
+            <button
+              v-if="props.profile?.email"
+              class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
+              aria-label="Copy email"
+              @click="props.profile?.email && navigator.clipboard.writeText(props.profile.email)"
+            ><Copy class="w-3.5 h-3.5" stroke-width="1.8" /></button>
+            <span v-else />
+
+            <span class="text-[var(--brand-text-quiet)]">Phone</span>
+            <span class="text-[var(--brand-text)]">{{ props.profile?.phone ?? '—' }}</span>
+            <button
+              v-if="props.profile?.phone"
+              class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
+              aria-label="Copy phone"
+              @click="props.profile?.phone && navigator.clipboard.writeText(props.profile.phone)"
+            ><Copy class="w-3.5 h-3.5" stroke-width="1.8" /></button>
+            <span v-else />
+
+            <span class="text-[var(--brand-text-quiet)]">Location</span>
+            <span class="text-[var(--brand-text)]">{{ props.profile?.location ?? props.candidate.location ?? '—' }}</span>
+            <span />
+          </div>
+        </CandidateCollapsibleCard>
+
+        <!-- Profile fields -->
+        <CandidateCollapsibleCard title="Profile fields" class="mb-4">
+          <div class="grid grid-cols-[130px_1fr] gap-y-2.5 text-[13.5px]">
+            <span class="text-[var(--brand-text-secondary)]">University</span>
+            <span :class="props.profile?.profileFields?.university ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] italic'">{{ props.profile?.profileFields?.university || 'empty' }}</span>
+            <span class="text-[var(--brand-text-secondary)]">Faculty</span>
+            <span :class="props.profile?.profileFields?.faculty ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] italic'">{{ props.profile?.profileFields?.faculty || 'empty' }}</span>
+            <span class="text-[var(--brand-text-secondary)]">Years of experience</span>
+            <span :class="props.profile?.profileFields?.yearsOfExperience ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] italic'">{{ props.profile?.profileFields?.yearsOfExperience ?? 'empty' }}</span>
+            <span class="text-[var(--brand-text-secondary)]">Industry-relevant</span>
+            <span :class="props.profile?.profileFields?.industryRelevant !== null && props.profile?.profileFields?.industryRelevant !== undefined ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] italic'">
+              {{ props.profile?.profileFields?.industryRelevant === true ? 'Yes' : props.profile?.profileFields?.industryRelevant === false ? 'No' : 'empty' }}
+            </span>
+            <span class="text-[var(--brand-text-secondary)]">Languages</span>
+            <span :class="props.profile?.profileFields?.languages ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] italic'">{{ props.profile?.profileFields?.languages || 'empty' }}</span>
+            <span class="text-[var(--brand-text-secondary)]">Gender</span>
+            <span :class="props.profile?.profileFields?.gender ? 'text-[var(--brand-text)]' : 'text-[var(--brand-text-quiet)] italic'">{{ props.profile?.profileFields?.gender || 'empty' }}</span>
+          </div>
+        </CandidateCollapsibleCard>
+
+        <!-- AI Summary -->
+        <CandidateCollapsibleCard title="AI Summary" class="mb-4">
+          <template #icon>
+            <Sparkles class="w-4 h-4 text-[var(--brand-ai-accent)]" stroke-width="1.7" />
+          </template>
+          <p v-if="props.summary" class="text-[13.5px] text-[var(--brand-text-secondary)] leading-relaxed">
+            {{ props.summary }}
+          </p>
+          <p v-else class="text-[13px] text-[var(--brand-text-quiet)] italic">
+            No AI summary generated yet.
+          </p>
+        </CandidateCollapsibleCard>
+
+        <!-- Screening answers — kept from the earlier triage layout since
+             they're specific to this job's application flow. -->
+        <CandidateCollapsibleCard v-if="props.answers?.length" title="Screening answers" class="mb-4">
           <ul class="space-y-3">
-            <li v-for="(qa, i) in props.answers" :key="i"
-                class="border border-[var(--brand-border-fade)] rounded-[10px] px-4 py-3">
+            <li v-for="(qa, i) in props.answers" :key="i" class="border border-[var(--brand-border-fade)] rounded-[10px] px-4 py-3 bg-white">
               <div class="text-[12.5px] text-[var(--brand-text-secondary)]">{{ qa.q }}</div>
               <div class="text-[13.5px] font-semibold text-[var(--brand-text)] mt-1">{{ qa.a }}</div>
             </li>
           </ul>
-        </section>
+        </CandidateCollapsibleCard>
 
-        <section class="mb-6">
-          <h3 class="text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)] mb-2">Resume</h3>
-          <div class="border border-[var(--brand-border-fade)] rounded-[10px] p-5 bg-white">
-            <div class="text-[15px] font-bold text-[var(--brand-text)]">{{ props.candidate.name }}</div>
-            <div v-if="props.cv?.contactLine || props.contact?.email"
-                 class="text-[12px] text-[var(--brand-text-secondary)] mt-0.5">
-              {{ props.cv?.contactLine ?? [props.headline, props.contact?.email, props.contact?.phone].filter(Boolean).join(' · ') }}
-            </div>
-
-            <div class="h-px bg-[var(--brand-border-fade)] my-4" />
-
-            <div class="text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-secondary)] mb-2">Experience</div>
-            <template v-if="props.cv?.experience?.length">
-              <div v-for="(exp, i) in props.cv.experience" :key="i" class="mb-3.5 last:mb-0">
-                <div class="text-[13px] font-bold text-[var(--brand-text)]">{{ exp.role }} — {{ exp.company }}</div>
-                <div class="text-[11.5px] text-[var(--brand-text-quiet)] mt-0.5">{{ exp.period }}</div>
-                <div v-if="exp.description" class="text-[12.5px] text-[var(--brand-text-secondary)] leading-relaxed mt-1">
-                  {{ exp.description }}
-                </div>
-              </div>
-            </template>
-            <div v-else class="text-[12.5px] text-[var(--brand-text-quiet)]">
-              No experience on file yet.
-              <button
-                class="ml-1 text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] font-semibold transition"
-                @click="emit('open-full', props.candidate.id)"
-              >View full profile →</button>
-            </div>
-
-            <template v-if="props.cv?.skills?.length">
-              <div class="text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-secondary)] mt-4 mb-2">Skills</div>
-              <div class="text-[12.5px] text-[var(--brand-text-secondary)]">
-                {{ props.cv.skills.join(' · ') }}
-              </div>
-            </template>
-          </div>
-        </section>
+        <button
+          class="w-full inline-flex items-center justify-center gap-1.5 h-10 rounded-[10px] border border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)] transition"
+          @click="emit('open-full', props.candidate.id)"
+        >
+          Open full profile
+          <ArrowRight class="w-3.5 h-3.5" stroke-width="2" />
+        </button>
       </template>
       <template v-else>
         <div class="text-center py-16 text-[13px] text-[var(--brand-text-quiet)]">

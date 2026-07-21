@@ -292,6 +292,7 @@ function listMetaFor(id: string) {
             :answers="profileForPane.answers"
             :contact="profileForPane.contact ?? { location: selectedRow.candidate.location ?? undefined }"
             :cv="profileForPane.cv"
+            :profile="profile ?? null"
             @move="(id, from, to) => emit('move', id, from, to)"
             @disqualify="(id) => emit('move', id, selectedRow!.stage.key, 'rejected')"
             @open-full="(id) => emit('open-full', id)"
