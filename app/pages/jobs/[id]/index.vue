@@ -487,8 +487,39 @@ function clearSelection() { selectedIds.value = new Set() }
 
           <!-- Segmented Qualified/Disqualified. Shown in BOTH Kanban and
                 Screening — mockup keeps this compact pill at the top of
-                the sub-toolbar for both views. -->
+                the sub-toolbar for both views. The Kanban⇆Screening
+                view toggle sits to the LEFT of it per the ref. -->
           <template v-else>
+            <!-- Kanban ⇆ Screening view-mode toggle. -->
+            <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-9" role="tablist" aria-label="Pipeline view mode">
+              <button
+                role="tab"
+                :aria-selected="pipelineViewMode === 'kanban'"
+                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
+                :class="pipelineViewMode === 'kanban'
+                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
+                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                aria-label="Kanban view"
+                @click="pipelineViewMode = 'kanban'"
+              >
+                <Kanban class="w-3.5 h-3.5" stroke-width="1.8" />
+                Kanban
+              </button>
+              <button
+                role="tab"
+                :aria-selected="pipelineViewMode === 'screening'"
+                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
+                :class="pipelineViewMode === 'screening'
+                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
+                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+                aria-label="Screening view"
+                @click="pipelineViewMode = 'screening'"
+              >
+                <Users class="w-3.5 h-3.5" stroke-width="1.8" />
+                Screening
+              </button>
+            </div>
+
             <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-[37px]">
               <button
                 class="inline-flex items-center gap-2 rounded-[8px] px-3.5 h-[31px] text-[13px] font-bold transition"
@@ -547,41 +578,10 @@ function clearSelection() { selectedIds.value = new Set() }
                Kanban only — Screening uses its own list-scoped affordances. -->
           <AddCandidatesModal v-if="pipelineViewMode === 'kanban'" :preselected-job-id="jobId" />
 
-          <div class="inline-flex items-center gap-1.5">
-            <button v-if="pipelineViewMode === 'kanban'" class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] transition" aria-label="Sort candidates">
+          <div v-if="pipelineViewMode === 'kanban'" class="inline-flex items-center gap-1.5">
+            <button class="w-9 h-9 rounded-[10px] bg-[var(--brand-canvas)] text-[var(--brand-text-quiet)] inline-flex items-center justify-center hover:bg-[var(--brand-lime-tint)] transition" aria-label="Sort candidates">
               <ArrowUpDown class="w-4 h-4" stroke-width="1.5" />
             </button>
-            <!-- Kanban ⇆ Screening view-mode toggle (Recruitee-style).
-                 Same segmented visuals as Qualified/Disqualified above,
-                 so the sub-toolbar reads as a coherent row. -->
-            <div class="inline-flex items-center bg-[var(--brand-canvas)] rounded-[10px] p-[3px] h-9" role="tablist" aria-label="Pipeline view mode">
-              <button
-                role="tab"
-                :aria-selected="pipelineViewMode === 'kanban'"
-                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
-                :class="pipelineViewMode === 'kanban'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
-                aria-label="Kanban view"
-                @click="pipelineViewMode = 'kanban'"
-              >
-                <Kanban class="w-3.5 h-3.5" stroke-width="1.8" />
-                Kanban
-              </button>
-              <button
-                role="tab"
-                :aria-selected="pipelineViewMode === 'screening'"
-                class="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 h-[26px] text-[12.5px] font-bold transition"
-                :class="pipelineViewMode === 'screening'
-                  ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_2px_rgba(0,20,18,0.08)]'
-                  : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
-                aria-label="Screening view"
-                @click="pipelineViewMode = 'screening'"
-              >
-                <Users class="w-3.5 h-3.5" stroke-width="1.8" />
-                Screening
-              </button>
-            </div>
           </div>
         </div>
 
