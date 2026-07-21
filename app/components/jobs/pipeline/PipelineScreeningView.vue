@@ -25,6 +25,8 @@ import ScreeningProfilePane from './ScreeningProfilePane.vue'
 const props = defineProps<{
   stages: PipelineStage[]
   selected: Set<string>
+  qualifiedCount: number
+  disqualifiedCount: number
 }>()
 
 const emit = defineEmits<{
@@ -37,6 +39,10 @@ const activeStageKey = ref<string>('all')
 const selectedCandidateId = ref<string | null>(null)
 const searchText = ref('')
 const listCollapsed = ref(false)
+// Qualified/Disqualified as folder tabs at the top of the list column.
+// Fixture today; when the API lands this becomes a boolean folded into
+// the ['pipeline', jobId, stageKey, filters] key.
+const segment = ref<'qual' | 'disq'>('qual')
 
 // Keyboard-hint dismissal persists so power users don't see it again.
 // `1` = dismissed. Guard rendering off it AND require a selected candidate.
@@ -179,14 +185,53 @@ function listMetaFor(id: string) {
     <div class="flex-1 min-h-0 flex overflow-hidden">
       <!-- LIST COLUMN -->
       <aside
-        class="border-r border-[var(--brand-border-fade)] flex flex-col min-h-0 bg-white transition-[width]"
-        :class="listCollapsed ? 'w-[52px]' : 'w-[340px]'"
+        class="border-r border-[var(--brand-border-fade)] flex flex-col min-h-0 transition-[width]"
+        :class="listCollapsed ? 'w-[52px] bg-white' : 'w-[340px] bg-[var(--brand-canvas)]'"
       >
-        <!-- List column header. Qualified/Disqualified used to live here
-             but the top-level pill in the sub-toolbar is the source of
-             truth (Wuzzuf parity), so this header is now just: collapse
-             toggle + search + filter popover. -->
-        <div v-if="!listCollapsed" class="border-b border-[var(--brand-border-fade)]">
+        <!-- Folder tabs — Qualified / Disqualified. Active tab is the
+             elevated white "folder" that flows into the list content
+             below; the inactive tab is recessed on the same canvas as
+             the list card's surrounding background. Matches sc2/sc3. -->
+        <div v-if="!listCollapsed" role="tablist" class="flex items-end gap-0 shrink-0 pt-1">
+          <button
+            role="tab"
+            :aria-selected="segment === 'qual'"
+            class="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-bold transition"
+            :class="segment === 'qual'
+              ? 'bg-white text-[var(--brand-text)] rounded-t-[14px] h-[46px] shadow-[0_-1px_0_var(--brand-border-fade)]'
+              : 'bg-[color-mix(in_srgb,var(--brand-lime-tint)_60%,white)] text-[var(--brand-text-subtle)] rounded-t-[12px] h-10 hover:text-[var(--brand-text)]'"
+            @click="segment = 'qual'"
+          >
+            Qualified
+            <span
+              class="text-[11.5px] font-bold rounded-md px-[7px] py-px tabular-nums"
+              :class="segment === 'qual'
+                ? 'bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]'
+                : 'bg-white/60 text-[var(--brand-text-quiet)]'"
+            >{{ props.qualifiedCount }}</span>
+          </button>
+          <button
+            role="tab"
+            :aria-selected="segment === 'disq'"
+            class="flex-1 inline-flex items-center justify-center gap-2 text-[14px] font-bold transition"
+            :class="segment === 'disq'
+              ? 'bg-white text-[var(--brand-text)] rounded-t-[14px] h-[46px] shadow-[0_-1px_0_var(--brand-border-fade)]'
+              : 'bg-[color-mix(in_srgb,var(--brand-lime-tint)_60%,white)] text-[var(--brand-text-subtle)] rounded-t-[12px] h-10 hover:text-[var(--brand-text)]'"
+            @click="segment = 'disq'"
+          >
+            Disqualified
+            <span
+              class="text-[11.5px] font-bold rounded-md px-[7px] py-px tabular-nums"
+              :class="segment === 'disq'
+                ? 'bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]'
+                : 'bg-white/60 text-[var(--brand-text-quiet)]'"
+            >{{ props.disqualifiedCount }}</span>
+          </button>
+        </div>
+
+        <!-- List column header (below folder tabs). Just: collapse toggle,
+             search, filter popover. -->
+        <div v-if="!listCollapsed" class="bg-white border-b border-[var(--brand-border-fade)]">
           <div class="flex items-center gap-2 px-3 py-3">
             <button
               class="w-8 h-8 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"
@@ -276,7 +321,7 @@ function listMetaFor(id: string) {
           </button>
         </div>
 
-        <div v-if="!listCollapsed" class="flex-1 min-h-0 overflow-y-auto">
+        <div v-if="!listCollapsed" class="flex-1 min-h-0 overflow-y-auto bg-white">
           <template v-if="filteredRows.length">
             <ScreeningCandidateRow
               v-for="row in filteredRows"
