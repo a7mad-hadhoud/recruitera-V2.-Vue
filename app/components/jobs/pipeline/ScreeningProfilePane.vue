@@ -42,9 +42,17 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
 </script>
 
 <template>
-  <div class="flex flex-col min-h-0 h-full bg-white">
+  <div class="flex flex-col min-h-0 h-full bg-white relative">
+    <!-- Warm gradient behind the action row + header — matches Wuzzuf/
+         Recruitee reference. Kept low-opacity so brand palette stays lead. -->
+    <div
+      class="pointer-events-none absolute top-0 left-0 right-0 h-[220px]"
+      aria-hidden="true"
+      :style="{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--brand-lime-tint) 60%, white) 0%, color-mix(in srgb, var(--brand-pipeline-purple) 6%, white) 55%, transparent 100%)' }"
+    />
+
     <!-- Action row (top) -->
-    <div class="flex items-center gap-2 px-6 pt-5">
+    <div class="relative flex items-center gap-2 px-6 pt-5">
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <button
@@ -126,7 +134,7 @@ const primaryTarget = computed(() => props.nextStage ?? props.moveTargets[0] ?? 
     </div>
 
     <!-- Header -->
-    <div class="flex items-start gap-4 px-6 pt-5">
+    <div class="relative flex items-start gap-4 px-6 pt-5">
       <span class="relative inline-flex w-16 h-16 shrink-0">
         <img
           v-if="props.candidate.avatarUrl"

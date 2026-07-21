@@ -48,7 +48,7 @@ function onKey(e: KeyboardEvent) {
   <div
     role="tablist"
     aria-label="Pipeline stages"
-    class="flex items-center gap-1 overflow-x-auto no-scrollbar border-b border-[var(--brand-border-fade)]"
+    class="flex items-center gap-2 overflow-x-auto no-scrollbar px-4 py-3 border-b border-[var(--brand-border-fade)] bg-white"
     @keydown="onKey"
   >
     <button
@@ -57,24 +57,23 @@ function onKey(e: KeyboardEvent) {
       role="tab"
       :aria-selected="tab.key === props.activeKey"
       :tabindex="tab.key === props.activeKey ? 0 : -1"
-      class="group inline-flex items-center gap-2 shrink-0 px-4 h-11 text-[13.5px] font-semibold transition relative"
+      class="group inline-flex items-center gap-2 shrink-0 rounded-[10px] h-9 px-3 text-[13px] font-bold transition"
       :class="tab.key === props.activeKey
-        ? 'text-[var(--brand-text)]'
-        : 'text-[var(--brand-text-subtle)] hover:text-[var(--brand-text)]'"
+        ? 'bg-[var(--brand-teal)] text-white shadow-[0_1px_2px_rgba(0,20,18,0.15)]'
+        : 'bg-transparent text-[var(--brand-text-subtle)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-text)]'"
       @click="emit('update:activeKey', tab.key)"
     >
-      <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: tab.dot }" />
+      <span
+        class="w-1.5 h-1.5 rounded-full shrink-0"
+        :style="{ background: tab.key === props.activeKey ? 'var(--brand-lime)' : tab.dot }"
+      />
       <span>{{ tab.label }}</span>
       <span
-        class="text-[11px] font-bold rounded-md px-[7px] py-px tabular-nums"
+        class="text-[11px] font-bold rounded-md px-[6px] py-px tabular-nums"
         :class="tab.key === props.activeKey
-          ? 'bg-[var(--brand-teal)] text-white'
+          ? 'bg-white/15 text-white'
           : 'bg-[var(--brand-canvas)] text-[var(--brand-text-secondary)]'"
       >{{ tab.count }}</span>
-      <span
-        v-if="tab.key === props.activeKey"
-        class="absolute left-3 right-3 -bottom-px h-[2px] bg-[var(--brand-teal)] rounded-full"
-      />
     </button>
   </div>
 </template>
