@@ -190,12 +190,11 @@ async function copyJobUrl() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
-    <!-- Modal frame — per spec: 1000px capped, asymmetric gutters
-         (15px left / 90px right) so the underlying app peeks through
-         on the right. On narrow viewports collapse to a tiny inset so
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
+    <!-- Modal frame — 1000px capped, centered horizontally with a tiny
+         vertical gutter. On narrow viewports collapse to fullscreen so
          the editor stays usable. -->
-    <div class="absolute inset-0 md:top-3 md:bottom-3 md:left-[15px] md:right-[90px] md:max-w-[1000px] flex flex-col rounded-none md:rounded-[10px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
+    <div class="relative w-full h-full md:w-[1000px] md:max-w-[calc(100vw-32px)] md:h-[calc(100vh-24px)] flex flex-col rounded-none md:rounded-[10px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
       <!-- Sample-data banner -->
       <div class="flex items-center justify-center gap-2 h-9 bg-[var(--brand-text)] text-white text-[12.5px] shrink-0">
         Sample data active —
