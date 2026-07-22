@@ -191,7 +191,11 @@ async function copyJobUrl() {
 
 <template>
   <div class="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
-    <div class="absolute inset-0 md:inset-1 flex flex-col rounded-none md:rounded-[10px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
+    <!-- Modal frame — per spec: 1000px capped, asymmetric gutters
+         (15px left / 90px right) so the underlying app peeks through
+         on the right. On narrow viewports collapse to a tiny inset so
+         the editor stays usable. -->
+    <div class="absolute inset-0 md:top-3 md:bottom-3 md:left-[15px] md:right-[90px] md:max-w-[1000px] flex flex-col rounded-none md:rounded-[10px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
       <!-- Sample-data banner -->
       <div class="flex items-center justify-center gap-2 h-9 bg-[var(--brand-text)] text-white text-[12.5px] shrink-0">
         Sample data active —
@@ -320,7 +324,7 @@ async function copyJobUrl() {
       <!-- Body: sidenav + content -->
       <div class="flex-1 min-h-0 flex overflow-hidden">
         <!-- Sidenav -->
-        <aside class="w-[240px] lg:w-[280px] xl:w-[320px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
+        <aside class="w-[194px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
           <nav class="flex-1 p-3">
             <button
               v-for="n in NAV"
@@ -345,7 +349,7 @@ async function copyJobUrl() {
 
         <!-- Content -->
         <div class="flex-1 min-h-0 overflow-y-auto">
-          <div v-if="activeNav === 'details'" class="max-w-[880px] mx-auto p-6 flex flex-col gap-4">
+          <div v-if="activeNav === 'details'" class="max-w-[700px] mx-auto p-6 flex flex-col gap-4">
             <!-- Work mode -->
             <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Work mode</h2>
@@ -405,8 +409,10 @@ async function copyJobUrl() {
                   Manage fields
                 </button>
               </div>
-              <div class="grid grid-cols-2 gap-4 mt-4">
-                <div>
+              <!-- Title:Dept 2:1 per spec — Job title dominates, Department
+                   sits as the narrower right-side field. -->
+              <div class="grid grid-cols-3 gap-4 mt-4">
+                <div class="col-span-2">
                   <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
                     Job title <span class="text-[var(--brand-status-closed-text)]">*</span>
                   </label>
@@ -730,13 +736,13 @@ async function copyJobUrl() {
 
           <JobEditorCrossPostingTab v-else-if="activeNav === 'cross'" />
 
-          <div v-else class="max-w-[880px] mx-auto p-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
+          <div v-else class="max-w-[700px] mx-auto p-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
           </div>
 
           <!-- Shared step nav — same [← Prev] [Next →] pair under every
                tab body, driven by the sidenav order. -->
-          <div class="max-w-[880px] mx-auto px-6 pb-8 flex items-center justify-between gap-2">
+          <div class="max-w-[700px] mx-auto px-6 pb-8 flex items-center justify-between gap-2">
             <button
               v-if="prevNav"
               class="inline-flex items-center gap-2 px-5 h-10 rounded-[9px] border border-[var(--brand-border)] bg-white text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"

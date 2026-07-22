@@ -61,7 +61,7 @@ function onPickImage(e: Event) {
 </script>
 
 <template>
-  <div class="max-w-[880px] mx-auto p-6 flex flex-col gap-4">
+  <div class="max-w-[700px] mx-auto p-6 flex flex-col gap-4">
     <!-- SEO ─────────────────────────────────────────────────── -->
     <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
       <h2 class="text-[17px] font-bold text-[var(--brand-text)]">SEO</h2>
