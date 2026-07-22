@@ -28,8 +28,7 @@
 import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
          Trash2, Briefcase, Wrench, Sparkles, ArrowRight,
          Bold, Italic, Underline, Strikethrough, List, ListOrdered, Link2, Image,
-         MapPin, Building2, ClipboardList, Users, Layers, Share, Send, ChevronUp, Copy, Check,
-         ThumbsUp } from 'lucide-vue-next'
+         MapPin, Building2, ClipboardList, Users, Layers, Share, Send, ChevronUp, Copy, Check } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -57,7 +56,6 @@ const NAV: Array<{ key: string; label: string; icon: any }> = [
   { key: 'app',      label: 'Application',    icon: ClipboardList },
   { key: 'team',     label: 'Team',           icon: Users        },
   { key: 'workflow', label: 'Workflow',       icon: Layers       },
-  { key: 'eval',     label: 'Evaluation kit', icon: ThumbsUp     },
   { key: 'social',   label: 'Social Sharing', icon: Share        },
   { key: 'cross',    label: 'Cross Posting',  icon: Send         },
 ]
@@ -193,7 +191,7 @@ async function copyJobUrl() {
 
 <template>
   <div class="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
-    <div class="absolute inset-3 md:inset-6 flex flex-col rounded-[14px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
+    <div class="absolute inset-2 md:inset-3 flex flex-col rounded-[14px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
       <!-- Sample-data banner -->
       <div class="flex items-center justify-center gap-2 h-9 bg-[var(--brand-text)] text-white text-[12.5px] shrink-0">
         Sample data active —
@@ -208,10 +206,10 @@ async function copyJobUrl() {
       <div class="flex items-center gap-2 px-6 py-4 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
         <div class="min-w-0 flex-1 mr-auto">
           <div class="flex items-center gap-2 min-w-0">
-            <h1 class="text-[18px] font-bold text-[var(--brand-text)] leading-tight truncate min-w-0">{{ jobTitle || 'Untitled job' }}</h1>
-            <span class="text-[12px] font-semibold text-[var(--brand-text-quiet)] tabular-nums whitespace-nowrap shrink-0">#{{ shortId }}</span>
+            <h1 class="text-[22px] font-extrabold text-[var(--brand-text)] leading-tight truncate min-w-0">{{ jobTitle || 'Untitled job' }}</h1>
+            <span class="text-[13px] font-semibold text-[var(--brand-text-quiet)] tabular-nums whitespace-nowrap shrink-0">#{{ shortId }}</span>
           </div>
-          <div class="text-[12px] text-[var(--brand-text-quiet)] mt-0.5 whitespace-nowrap">Last edit a moment ago</div>
+          <div class="text-[12.5px] text-[var(--brand-text-quiet)] mt-1 whitespace-nowrap">Saved just now</div>
         </div>
 
         <!-- Share popover — reuses the same shape as the kanban Share (see
@@ -306,15 +304,23 @@ async function copyJobUrl() {
         <button class="w-9 h-9 rounded-[8px] inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="More actions">
           <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
         </button>
-        <NuxtLink to="/jobs" class="w-9 h-9 rounded-[8px] inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="Close editor">
-          <X class="w-4 h-4" stroke-width="2" />
-        </NuxtLink>
       </div>
+
+      <!-- Close button — lifted to the top-right corner of the modal
+           (outside the header row), matching the Recruitee ref where the
+           dismiss chip floats above the header. -->
+      <NuxtLink
+        to="/jobs"
+        class="absolute top-2.5 right-2.5 z-10 w-9 h-9 rounded-[10px] inline-flex items-center justify-center bg-white/90 backdrop-blur text-[var(--brand-text-secondary)] hover:bg-white hover:text-[var(--brand-text)] shadow-[0_2px_8px_rgba(0,20,18,0.08)] transition"
+        aria-label="Close editor"
+      >
+        <X class="w-4 h-4" stroke-width="2" />
+      </NuxtLink>
 
       <!-- Body: sidenav + content -->
       <div class="flex-1 min-h-0 flex overflow-hidden">
         <!-- Sidenav -->
-        <aside class="w-[220px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
+        <aside class="w-[260px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
           <nav class="flex-1 p-2">
             <button
               v-for="n in NAV"
