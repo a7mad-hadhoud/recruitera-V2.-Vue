@@ -39,6 +39,8 @@ import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.v
 import JobEditorTeamTab from '~/components/jobs/JobEditorTeamTab.vue'
 import JobEditorSocialSharingTab from '~/components/jobs/JobEditorSocialSharingTab.vue'
 import JobEditorCrossPostingTab from '~/components/jobs/JobEditorCrossPostingTab.vue'
+import JobDetailsFieldsModal from '~/components/jobs/JobDetailsFieldsModal.vue'
+import JobDetailsLocationModal from '~/components/jobs/JobDetailsLocationModal.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -161,6 +163,17 @@ const statusDot = computed(() =>
 // Short id for the header chip. Stable per pageload so it doesn't
 // bounce on every render (was Math.random() in the template previously).
 const shortId = computed(() => String(route.params.id ?? '').slice(-5) || Math.random().toString(36).slice(2, 7))
+
+// Modals launched from Job details cards
+const fieldsModalOpen = ref(false)
+const locationModalOpen = ref(false)
+function onApplyCustomFields(ids: string[]) {
+  // eslint-disable-next-line no-console
+  console.info('[job-editor] custom fields applied', ids)
+}
+function onConfirmLocations(ids: string[]) {
+  form.locations = ids
+}
 
 // Share popover — matches the one on /jobs/[id]. Job URL + Copy.
 const jobUrl = computed(() =>
@@ -376,7 +389,10 @@ async function copyJobUrl() {
                   <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Basic info</h2>
                   <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Define basic information about the job.</p>
                 </div>
-                <button class="inline-flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition">
+                <button
+                  class="inline-flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+                  @click="fieldsModalOpen = true"
+                >
                   <Pencil class="w-3.5 h-3.5" stroke-width="1.8" />
                   Manage fields
                 </button>
@@ -448,7 +464,7 @@ async function copyJobUrl() {
                   <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Location</h2>
                   <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Assigned locations are displayed on the careers site.</p>
                 </div>
-                <BrandButton variant="outline">
+                <BrandButton variant="outline" @click="locationModalOpen = true">
                   <Plus class="w-3.5 h-3.5 mr-1.5" stroke-width="2.2" />
                   Assign location
                 </BrandButton>
@@ -734,6 +750,16 @@ async function copyJobUrl() {
           </div>
         </div>
       </div>
+
+      <!-- Manage custom fields (Basic info → Manage fields) -->
+      <JobDetailsFieldsModal v-model:open="fieldsModalOpen" @apply="onApplyCustomFields" />
+
+      <!-- Assign location (Location → + Assign location) -->
+      <JobDetailsLocationModal
+        v-model:open="locationModalOpen"
+        :selected-ids="form.locations"
+        @confirm="onConfirmLocations"
+      />
 
       <!-- Saved-draft toast -->
       <Transition
