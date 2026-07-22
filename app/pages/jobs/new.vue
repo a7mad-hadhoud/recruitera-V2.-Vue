@@ -203,7 +203,7 @@ async function copyJobUrl() {
       <!-- Header — Recruitee/Tellent parity: title + short id + Last-edit
            timestamp on the left; Share popover, Preview, status dropdown,
            Publish changes primary, ⋯, close on the right. -->
-      <div class="flex items-center gap-2 px-6 py-4 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
+      <div class="flex items-center gap-2 pl-6 pr-16 py-5 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
         <div class="min-w-0 flex-1 mr-auto">
           <div class="flex items-center gap-2 min-w-0">
             <h1 class="text-[22px] font-extrabold text-[var(--brand-text)] leading-tight truncate min-w-0">{{ jobTitle || 'Untitled job' }}</h1>
@@ -320,12 +320,12 @@ async function copyJobUrl() {
       <!-- Body: sidenav + content -->
       <div class="flex-1 min-h-0 flex overflow-hidden">
         <!-- Sidenav -->
-        <aside class="w-[260px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
-          <nav class="flex-1 p-2">
+        <aside class="w-[240px] lg:w-[280px] xl:w-[320px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
+          <nav class="flex-1 p-3">
             <button
               v-for="n in NAV"
               :key="n.key"
-              class="w-full text-left flex items-center gap-2.5 px-3 h-10 rounded-[8px] text-[13.5px] font-semibold transition"
+              class="w-full text-left flex items-center gap-3 px-3.5 h-11 rounded-[9px] text-[14px] font-semibold transition"
               :class="activeNav === n.key
                 ? 'bg-[var(--brand-lime-tint)] text-[var(--brand-text)]'
                 : 'text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-text)]'"
