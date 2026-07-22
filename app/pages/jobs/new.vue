@@ -32,6 +32,7 @@ import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
 import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
+import { ArrowLeft } from 'lucide-vue-next'
 import { useDepartments } from '~/composables/useDepartments'
 import { useLocations } from '~/composables/useLocations'
 import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.vue'
@@ -57,6 +58,13 @@ const NAV: Array<{ key: string; label: string; icon: any }> = [
   { key: 'cross',    label: 'Cross Posting',  icon: Send         },
 ]
 const activeNav = ref<string>('details')
+
+// Prev/Next sidenav step — used by the shared footer nav so every tab
+// gets consistent [← Prev] [Next →] navigation without duplicating
+// buttons inside each tab body.
+const navIndex = computed(() => NAV.findIndex(n => n.key === activeNav.value))
+const prevNav = computed(() => navIndex.value > 0 ? NAV[navIndex.value - 1]! : null)
+const nextNav = computed(() => navIndex.value >= 0 && navIndex.value < NAV.length - 1 ? NAV[navIndex.value + 1]! : null)
 
 // ─── Job details form state ──────────────────────────────
 const form = reactive({
@@ -688,16 +696,6 @@ async function copyJobUrl() {
               </div>
             </section>
 
-            <!-- Next → Application -->
-            <div class="flex justify-end pb-2">
-              <button
-                class="inline-flex items-center gap-2 px-5 h-10 rounded-[9px] border border-[var(--brand-border)] bg-white text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
-                @click="activeNav = 'app'"
-              >
-                Application
-                <ArrowRight class="w-4 h-4" stroke-width="2" />
-              </button>
-            </div>
           </div>
 
           <JobEditorApplicationTab v-else-if="activeNav === 'app'" />
@@ -710,6 +708,29 @@ async function copyJobUrl() {
 
           <div v-else class="max-w-[880px] mx-auto p-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
+          </div>
+
+          <!-- Shared step nav — same [← Prev] [Next →] pair under every
+               tab body, driven by the sidenav order. -->
+          <div class="max-w-[880px] mx-auto px-6 pb-8 flex items-center justify-between gap-2">
+            <button
+              v-if="prevNav"
+              class="inline-flex items-center gap-2 px-5 h-10 rounded-[9px] border border-[var(--brand-border)] bg-white text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+              @click="activeNav = prevNav.key"
+            >
+              <ArrowLeft class="w-4 h-4" stroke-width="2" />
+              {{ prevNav.label }}
+            </button>
+            <span v-else />
+            <button
+              v-if="nextNav"
+              class="inline-flex items-center gap-2 px-5 h-10 rounded-[9px] border border-[var(--brand-border)] bg-white text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+              @click="activeNav = nextNav.key"
+            >
+              {{ nextNav.label }}
+              <ArrowRight class="w-4 h-4" stroke-width="2" />
+            </button>
+            <span v-else />
           </div>
         </div>
       </div>
