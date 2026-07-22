@@ -191,7 +191,7 @@ async function copyJobUrl() {
 
 <template>
   <div class="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
-    <div class="absolute inset-2 md:inset-3 flex flex-col rounded-[14px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
+    <div class="absolute inset-0 md:inset-1 flex flex-col rounded-none md:rounded-[10px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
       <!-- Sample-data banner -->
       <div class="flex items-center justify-center gap-2 h-9 bg-[var(--brand-text)] text-white text-[12.5px] shrink-0">
         Sample data active —
