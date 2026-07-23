@@ -14,6 +14,7 @@ import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListC
 import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu'
 import PipelineStageEditForm from '~/components/settings/pipeline/PipelineStageEditForm.vue'
+import JobIdealCandidateModal from '~/components/jobs/JobIdealCandidateModal.vue'
 import { usePipelineTemplates } from '~/composables/useTemplates'
 import type { PipelineStage, PipelineStageType, PipelineTemplate } from '~/types'
 
@@ -141,6 +142,9 @@ function newWorkflowAutomation() {
   // eslint-disable-next-line no-console
   console.info('[job-editor] new workflow automation')
 }
+
+// ── AI screening — "Ideal candidate profile" criteria modal ──
+const idealModalOpen = ref(false)
 </script>
 
 <template>
@@ -176,6 +180,28 @@ function newWorkflowAutomation() {
             {{ workflowAutomations.length }}
           </span>
         </div>
+      </div>
+    </section>
+
+    <!-- ── Card: Screening and matching candidates (AI) ───────── -->
+    <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-[var(--brand-text)]">Screening and matching candidates</h2>
+            <span class="inline-flex items-center h-[18px] px-1.5 rounded-md text-[11px] font-bold tracking-[0.02em] text-[var(--brand-pipeline-purple)] bg-[color-mix(in_srgb,var(--brand-pipeline-purple)_14%,white)]">AI</span>
+          </div>
+          <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
+            Our AI will screen candidates’ applications to see if they match your criteria. They won’t see this.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0"
+          @click="idealModalOpen = true"
+        >
+          Set criteria
+        </button>
       </div>
     </section>
 
@@ -313,5 +339,8 @@ function newWorkflowAutomation() {
       </template>
       </template>
     </section>
+
+    <!-- Ideal candidate profile (AI criteria) modal -->
+    <JobIdealCandidateModal v-model:open="idealModalOpen" />
   </div>
 </template>
