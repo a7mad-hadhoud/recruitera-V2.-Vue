@@ -94,7 +94,7 @@ function onSave() {
   <Dialog v-model:open="open">
     <DialogContent
       :show-close-button="false"
-      class="p-0 border-0 rounded-[18px] max-w-[960px] w-[95vw] max-h-[90vh] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden flex flex-col"
+      class="p-0 border-0 rounded-[18px] max-w-[1120px] w-[96vw] max-h-[90vh] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden flex flex-col"
     >
       <!-- Header -->
       <div class="flex items-center gap-3 px-7 h-[68px] border-b border-[var(--brand-border-fade)] shrink-0">
@@ -137,38 +137,41 @@ function onSave() {
             :key="group.id"
             class="rounded-[14px] border border-[var(--brand-border-fade)] bg-white p-5"
           >
-            <!-- Group header: title + section weight (inline) + column labels -->
-            <div class="flex items-center gap-3 pb-3 border-b border-[var(--brand-border-fade)]">
-              <div class="flex-1 min-w-0 flex items-center gap-3">
-                <span class="text-[15px] font-bold text-[var(--brand-text)] truncate">{{ group.title }}</span>
-                <label class="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-[var(--brand-text-secondary)]">
-                  Weight
-                  <span class="inline-flex items-center rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white overflow-hidden focus-within:border-[var(--brand-teal)] transition">
-                    <input
-                      v-model.number="group.weight"
-                      type="number"
-                      min="0"
-                      max="100"
-                      class="w-[42px] h-7 px-2 text-[13px] text-right tabular-nums bg-transparent focus:outline-none"
-                      :aria-label="`Weight for ${group.title}`"
-                      @wheel="($event.target as HTMLInputElement).blur()"
-                    >
-                    <span class="px-1.5 text-[12px] text-[var(--brand-text-quiet)] border-l border-[var(--brand-border-fade)] self-stretch inline-flex items-center">%</span>
-                  </span>
-                </label>
-              </div>
-              <div class="w-[64px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Fully met</div>
-              <div class="w-[64px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Partially met</div>
-              <div class="w-[72px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Disqualify if missing</div>
-              <div class="w-[64px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Show in job post</div>
-              <div class="w-6 shrink-0" />
+            <!-- Group header — row 1: title + section weight -->
+            <div class="flex items-center gap-3 mb-3">
+              <span class="flex-1 min-w-0 text-[15px] font-bold text-[var(--brand-text)] truncate">{{ group.title }}</span>
+              <label class="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-[var(--brand-text-secondary)]">
+                Weight
+                <span class="inline-flex items-center rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white overflow-hidden focus-within:border-[var(--brand-teal)] transition">
+                  <input
+                    v-model.number="group.weight"
+                    type="number"
+                    min="0"
+                    max="100"
+                    class="w-[46px] h-8 px-2 text-[13.5px] text-right tabular-nums bg-transparent focus:outline-none"
+                    :aria-label="`Weight for ${group.title}`"
+                    @wheel="($event.target as HTMLInputElement).blur()"
+                  >
+                  <span class="px-1.5 text-[12.5px] text-[var(--brand-text-quiet)] border-l border-[var(--brand-border-fade)] self-stretch inline-flex items-center">%</span>
+                </span>
+              </label>
+            </div>
+
+            <!-- Group header — row 2: column labels, aligned to the row columns -->
+            <div class="flex items-center gap-4 pb-2.5 border-b border-[var(--brand-border-fade)]">
+              <span class="flex-1 min-w-0" />
+              <span class="w-[72px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Fully met</span>
+              <span class="w-[72px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Partially met</span>
+              <span class="w-[84px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Disqualify if missing</span>
+              <span class="w-[76px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Show in job post</span>
+              <span class="w-6 shrink-0" />
             </div>
 
             <!-- Criteria rows -->
             <div
               v-for="c in group.criteria"
               :key="c.id"
-              class="flex items-center gap-3 py-4 border-b border-[var(--brand-border-fade)] last:border-b-0"
+              class="flex items-center gap-4 py-4 border-b border-[var(--brand-border-fade)] last:border-b-0"
             >
               <div class="flex-1 min-w-0">
                 <textarea
@@ -178,16 +181,16 @@ function onSave() {
                   class="w-full resize-none text-[13.5px] leading-relaxed text-[var(--brand-text-secondary)] bg-transparent focus:outline-none focus:text-[var(--brand-text)]"
                 />
               </div>
-              <div class="w-[64px] shrink-0 flex justify-center">
+              <div class="w-[72px] shrink-0 flex justify-center">
                 <BrandLimeCheckbox v-model="c.fullyMet" :aria-label="`Fully met: ${c.text.slice(0, 24)}`" />
               </div>
-              <div class="w-[64px] shrink-0 flex justify-center">
+              <div class="w-[72px] shrink-0 flex justify-center">
                 <BrandLimeCheckbox v-model="c.partiallyMet" :aria-label="`Partially met: ${c.text.slice(0, 24)}`" />
               </div>
-              <div class="w-[72px] shrink-0 flex justify-center">
+              <div class="w-[84px] shrink-0 flex justify-center">
                 <BrandLimeCheckbox v-model="c.disqualify" :aria-label="`Disqualify if missing: ${c.text.slice(0, 24)}`" />
               </div>
-              <div class="w-[64px] shrink-0 flex justify-center">
+              <div class="w-[76px] shrink-0 flex justify-center">
                 <button
                   type="button"
                   class="w-9 h-9 rounded-[9px] inline-flex items-center justify-center transition"
