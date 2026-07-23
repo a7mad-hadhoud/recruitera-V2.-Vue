@@ -625,7 +625,7 @@ function clearSelection() { selectedIds.value = new Set() }
                  user hovers the column (or when it already has a selection). -->
             <section
               v-else
-              class="group flex-none w-[288px] flex flex-col rounded-[14px] px-3 pt-3.5 pb-3 min-h-[420px] transition"
+              class="group flex-none w-[288px] flex flex-col rounded-[14px] px-3 pt-[14px] pb-3 min-h-[420px] transition"
               :class="dropTarget === stage.key && drag && drag.fromKey !== stage.key
                 ? 'ring-2 ring-[var(--brand-teal)]/40 ring-inset'
                 : ''"
@@ -634,7 +634,7 @@ function clearSelection() { selectedIds.value = new Set() }
               @dragover="onColumnDragOver"
               @drop="(e) => onColumnDrop(stage.key, e)"
             >
-              <header class="flex items-center gap-2 px-1 pb-3">
+              <header class="flex items-center gap-[9px] px-1 pb-3">
                 <!-- Dot ↔ select-all checkbox swap. Idle = dot. Hover /
                      column-has-selection = checkbox in the same slot. -->
                 <span class="relative inline-flex w-[18px] h-[18px] shrink-0 items-center justify-center">

@@ -59,12 +59,12 @@ function onDragStart(e: DragEvent) {
     @dragstart="onDragStart"
     @dragend="emit('drag-end')"
   >
-    <div class="flex items-start gap-2.5 px-3.5 py-3">
+    <div class="flex items-start gap-[11px] pt-[13px] pb-[11px] px-3.5">
       <!-- Avatar ↔ checkbox swap. Idle: avatar. Hover: checkbox replaces
            avatar in-place. Selected: checkbox stays.
            Kept inline (not BrandAvatarInitials) so we can absolute-overlay
            the checkbox at the exact same slot. -->
-      <span class="relative inline-flex w-6 h-6 shrink-0 mt-px">
+      <span class="relative inline-flex w-6 h-6 shrink-0">
         <img
           v-if="props.candidate.avatarUrl"
           :src="props.candidate.avatarUrl"
@@ -75,7 +75,7 @@ function onDragStart(e: DragEvent) {
         >
         <span
           v-else
-          class="absolute inset-0 rounded-full bg-[var(--brand-teal)] text-white inline-flex items-center justify-center font-bold text-[10px] transition-opacity"
+          class="absolute inset-0 rounded-full bg-[var(--brand-text)] text-white inline-flex items-center justify-center font-bold text-[10px] transition-opacity"
           :class="props.selected ? 'opacity-0' : 'group-hover:opacity-0'"
           :aria-hidden="props.selected ? 'true' : undefined"
         >{{ props.candidate.initials }}</span>
@@ -93,24 +93,24 @@ function onDragStart(e: DragEvent) {
       </span>
 
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-[7px]">
           <span class="text-[14px] font-semibold text-[var(--brand-text)] truncate">{{ props.candidate.name }}</span>
           <span
             v-if="props.candidate.isNew"
-            class="text-[10px] font-bold tracking-wider text-[var(--brand-pipeline-blue)] border border-[color-mix(in_srgb,var(--brand-pipeline-blue)_30%,white)] bg-[color-mix(in_srgb,var(--brand-pipeline-blue)_10%,white)] rounded px-1.5 py-px shrink-0"
-          >NEW</span>
+            class="text-[10px] font-bold tracking-[0.03em] text-[var(--brand-pipeline-blue)] border border-[color-mix(in_srgb,var(--brand-pipeline-blue)_30%,white)] bg-[color-mix(in_srgb,var(--brand-pipeline-blue)_10%,white)] rounded-[4px] px-[5px] py-px shrink-0"
+          >New</span>
         </div>
-        <div class="flex items-center gap-3 mt-1.5 text-[12.5px] text-[var(--brand-text-quiet)]">
-          <span class="inline-flex items-center gap-1 text-[9px] font-bold tracking-wider text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)] rounded px-1.5 py-0.5">
+        <div class="flex items-center gap-[11px] mt-[7px] text-[12.5px] text-[var(--brand-text-quiet)]">
+          <span class="inline-flex items-center gap-[5px] whitespace-nowrap shrink-0 text-[9px] font-bold tracking-[0.05em] text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)] rounded-[4px] px-1.5 py-0.5">
             AI SCORE
             <span class="text-[10px] text-[var(--brand-text)]">{{ props.candidate.aiScore }}%</span>
           </span>
-          <span class="inline-flex items-center gap-1">
-            <MessageSquare class="w-3.5 h-3.5" stroke-width="1.5" />
+          <span class="inline-flex items-center gap-[5px]">
+            <MessageSquare class="w-[13px] h-[13px]" stroke-width="1.5" />
             {{ props.candidate.notes }}
           </span>
-          <span class="inline-flex items-center gap-1">
-            <CornerUpLeft class="w-3.5 h-3.5" stroke-width="1.5" />
+          <span class="inline-flex items-center gap-[5px]">
+            <CornerUpLeft class="w-[13px] h-[13px]" stroke-width="1.5" />
             {{ props.candidate.replies }}
           </span>
         </div>
@@ -148,9 +148,9 @@ function onDragStart(e: DragEvent) {
       </DropdownMenu>
     </div>
 
-    <div v-if="props.candidate.location" class="border-t border-[var(--brand-border-fade)] px-3.5 py-2 flex items-center gap-3.5 text-[12.5px] text-[var(--brand-text-quiet)]">
+    <div v-if="props.candidate.location" class="border-t border-[var(--brand-border-fade)] px-3.5 py-[9px] flex items-center gap-[14px] text-[12.5px] text-[var(--brand-text-quiet)]">
       <span class="inline-flex items-center gap-1.5">
-        <MapPin class="w-3.5 h-3.5" stroke-width="1.5" />
+        <MapPin class="w-[14px] h-[14px]" stroke-width="1.5" />
         {{ props.candidate.location }}
       </span>
     </div>

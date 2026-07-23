@@ -27,7 +27,7 @@ const wuzzufPublished   = ref(false)
 </script>
 
 <template>
-  <div class="max-w-[700px] mx-auto p-6">
+  <div class="max-w-[920px] mx-auto p-6">
     <div class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Publish this job to external platforms</div>
     <p class="text-[13.5px] text-[var(--brand-text-quiet)] mb-4">
       Reach more candidates by publishing this job to job boards. Google for Jobs is included by default.

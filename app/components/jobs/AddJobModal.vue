@@ -8,26 +8,29 @@
     • --brand-* tokens for every color (no hex)
 
   Flow:
-    Step 1  "Choose a starting point."  →  From template  |  Blank job
+    Step 1  "Choose a starting point."  →  From template  |  Blank job  |  Duplicate an existing job
     Step 2a (template)  →  search + template list  →  Continue
     Step 2b (blank)     →  title + collar (White / Blue) → Create job
+    Step 2c (duplicate) →  search + existing-jobs list  →  Continue
 
   Emits `create` with the built payload; parent decides what to do with
   it (add to fixture today, POST /api/jobs when the API lands).
 -->
 <script setup lang="ts">
-import { X, Search, FileText, Sparkles, Briefcase, HardHat, Check } from 'lucide-vue-next'
+import { X, Search, FileText, Sparkles, Briefcase, HardHat, Check, Copy } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { useJobTemplates } from '~/composables/useTemplates'
+import { useJobs } from '~/composables/useJobs'
 import type { JobTemplate } from '~/types'
 
 export type CollarType = 'white' | 'blue'
 export interface AddJobPayload {
-  source: 'template' | 'blank'
+  source: 'template' | 'blank' | 'duplicate'
   title?: string
   collar?: CollarType
   templateId?: string
+  sourceJobId?: string
 }
 
 const open = defineModel<boolean>('open', { default: false })
@@ -35,7 +38,7 @@ const emit = defineEmits<{
   create: [payload: AddJobPayload]
 }>()
 
-type Step = 'choose' | 'template' | 'blank'
+type Step = 'choose' | 'template' | 'blank' | 'duplicate'
 const step = ref<Step>('choose')
 
 // Template step state
@@ -56,8 +59,22 @@ const filteredTemplates = computed(() => {
 const blankTitle = ref('')
 const blankCollar = ref<CollarType | null>(null)
 
-const canContinueTemplate = computed(() => !!selectedTemplateId.value)
-const canCreateBlank      = computed(() => !!blankTitle.value.trim() && !!blankCollar.value)
+// Duplicate step state — pick an existing job to clone.
+const dupSearch = ref('')
+const selectedDupJobId = ref<string | null>(null)
+const { jobs } = useJobs()
+const filteredJobsForDup = computed(() => {
+  const q = dupSearch.value.trim().toLowerCase()
+  if (!q) return jobs.value
+  return jobs.value.filter(j =>
+    j.title.toLowerCase().includes(q)
+    || j.department.toLowerCase().includes(q)
+    || j.location.toLowerCase().includes(q))
+})
+
+const canContinueTemplate  = computed(() => !!selectedTemplateId.value)
+const canCreateBlank       = computed(() => !!blankTitle.value.trim() && !!blankCollar.value)
+const canContinueDuplicate = computed(() => !!selectedDupJobId.value)
 
 // Reset everything whenever the modal closes so it re-opens fresh.
 watch(open, (isOpen) => {
@@ -67,6 +84,8 @@ watch(open, (isOpen) => {
     templateSearch.value = ''
     blankTitle.value = ''
     blankCollar.value = null
+    dupSearch.value = ''
+    selectedDupJobId.value = null
   }
 })
 
@@ -77,31 +96,39 @@ function submit() {
   } else if (step.value === 'blank' && canCreateBlank.value) {
     emit('create', { source: 'blank', title: blankTitle.value.trim(), collar: blankCollar.value! })
     open.value = false
+  } else if (step.value === 'duplicate' && canContinueDuplicate.value) {
+    const src = jobs.value.find(j => j.id === selectedDupJobId.value)
+    emit('create', { source: 'duplicate', sourceJobId: selectedDupJobId.value!, title: src?.title, collar: src?.collar as CollarType | undefined })
+    open.value = false
   }
 }
 
 // Header copy per step — keeps the JSX below tidy.
 const header = computed(() => {
-  if (step.value === 'template') return { title: 'Select a template',       subtitle: 'Start from a saved template — you can still edit every field.' }
-  if (step.value === 'blank')    return { title: 'Blank job',               subtitle: 'Enter the job title and select the collar type.' }
-  return                              { title: 'Create a new job',          subtitle: 'Choose a starting point.' }
+  if (step.value === 'template')  return { title: 'Select a template',            subtitle: 'Start from a saved template — you can still edit every field.' }
+  if (step.value === 'blank')     return { title: 'Blank job',                    subtitle: 'Enter the job title and select the collar type.' }
+  if (step.value === 'duplicate') return { title: 'Duplicate an existing job',    subtitle: 'Pick a job to use as your starting point.' }
+  return                               { title: 'New job',                     subtitle: 'Choose a starting point.' }
 })
 
 const primaryLabel = computed(() =>
-  step.value === 'template' ? 'Continue' :
-  step.value === 'blank'    ? 'Create job' :
-                              null,
+  step.value === 'template'  ? 'Continue' :
+  step.value === 'blank'     ? 'Create job' :
+  step.value === 'duplicate' ? 'Continue' :
+                               null,
 )
 const primaryDisabled = computed(() =>
-  step.value === 'template' ? !canContinueTemplate.value :
-  step.value === 'blank'    ? !canCreateBlank.value :
-                              true,
+  step.value === 'template'  ? !canContinueTemplate.value :
+  step.value === 'blank'     ? !canCreateBlank.value :
+  step.value === 'duplicate' ? !canContinueDuplicate.value :
+                               true,
 )
 </script>
 
 <template>
   <Dialog v-model:open="open">
     <DialogContent
+      :show-close-button="false"
       class="p-0 border-0 rounded-[20px] max-w-[680px] w-[92vw] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden"
     >
       <!-- Header -->
@@ -151,6 +178,20 @@ const primaryDisabled = computed(() =>
               <span class="block text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Start from scratch.</span>
             </span>
           </button>
+
+          <button
+            type="button"
+            class="group text-left flex items-start gap-4 rounded-[12px] border-[1.5px] border-[var(--brand-border)] bg-white px-5 py-4 transition hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)] focus:outline-none focus:border-[var(--brand-teal)]"
+            @click="step = 'duplicate'"
+          >
+            <span class="w-10 h-10 rounded-[10px] inline-flex items-center justify-center bg-[var(--brand-canvas)] text-[var(--brand-teal)] group-hover:bg-white shrink-0">
+              <Copy class="w-5 h-5" stroke-width="1.8" />
+            </span>
+            <span class="flex-1">
+              <span class="block text-[15px] font-bold text-[var(--brand-text)]">Duplicate an existing job</span>
+              <span class="block text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Use an existing job as your starting point.</span>
+            </span>
+          </button>
         </div>
 
         <!-- STEP 2a: template -->
@@ -194,6 +235,50 @@ const primaryDisabled = computed(() =>
           </div>
           <div v-else class="text-center py-10 text-[13px] text-[var(--brand-text-quiet)]">
             No templates match “{{ templateSearch }}”.
+          </div>
+        </div>
+
+        <!-- STEP 2c: duplicate an existing job -->
+        <div v-else-if="step === 'duplicate'">
+          <div class="relative mb-4">
+            <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--brand-text-quiet)]" stroke-width="2" />
+            <input
+              v-model="dupSearch"
+              type="text"
+              placeholder="Search existing jobs"
+              class="w-full h-10 pl-9 pr-3 text-[13.5px] rounded-[10px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
+            >
+          </div>
+
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-secondary)]">Existing jobs</span>
+            <span class="text-[11px] font-bold rounded-md px-[7px] py-px tabular-nums text-[var(--brand-text-secondary)] bg-[var(--brand-canvas)]">{{ filteredJobsForDup.length }}</span>
+          </div>
+
+          <div v-if="filteredJobsForDup.length" class="flex flex-col gap-1.5">
+            <label
+              v-for="j in filteredJobsForDup"
+              :key="j.id"
+              class="flex items-start gap-3 rounded-[10px] border border-[var(--brand-border)] bg-white px-4 py-3 cursor-pointer transition hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)]"
+              :class="selectedDupJobId === j.id ? 'border-[var(--brand-teal)] bg-[var(--brand-lime-tint)]' : ''"
+            >
+              <input
+                v-model="selectedDupJobId"
+                type="radio"
+                name="dup-job"
+                :value="j.id"
+                class="mt-1 accent-[var(--brand-teal)]"
+              >
+              <div class="min-w-0 flex-1">
+                <div class="text-[14px] font-bold text-[var(--brand-text)] truncate">{{ j.title }}</div>
+                <div class="text-[12.5px] text-[var(--brand-text-quiet)] mt-0.5 truncate">
+                  {{ j.department }} · {{ j.location }} · {{ j.workModel }}
+                </div>
+              </div>
+            </label>
+          </div>
+          <div v-else class="text-center py-10 text-[13px] text-[var(--brand-text-quiet)]">
+            No jobs match “{{ dupSearch }}”.
           </div>
         </div>
 

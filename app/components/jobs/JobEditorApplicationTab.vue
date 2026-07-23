@@ -99,7 +99,7 @@ const autoEmailOn = ref(true)
 </script>
 
 <template>
-  <div class="max-w-[700px] mx-auto p-6 flex flex-col gap-4">
+  <div class="max-w-[920px] mx-auto p-6 flex flex-col gap-4">
     <!-- 1) Candidate information ────────────────────────────── -->
     <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] overflow-hidden">
       <div class="px-5 pt-5 pb-4 border-b border-[var(--brand-border-fade)]">

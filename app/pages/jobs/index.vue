@@ -64,8 +64,8 @@ const newViewOpen = ref(false)
 // Table vs card view mode — persisted so the choice sticks across visits.
 const viewMode = useLocalStorage<'table' | 'cards'>('recruitera:jobs:view-mode', 'table')
 
-// Add-job modal — two-step chooser (template ↔ blank). Submitting the
-// modal routes into /jobs/new pre-filled from query params; the editor
+// Add-job modal — 3-way chooser (template ↔ blank ↔ duplicate). Submitting
+// the modal routes into /jobs/new pre-filled from query params; the editor
 // page owns creation via POST /api/jobs when the endpoint lands.
 const addJobOpen = ref(false)
 async function onCreateJob(payload: AddJobPayload) {
@@ -75,6 +75,10 @@ async function onCreateJob(payload: AddJobPayload) {
     if (payload.collar) query.collar = payload.collar
   } else if (payload.source === 'template' && payload.templateId) {
     query.template = payload.templateId
+  } else if (payload.source === 'duplicate' && payload.sourceJobId) {
+    query.duplicate = payload.sourceJobId
+    if (payload.title)  query.title = payload.title
+    if (payload.collar) query.collar = payload.collar
   }
   await navigateTo({ path: '/jobs/new', query })
 }
