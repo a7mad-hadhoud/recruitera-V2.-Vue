@@ -40,6 +40,7 @@ import JobEditorTeamTab from '~/components/jobs/JobEditorTeamTab.vue'
 import JobEditorSocialSharingTab from '~/components/jobs/JobEditorSocialSharingTab.vue'
 import JobEditorCrossPostingTab from '~/components/jobs/JobEditorCrossPostingTab.vue'
 import JobEditorRichTextField from '~/components/jobs/JobEditorRichTextField.vue'
+import JobEditorWorkflowTab from '~/components/jobs/JobEditorWorkflowTab.vue'
 import JobDetailsFieldsModal from '~/components/jobs/JobDetailsFieldsModal.vue'
 
 definePageMeta({ layout: 'default' })
@@ -750,6 +751,8 @@ async function copyJobUrl() {
             </section>
 
           </div>
+
+          <JobEditorWorkflowTab v-else-if="activeNav === 'workflow'" />
 
           <JobEditorApplicationTab v-else-if="activeNav === 'app'" />
 
