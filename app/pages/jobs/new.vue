@@ -219,15 +219,15 @@ async function copyJobUrl() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex flex-col bg-[var(--brand-canvas)]">
-    <!-- Full-bleed takeover — fills the viewport, no dimmed backdrop. The
-         header is sticky at the top; sidebar + content each own their
-         scroll below it. -->
-    <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
+  <div class="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--brand-text)_68%,transparent)]" style="--page-gutter: 32px;">
+    <!-- Modal sheet — dimmed backdrop behind; the sheet drops from a thin
+         top gap that lets the app peek through and curves its top corners.
+         Header sticky inside; sidebar + content each own their scroll. -->
+    <div class="absolute inset-x-0 bottom-0 top-0 md:top-[52px] flex flex-col rounded-none md:rounded-t-[18px] bg-[var(--brand-canvas)] shadow-[0_-10px_44px_rgba(0,20,18,0.20)] overflow-hidden">
 
       <!-- Header — sticky, h-20, border-b. Title + short id + timestamp on
            the left; Share / Preview / status / Publish + close on the right. -->
-      <div class="sticky top-0 z-10 h-20 flex items-center gap-2 pl-6 pr-16 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
+      <div class="sticky top-0 z-10 h-20 flex items-center gap-3 pl-[var(--page-gutter)] pr-[var(--page-gutter)] border-b border-[var(--brand-border-fade)] bg-white shrink-0">
         <div class="min-w-0 flex-1 mr-auto">
           <div class="flex items-center gap-2 min-w-0">
             <h1 class="text-[22px] font-extrabold text-[var(--brand-text)] leading-tight truncate min-w-0">{{ jobTitle || 'Untitled job' }}</h1>
@@ -328,18 +328,17 @@ async function copyJobUrl() {
         <button class="w-9 h-9 rounded-[8px] inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="More actions">
           <MoreHorizontal class="w-4 h-4" stroke-width="1.8" />
         </button>
-      </div>
 
-      <!-- Close button — lifted to the top-right corner of the modal
-           (outside the header row), matching the Recruitee ref where the
-           dismiss chip floats above the header. -->
-      <NuxtLink
-        to="/jobs"
-        class="absolute top-2.5 right-2.5 z-10 w-9 h-9 rounded-[10px] inline-flex items-center justify-center bg-white/90 backdrop-blur text-[var(--brand-text-secondary)] hover:bg-white hover:text-[var(--brand-text)] shadow-[0_2px_8px_rgba(0,20,18,0.08)] transition"
-        aria-label="Close editor"
-      >
-        <X class="w-4 h-4" stroke-width="2" />
-      </NuxtLink>
+        <!-- Close — last item in the header action row (no longer floating).
+             Right edge resolves to the page gutter via the header pr. -->
+        <NuxtLink
+          to="/jobs"
+          class="w-9 h-9 rounded-[8px] inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-text)] transition"
+          aria-label="Close editor"
+        >
+          <X class="w-4 h-4" stroke-width="2" />
+        </NuxtLink>
+      </div>
 
       <!-- Body: sidenav + content -->
       <div class="flex-1 min-h-0 flex overflow-hidden">
