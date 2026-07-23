@@ -10,7 +10,7 @@
   stage rows, inline edit/add and automation panels match Settings 1:1.
 -->
 <script setup lang="ts">
-import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListChecks } from 'lucide-vue-next'
+import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListChecks, Workflow } from 'lucide-vue-next'
 import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu'
 import PipelineStageEditForm from '~/components/settings/pipeline/PipelineStageEditForm.vue'
@@ -133,47 +133,91 @@ function removeAutomation(section: Section, stageId: string, autoId: string) {
     if (stage) stage.automations = stage.automations.filter(a => a.id !== autoId)
   })
 }
+
+// ── Job-level workflow automations (separate from per-stage automations
+// above). Empty today; "New automation" opens the builder when it lands. ──
+const workflowAutomations = ref<{ id: string; label: string }[]>([])
+function newWorkflowAutomation() {
+  // eslint-disable-next-line no-console
+  console.info('[job-editor] new workflow automation')
+}
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto pt-8 px-6">
-    <!-- Header — title + template selector -->
-    <div class="flex items-start justify-between gap-4 mb-6">
-      <div>
-        <h2 class="text-lg font-semibold text-[var(--brand-text)]">Pipeline</h2>
-        <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
-          Create a hiring pipeline to easily manage candidates.
-          <a href="#" class="font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)]">Learn more</a>
-        </p>
+  <div class="max-w-3xl mx-auto pt-8 px-6 flex flex-col gap-6">
+    <!-- ── Card: Workflow automations ─────────────────────────── -->
+    <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-[var(--brand-text)]">Workflow automations</h2>
+          <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
+            Create automations for this job by defining what should happen when key events occur.
+            <a href="#" class="font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)]">Learn more</a>
+          </p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0"
+          @click="newWorkflowAutomation"
+        >
+          <Workflow class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.9" />
+          New automation
+        </button>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0"
-          >
-            <ListChecks class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.9" />
-            <span class="whitespace-nowrap">Template: {{ selected?.name ?? '—' }}</span>
-            <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2.2" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" :side-offset="6" class="w-[240px] p-1.5 rounded-[12px]">
-          <DropdownMenuItem
-            v-for="t in templates"
-            :key="t.id"
-            class="flex items-center gap-2 px-2.5 py-2 rounded-[8px] text-[13.5px] font-semibold text-[var(--brand-text)] cursor-pointer"
-            @select="selectedId = t.id"
-          >
-            <span class="flex-1 truncate">{{ t.name }}</span>
-            <span v-if="t.isDefault" class="text-[11px] font-bold text-[var(--brand-text-quiet)]">Default</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
 
-    <p v-if="isLoading && !selected" class="text-[13px] text-[var(--brand-text-quiet)] py-8">Loading pipeline…</p>
+      <!-- List / empty state -->
+      <div class="mt-5">
+        <div
+          v-if="!workflowAutomations.length"
+          class="rounded-[10px] border border-[var(--brand-border-fade)] bg-[var(--brand-canvas)] px-4 py-3.5 flex items-center gap-2 text-[13.5px] text-[var(--brand-text-quiet)]"
+        >
+          No automations yet
+          <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-md bg-white border border-[var(--brand-border-fade)] text-[11.5px] font-bold text-[var(--brand-text-secondary)]">
+            {{ workflowAutomations.length }}
+          </span>
+        </div>
+      </div>
+    </section>
 
-    <template v-else-if="selected">
+    <!-- ── Card: Pipeline ─────────────────────────────────────── -->
+    <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
+      <!-- Header — title + template selector -->
+      <div class="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-lg font-semibold text-[var(--brand-text)]">Pipeline</h2>
+          <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
+            Create a hiring pipeline to easily manage candidates.
+            <a href="#" class="font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)]">Learn more</a>
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0"
+            >
+              <ListChecks class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.9" />
+              <span class="whitespace-nowrap">Template: {{ selected?.name ?? '—' }}</span>
+              <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2.2" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" :side-offset="6" class="w-[240px] p-1.5 rounded-[12px]">
+            <DropdownMenuItem
+              v-for="t in templates"
+              :key="t.id"
+              class="flex items-center gap-2 px-2.5 py-2 rounded-[8px] text-[13.5px] font-semibold text-[var(--brand-text)] cursor-pointer"
+              @select="selectedId = t.id"
+            >
+              <span class="flex-1 truncate">{{ t.name }}</span>
+              <span v-if="t.isDefault" class="text-[11px] font-bold text-[var(--brand-text-quiet)]">Default</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <p v-if="isLoading && !selected" class="text-[13px] text-[var(--brand-text-quiet)] py-8">Loading pipeline…</p>
+
+      <template v-else-if="selected">
       <template v-for="section in (['applicants', 'active', 'hires'] as Section[])" :key="section">
         <!-- Group header -->
         <div class="flex items-center gap-1.5 mb-2.5" :class="section !== 'applicants' ? 'mt-6' : ''">
@@ -267,6 +311,7 @@ function removeAutomation(section: Section, stageId: string, autoId: string) {
           Add new
         </BrandButton>
       </template>
-    </template>
+      </template>
+    </section>
   </div>
 </template>
