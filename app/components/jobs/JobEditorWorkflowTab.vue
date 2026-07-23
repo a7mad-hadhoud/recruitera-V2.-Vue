@@ -10,11 +10,12 @@
   stage rows, inline edit/add and automation panels match Settings 1:1.
 -->
 <script setup lang="ts">
-import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListChecks, Workflow } from 'lucide-vue-next'
+import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListChecks } from 'lucide-vue-next'
 import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu'
 import PipelineStageEditForm from '~/components/settings/pipeline/PipelineStageEditForm.vue'
 import JobIdealCandidateModal from '~/components/jobs/JobIdealCandidateModal.vue'
+import JobStageAutomationModal from '~/components/jobs/JobStageAutomationModal.vue'
 import { usePipelineTemplates } from '~/composables/useTemplates'
 import type { PipelineStage, PipelineStageType, PipelineTemplate } from '~/types'
 
@@ -135,54 +136,34 @@ function removeAutomation(section: Section, stageId: string, autoId: string) {
   })
 }
 
-// ── Job-level workflow automations (separate from per-stage automations
-// above). Empty today; "New automation" opens the builder when it lands. ──
-const workflowAutomations = ref<{ id: string; label: string }[]>([])
-function newWorkflowAutomation() {
-  // eslint-disable-next-line no-console
-  console.info('[job-editor] new workflow automation')
-}
-
 // ── AI screening — "Ideal candidate profile" criteria modal ──
 const idealModalOpen = ref(false)
+
+// ── Stage automation — "Set up an automation" chooser modal ──
+const AUTOMATION_LABELS: Record<'notify' | 'talent-pool' | 'task', string> = {
+  'notify':      'When a candidate is moved to this stage, then send an email to the candidate',
+  'talent-pool': 'When a candidate is moved to this stage, then tag them and add to a talent pool',
+  'task':        'When a candidate is moved to this stage, then create a task for the recruiter',
+}
+const autoModalOpen = ref(false)
+const autoTarget = ref<{ section: Section; stageId: string; stageName: string } | null>(null)
+function openStageAutomation(section: Section, stage: PipelineStage) {
+  autoTarget.value = { section, stageId: stage.id, stageName: stage.name }
+  autoModalOpen.value = true
+}
+function onSelectAutomation(action: 'notify' | 'talent-pool' | 'task') {
+  if (!autoTarget.value) return
+  const { section, stageId } = autoTarget.value
+  mutateSelected((t) => {
+    const stage = sectionArray(t, section).find(s => s.id === stageId)
+    stage?.automations.push({ id: newId('auto'), label: AUTOMATION_LABELS[action] })
+  })
+  expandedStageId.value = stageId
+}
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto pt-8 px-6 flex flex-col gap-6">
-    <!-- ── Card: Workflow automations ─────────────────────────── -->
-    <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-semibold text-[var(--brand-text)]">Workflow automations</h2>
-          <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
-            Create automations for this job by defining what should happen when key events occur.
-            <a href="#" class="font-semibold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)]">Learn more</a>
-          </p>
-        </div>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0"
-          @click="newWorkflowAutomation"
-        >
-          <Workflow class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.9" />
-          New automation
-        </button>
-      </div>
-
-      <!-- List / empty state -->
-      <div class="mt-5">
-        <div
-          v-if="!workflowAutomations.length"
-          class="rounded-[10px] border border-[var(--brand-border-fade)] bg-[var(--brand-canvas)] px-4 py-3.5 flex items-center gap-2 text-[13.5px] text-[var(--brand-text-quiet)]"
-        >
-          No automations yet
-          <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-md bg-white border border-[var(--brand-border-fade)] text-[11.5px] font-bold text-[var(--brand-text-secondary)]">
-            {{ workflowAutomations.length }}
-          </span>
-        </div>
-      </div>
-    </section>
-
     <!-- ── Card: Screening and matching candidates (AI) ───────── -->
     <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
       <div class="flex items-center justify-between gap-4">
@@ -274,7 +255,7 @@ const idealModalOpen = ref(false)
               <GripVertical v-if="section !== 'applicants'" class="w-3 h-3 text-[var(--brand-text-faint)] cursor-grab shrink-0" />
               <BrandStatusBadge variant="dot-only" :tone="stageDotTone(section, stage)" :label="stageDotLabel(section, stage)" />
               <span class="flex-1 text-[14px] font-medium text-[var(--brand-text)]">{{ stage.name }}</span>
-              <button type="button" class="text-[var(--brand-text-quiet)] outline-none hover:text-[var(--brand-text)] p-1 transition-colors" title="Automations" @click="toggleExpand(stage.id)">
+              <button type="button" class="text-[var(--brand-text-quiet)] outline-none hover:text-[var(--brand-text)] p-1 transition-colors" title="Set up an automation" @click="openStageAutomation(section, stage)">
                 <Zap class="w-3.5 h-3.5" />
               </button>
               <button v-if="section !== 'applicants'" type="button" class="text-[var(--brand-text-quiet)] outline-none hover:text-[var(--brand-text)] p-1 transition-colors" title="Edit" @click="openEdit(section, i)">
@@ -342,5 +323,12 @@ const idealModalOpen = ref(false)
 
     <!-- Ideal candidate profile (AI criteria) modal -->
     <JobIdealCandidateModal v-model:open="idealModalOpen" />
+
+    <!-- Stage automation chooser -->
+    <JobStageAutomationModal
+      v-model:open="autoModalOpen"
+      :stage-name="autoTarget?.stageName"
+      @select="onSelectAutomation"
+    />
   </div>
 </template>
