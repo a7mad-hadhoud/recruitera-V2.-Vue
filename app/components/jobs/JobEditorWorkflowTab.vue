@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import PipelineStageEditForm from '~/components/settings/pipeline/PipelineStageEditForm.vue'
 import JobIdealCandidateModal from '~/components/jobs/JobIdealCandidateModal.vue'
 import JobStageAutomationModal from '~/components/jobs/JobStageAutomationModal.vue'
+import JobAutomationBuilderModal from '~/components/jobs/JobAutomationBuilderModal.vue'
 import { usePipelineTemplates } from '~/composables/useTemplates'
 import type { PipelineStage, PipelineStageType, PipelineTemplate } from '~/types'
 
@@ -139,24 +140,40 @@ function removeAutomation(section: Section, stageId: string, autoId: string) {
 // ── AI screening — "Ideal candidate profile" criteria modal ──
 const idealModalOpen = ref(false)
 
-// ── Stage automation — "Set up an automation" chooser modal ──
-const AUTOMATION_LABELS: Record<'notify' | 'talent-pool' | 'task', string> = {
-  'notify':      'When a candidate is moved to this stage, then send an email to the candidate',
-  'talent-pool': 'When a candidate is moved to this stage, then tag them and add to a talent pool',
-  'task':        'When a candidate is moved to this stage, then create a task for the recruiter',
+// ── Stage automation — chooser → "Add automation" builder ──
+type ActionKey = 'notify' | 'talent-pool' | 'task'
+const ACTION_LABEL: Record<ActionKey, string> = {
+  'notify':      'send an email to the candidate',
+  'talent-pool': 'tag them and add to a talent pool',
+  'task':        'create a task for the recruiter',
 }
-const autoModalOpen = ref(false)
+const autoModalOpen = ref(false)          // step 1: chooser
+const builderOpen = ref(false)            // step 2: full builder
+const builderInitialAction = ref<ActionKey | null>(null)
 const autoTarget = ref<{ section: Section; stageId: string; stageName: string } | null>(null)
+
 function openStageAutomation(section: Section, stage: PipelineStage) {
   autoTarget.value = { section, stageId: stage.id, stageName: stage.name }
   autoModalOpen.value = true
 }
-function onSelectAutomation(action: 'notify' | 'talent-pool' | 'task') {
+// Chooser → open the builder seeded with the picked action.
+function onSelectAutomation(action: ActionKey) {
+  builderInitialAction.value = action
+  builderOpen.value = true
+}
+// Builder Save → append the configured actions to the stage.
+function onSaveAutomation(actions: { key: ActionKey; config: string }[]) {
   if (!autoTarget.value) return
-  const { section, stageId } = autoTarget.value
+  const { section, stageId, stageName } = autoTarget.value
   mutateSelected((t) => {
     const stage = sectionArray(t, section).find(s => s.id === stageId)
-    stage?.automations.push({ id: newId('auto'), label: AUTOMATION_LABELS[action] })
+    if (!stage) return
+    for (const a of actions) {
+      stage.automations.push({
+        id: newId('auto'),
+        label: `When a candidate is moved to ${stageName}, then ${ACTION_LABEL[a.key]} (${a.config})`,
+      })
+    }
   })
   expandedStageId.value = stageId
 }
@@ -324,11 +341,19 @@ function onSelectAutomation(action: 'notify' | 'talent-pool' | 'task') {
     <!-- Ideal candidate profile (AI criteria) modal -->
     <JobIdealCandidateModal v-model:open="idealModalOpen" />
 
-    <!-- Stage automation chooser -->
+    <!-- Stage automation — step 1: chooser -->
     <JobStageAutomationModal
       v-model:open="autoModalOpen"
       :stage-name="autoTarget?.stageName"
       @select="onSelectAutomation"
+    />
+
+    <!-- Stage automation — step 2: builder -->
+    <JobAutomationBuilderModal
+      v-model:open="builderOpen"
+      :stage-name="autoTarget?.stageName"
+      :initial-action="builderInitialAction"
+      @save="onSaveAutomation"
     />
   </div>
 </template>
