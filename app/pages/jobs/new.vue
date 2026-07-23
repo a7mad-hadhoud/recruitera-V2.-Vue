@@ -27,20 +27,20 @@
 <script setup lang="ts">
 import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
          Trash2, Briefcase, Wrench, Sparkles, ArrowRight,
-         Bold, Italic, Underline, Strikethrough, List, ListOrdered, Link2, Image,
-         MapPin, Building2, ClipboardList, Users, Layers, Share, Send, ChevronUp, Copy, Check } from 'lucide-vue-next'
+         Building2, ClipboardList, Users, Layers, Share, Send, ChevronUp, Copy, Check } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { ArrowLeft } from 'lucide-vue-next'
 import { useDepartments } from '~/composables/useDepartments'
 import { useLocations } from '~/composables/useLocations'
+import type { Location } from '~/types'
 import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.vue'
 import JobEditorTeamTab from '~/components/jobs/JobEditorTeamTab.vue'
 import JobEditorSocialSharingTab from '~/components/jobs/JobEditorSocialSharingTab.vue'
 import JobEditorCrossPostingTab from '~/components/jobs/JobEditorCrossPostingTab.vue'
+import JobEditorRichTextField from '~/components/jobs/JobEditorRichTextField.vue'
 import JobDetailsFieldsModal from '~/components/jobs/JobDetailsFieldsModal.vue'
-import JobDetailsLocationModal from '~/components/jobs/JobDetailsLocationModal.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -80,8 +80,6 @@ const form = reactive({
   benefits: '' as string,
   keywords: ['Marketing', 'Content', 'Branding'] as string[],
   workModel: 'on-site' as 'on-site' | 'remote' | 'hybrid',
-  careerLevel: 'experienced' as 'experienced' | 'manager' | 'senior' | 'entry' | 'student',
-  yearsOfExperience: '' as string,
   employmentType: '',
   category: '',
   requiredEducation: '',
@@ -101,18 +99,41 @@ const locations   = computed(() => locationsData.value?.data ?? [])
 const departmentSubs = computed(() =>
   departments.value.find(d => d.id === form.department)?.subDepartments ?? [],
 )
-const assignedLocations = computed(() =>
-  locations.value.filter(l => form.locations.includes(l.id)),
-)
 
-// Career level options — reference labels.
-const CAREER_LEVELS = [
-  { key: 'experienced', label: 'Experienced'       },
-  { key: 'manager',     label: 'Manager'           },
-  { key: 'senior',      label: 'Senior Management' },
-  { key: 'entry',       label: 'Entry Level'       },
-  { key: 'student',     label: 'Student'           },
-] as const
+// ── Location as a single dropdown (mirrors the Department field) ──
+// Newly-created locations live in `addedLocations` so they show up in
+// the dropdown immediately, prepended ahead of the workspace list.
+const addedLocations = ref<Location[]>([])
+const allLocations = computed(() => [...addedLocations.value, ...locations.value])
+// Single-select bridge over the (still array-shaped) form.locations, so
+// the rest of the payload keeps working unchanged.
+const selectedLocationId = computed<string>({
+  get: () => form.locations[0] ?? '',
+  set: (v) => { form.locations = v ? [v] : [] },
+})
+
+// Inline "+ Add new location" — same affordance as "+ Add Department".
+const showAddLocation = ref(false)
+const newLocName = ref('')
+const newLocCountry = ref('')
+const newLocCity = ref('')
+const canAddLocation = computed(() => newLocName.value.trim().length > 0)
+function addLocation() {
+  if (!canAddLocation.value) return
+  const loc: Location = {
+    id: `loc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: newLocName.value.trim(),
+    country: newLocCountry.value.trim(),
+    city: newLocCity.value.trim(),
+    jobCount: 0,
+  }
+  addedLocations.value = [loc, ...addedLocations.value]
+  selectedLocationId.value = loc.id
+  newLocName.value = ''
+  newLocCountry.value = ''
+  newLocCity.value = ''
+  showAddLocation.value = false
+}
 
 // Work models — same three that show on kanban stage/location filters.
 const WORK_MODELS = [
@@ -164,15 +185,23 @@ const statusDot = computed(() =>
 // bounce on every render (was Math.random() in the template previously).
 const shortId = computed(() => String(route.params.id ?? '').slice(-5) || Math.random().toString(36).slice(2, 7))
 
+// AI Generate — tone options (Neutral / Friendly / Formal), matching the
+// reference "AI Regenerate" dropdown but in our tokens. `aiGenerated`
+// flips the label to "AI Regenerate" once a description exists.
+const AI_TONES = ['Neutral', 'Friendly', 'Formal'] as const
+const aiTone = ref<typeof AI_TONES[number]>('Neutral')
+const aiGenerated = computed(() => form.description.trim().length > 0)
+function generateWithTone(tone: typeof AI_TONES[number]) {
+  aiTone.value = tone
+  // eslint-disable-next-line no-console
+  console.info('[job-editor] AI generate description —', tone)
+}
+
 // Modals launched from Job details cards
 const fieldsModalOpen = ref(false)
-const locationModalOpen = ref(false)
 function onApplyCustomFields(ids: string[]) {
   // eslint-disable-next-line no-console
   console.info('[job-editor] custom fields applied', ids)
-}
-function onConfirmLocations(ids: string[]) {
-  form.locations = ids
 }
 
 // Share popover — matches the one on /jobs/[id]. Job URL + Copy.
@@ -190,23 +219,15 @@ async function copyJobUrl() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--brand-text)_45%,transparent)]">
-    <!-- Modal frame — 1000px capped, centered horizontally with a tiny
-         vertical gutter. On narrow viewports collapse to fullscreen so
-         the editor stays usable. -->
-    <div class="relative w-full h-full md:w-[1000px] md:max-w-[calc(100vw-32px)] md:h-[calc(100vh-24px)] flex flex-col rounded-none md:rounded-[10px] bg-[var(--brand-canvas)] shadow-[0_24px_64px_rgba(0,20,18,0.22)] overflow-hidden">
-      <!-- Sample-data banner -->
-      <div class="flex items-center justify-center gap-2 h-9 bg-[var(--brand-text)] text-white text-[12.5px] shrink-0">
-        Sample data active —
-        <button class="underline underline-offset-2 font-semibold" @click="() => {}">remove it</button>
-        before entering your real data.
-        <button class="ml-2 opacity-70 hover:opacity-100" aria-label="Dismiss banner"><X class="w-3.5 h-3.5" stroke-width="2" /></button>
-      </div>
+  <div class="fixed inset-0 z-50 flex flex-col bg-[var(--brand-canvas)]">
+    <!-- Full-bleed takeover — fills the viewport, no dimmed backdrop. The
+         header is sticky at the top; sidebar + content each own their
+         scroll below it. -->
+    <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
 
-      <!-- Header — Recruitee/Tellent parity: title + short id + Last-edit
-           timestamp on the left; Share popover, Preview, status dropdown,
-           Publish changes primary, ⋯, close on the right. -->
-      <div class="flex items-center gap-2 pl-6 pr-16 py-5 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
+      <!-- Header — sticky, h-20, border-b. Title + short id + timestamp on
+           the left; Share / Preview / status / Publish + close on the right. -->
+      <div class="sticky top-0 z-10 h-20 flex items-center gap-2 pl-6 pr-16 border-b border-[var(--brand-border-fade)] bg-white shrink-0">
         <div class="min-w-0 flex-1 mr-auto">
           <div class="flex items-center gap-2 min-w-0">
             <h1 class="text-[22px] font-extrabold text-[var(--brand-text)] leading-tight truncate min-w-0">{{ jobTitle || 'Untitled job' }}</h1>
@@ -323,7 +344,7 @@ async function copyJobUrl() {
       <!-- Body: sidenav + content -->
       <div class="flex-1 min-h-0 flex overflow-hidden">
         <!-- Sidenav -->
-        <aside class="w-[194px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col">
+        <aside class="w-64 shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col overflow-y-auto">
           <nav class="flex-1 p-3">
             <button
               v-for="n in NAV"
@@ -346,60 +367,14 @@ async function copyJobUrl() {
           </div>
         </aside>
 
-        <!-- Content -->
-        <div class="flex-1 min-h-0 overflow-y-auto">
-          <div v-if="activeNav === 'details'" class="max-w-[700px] mx-auto p-6 flex flex-col gap-4">
-            <!-- Work mode -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
-              <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Work mode</h2>
-              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-4">Select the collar type. This determines the form language, AI generation, and career level options.</p>
-              <div class="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  class="relative text-left flex flex-col rounded-[10px] border-[1.5px] p-4 transition focus:outline-none"
-                  :class="collar === 'white'
-                    ? 'border-[var(--brand-teal)] bg-[var(--brand-lime-tint)]'
-                    : 'border-[var(--brand-border)] bg-white hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)]'"
-                  @click="collar = 'white'"
-                >
-                  <span
-                    class="absolute top-3 right-3 w-5 h-5 rounded-md inline-flex items-center justify-center"
-                    :class="collar === 'white' ? 'bg-[var(--brand-teal)] text-[var(--brand-lime)]' : 'border-[1.5px] border-[var(--brand-border)]'"
-                  >
-                    <svg v-if="collar === 'white'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                  </span>
-                  <Briefcase class="w-5 h-5 mb-2 text-[var(--brand-text-secondary)]" stroke-width="1.7" />
-                  <span class="text-[14px] font-bold text-[var(--brand-text)] mb-0.5">White Collar</span>
-                  <span class="text-[12px] text-[var(--brand-text-quiet)]">English LTR · AI in English · Monthly salary</span>
-                </button>
-                <button
-                  type="button"
-                  class="relative text-left flex flex-col rounded-[10px] border-[1.5px] p-4 transition focus:outline-none"
-                  :class="collar === 'blue'
-                    ? 'border-[var(--brand-teal)] bg-[var(--brand-lime-tint)]'
-                    : 'border-[var(--brand-border)] bg-white hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)]'"
-                  @click="collar = 'blue'"
-                >
-                  <span
-                    class="absolute top-3 right-3 w-5 h-5 rounded-md inline-flex items-center justify-center"
-                    :class="collar === 'blue' ? 'bg-[var(--brand-teal)] text-[var(--brand-lime)]' : 'border-[1.5px] border-[var(--brand-border)]'"
-                  >
-                    <svg v-if="collar === 'blue'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                  </span>
-                  <Wrench class="w-5 h-5 mb-2 text-[var(--brand-text-secondary)]" stroke-width="1.7" />
-                  <span class="text-[14px] font-bold text-[var(--brand-text)] mb-0.5">Blue Collar</span>
-                  <span class="text-[12px] text-[var(--brand-text-quiet)]">Arabic RTL · AI in Arabic · Daily salary</span>
-                </button>
-              </div>
-            </section>
-
+        <!-- Content — own scroll, canvas bg, 96px scroll-padding so anchored
+             jumps clear the sticky header. -->
+        <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--brand-canvas)]" style="scroll-padding-top: 96px;">
+          <div v-if="activeNav === 'details'" class="max-w-3xl mx-auto pt-8 flex flex-col gap-4">
             <!-- Basic info -->
             <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
               <div class="flex items-start justify-between mb-1">
-                <div>
-                  <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Basic info</h2>
-                  <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Define basic information about the job.</p>
-                </div>
+                <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Basic info</h2>
                 <button
                   class="inline-flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
                   @click="fieldsModalOpen = true"
@@ -408,19 +383,54 @@ async function copyJobUrl() {
                   Manage fields
                 </button>
               </div>
-              <!-- Title:Dept 2:1 per spec — Job title dominates, Department
-                   sits as the narrower right-side field. -->
-              <div class="grid grid-cols-3 gap-4 mt-4">
-                <div class="col-span-2">
-                  <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
+
+              <!-- Row 1 — Job title (left) + Job type toggle (right), 50/50 so
+                   the right edge aligns with Location in row 2. -->
+              <div class="mt-4 grid grid-cols-2 gap-4 items-end">
+                <div class="min-w-0">
+                  <label for="jd-job-title" class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
                     Job title <span class="text-[var(--brand-status-closed-text)]">*</span>
                   </label>
                   <input
+                    id="jd-job-title"
                     v-model="jobTitle"
                     type="text"
+                    required
+                    aria-required="true"
                     class="w-full h-11 px-3.5 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
                   >
                 </div>
+                <div class="min-w-0">
+                  <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Job type</label>
+                  <div role="radiogroup" aria-label="Job type" class="flex w-full p-0.5 rounded-[9px] bg-[var(--brand-canvas)] border border-[var(--brand-border-fade)] h-11 items-center">
+                    <button
+                      type="button"
+                      role="radio"
+                      :aria-checked="collar === 'white'"
+                      class="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-[7px] text-[13px] font-semibold transition"
+                      :class="collar === 'white' ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_3px_rgba(0,20,18,0.10)]' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text)]'"
+                      @click="collar = 'white'"
+                    >
+                      <Briefcase class="w-3.5 h-3.5" stroke-width="1.8" />
+                      White collar
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      :aria-checked="collar === 'blue'"
+                      class="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-[7px] text-[13px] font-semibold transition"
+                      :class="collar === 'blue' ? 'bg-white text-[var(--brand-text)] shadow-[0_1px_3px_rgba(0,20,18,0.10)]' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text)]'"
+                      @click="collar = 'blue'"
+                    >
+                      <Wrench class="w-3.5 h-3.5" stroke-width="1.8" />
+                      Blue collar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 2 — Department + Location (side by side) -->
+              <div class="grid grid-cols-2 gap-4 mt-4 items-start">
                 <div>
                   <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
                     Department <span class="text-[var(--brand-status-closed-text)]">*</span>
@@ -428,9 +438,11 @@ async function copyJobUrl() {
                   <div class="relative">
                     <select
                       v-model="form.department"
+                      required
+                      aria-required="true"
                       class="w-full h-11 pl-3.5 pr-9 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none appearance-none transition"
                     >
-                      <option value="">Select</option>
+                      <option value="">Select department</option>
                       <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
                     </select>
                     <ChevronDown class="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[var(--brand-text-quiet)] pointer-events-none" stroke-width="2" />
@@ -438,7 +450,7 @@ async function copyJobUrl() {
                   <button
                     class="mt-1.5 text-[11.5px] font-bold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition"
                     @click="form.showSubDept = !form.showSubDept"
-                  >+ Add Department</button>
+                  >+ Add department</button>
                   <div v-if="form.showSubDept && departmentSubs.length" class="mt-2.5">
                     <label class="block text-[12px] font-bold text-[var(--brand-text-quiet)] mb-1">Sub-department</label>
                     <div class="relative">
@@ -453,7 +465,67 @@ async function copyJobUrl() {
                     </div>
                   </div>
                 </div>
+                <div>
+                  <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Location</label>
+                  <div class="relative">
+                    <select
+                      v-model="selectedLocationId"
+                      class="w-full h-11 pl-3.5 pr-9 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none appearance-none transition"
+                    >
+                      <option value="">Select location</option>
+                      <option v-for="l in allLocations" :key="l.id" :value="l.id">
+                        {{ l.name }}<template v-if="l.city || l.country"> — {{ [l.city, l.country].filter(Boolean).join(', ') }}</template>
+                      </option>
+                    </select>
+                    <ChevronDown class="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[var(--brand-text-quiet)] pointer-events-none" stroke-width="2" />
+                  </div>
+                  <button
+                    class="mt-1.5 text-[11.5px] font-bold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition"
+                    @click="showAddLocation = !showAddLocation"
+                  >+ Add location</button>
+
+                  <!-- Inline add-location mini-form (mirrors the sub-department
+                       inline pattern under Department). -->
+                  <div v-if="showAddLocation" class="mt-2.5 rounded-[10px] border border-[var(--brand-border-fade)] bg-[var(--brand-canvas)] p-3">
+                    <input
+                      v-model="newLocName"
+                      type="text"
+                      placeholder="Location name (e.g. Amsterdam HQ)"
+                      class="w-full h-9 px-3 text-[13px] rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
+                    >
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                      <input
+                        v-model="newLocCity"
+                        type="text"
+                        placeholder="City"
+                        class="w-full h-9 px-3 text-[13px] rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
+                      >
+                      <input
+                        v-model="newLocCountry"
+                        type="text"
+                        placeholder="Country"
+                        class="w-full h-9 px-3 text-[13px] rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
+                      >
+                    </div>
+                    <div class="flex items-center justify-end gap-2 mt-2.5">
+                      <button
+                        class="text-[12.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text-secondary)] px-2 h-8"
+                        @click="showAddLocation = false; newLocName = ''; newLocCity = ''; newLocCountry = ''"
+                      >Cancel</button>
+                      <button
+                        class="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12.5px] font-bold text-white bg-[var(--brand-teal)] disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        :disabled="!canAddLocation"
+                        @click="addLocation"
+                      >
+                        <Plus class="w-3.5 h-3.5" stroke-width="2.4" />
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              <!-- Row 3 — Tags (full width) -->
               <div class="mt-4">
                 <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-2">Tags</label>
                 <div class="flex flex-wrap items-center gap-1.5">
@@ -463,36 +535,12 @@ async function copyJobUrl() {
                       <X class="w-3 h-3" stroke-width="2" />
                     </button>
                   </span>
-                  <button class="w-7 h-7 rounded-[6px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text-quiet)] hover:border-[var(--brand-teal)] hover:text-[var(--brand-teal)] transition inline-flex items-center justify-center">
-                    <Plus class="w-3.5 h-3.5" stroke-width="2.2" />
+                  <button class="inline-flex items-center gap-1 h-7 px-2.5 rounded-[6px] border-[1.5px] border-dashed border-[var(--brand-border)] bg-white text-[12px] font-semibold text-[var(--brand-text-quiet)] hover:border-[var(--brand-teal)] hover:text-[var(--brand-teal)] transition">
+                    <Plus class="w-3 h-3" stroke-width="2.4" />
+                    Add tag
                   </button>
                 </div>
               </div>
-            </section>
-
-            <!-- Location -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Location</h2>
-                  <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Assigned locations are displayed on the careers site.</p>
-                </div>
-                <BrandButton variant="outline" @click="locationModalOpen = true">
-                  <Plus class="w-3.5 h-3.5 mr-1.5" stroke-width="2.2" />
-                  Assign location
-                </BrandButton>
-              </div>
-              <div v-for="loc in assignedLocations" :key="loc.id"
-                   class="flex items-center gap-3 rounded-[10px] border border-[var(--brand-border-fade)] px-4 py-3.5 bg-white">
-                <MapPin class="w-4 h-4 text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.8" />
-                <div class="flex-1 min-w-0">
-                  <div class="text-[14px] font-bold text-[var(--brand-text)]">{{ loc.name }}</div>
-                  <div class="text-[12.5px] text-[var(--brand-text-quiet)] mt-0.5">{{ loc.country }}, {{ loc.city }}</div>
-                </div>
-                <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="Edit location"><Pencil class="w-3.5 h-3.5" stroke-width="1.8" /></button>
-                <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-status-closed-text)] transition" aria-label="Remove location" @click="form.locations = form.locations.filter(id => id !== loc.id)"><X class="w-3.5 h-3.5" stroke-width="2" /></button>
-              </div>
-              <div v-if="!assignedLocations.length" class="text-[13px] text-[var(--brand-text-quiet)] italic py-2">No locations assigned yet.</div>
             </section>
 
             <!-- About the role -->
@@ -502,41 +550,48 @@ async function copyJobUrl() {
                   <h2 class="text-[16px] font-bold text-[var(--brand-text)]">About the role</h2>
                   <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Description of the role and responsibilities.</p>
                 </div>
-                <button class="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-[9px] border-[1.5px] border-[var(--brand-teal)] bg-[var(--brand-lime-tint)] text-[13px] font-bold text-[var(--brand-teal)] hover:brightness-95 transition">
-                  <Sparkles class="w-3.5 h-3.5" stroke-width="1.8" />
-                  AI Generate
-                  <ChevronDown class="w-3 h-3" stroke-width="2.2" />
-                </button>
+                <!-- AI Generate — dropdown of tone options (Neutral / Friendly
+                     / Formal), same shape as the reference "AI Regenerate"
+                     menu but styled with our tokens. -->
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <button class="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-[9px] border-[1.5px] border-[var(--brand-teal)] bg-[var(--brand-lime-tint)] text-[13px] font-bold text-[var(--brand-teal)] hover:brightness-95 transition">
+                      <Sparkles class="w-3.5 h-3.5" stroke-width="1.8" />
+                      {{ aiGenerated ? 'AI Regenerate' : 'AI Generate' }}
+                      <ChevronDown class="w-3 h-3" stroke-width="2.2" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" :side-offset="6" class="w-[200px] p-1.5 rounded-[12px]">
+                    <div class="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">Writing tone</div>
+                    <DropdownMenuItem
+                      v-for="tone in AI_TONES"
+                      :key="tone"
+                      class="flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[13.5px] font-semibold text-[var(--brand-text)] cursor-pointer"
+                      @select="generateWithTone(tone)"
+                    >
+                      <Sparkles class="w-3.5 h-3.5 text-[var(--brand-teal-secondary)]" stroke-width="1.8" />
+                      <span class="flex-1">{{ tone }}</span>
+                      <Check v-if="aiTone === tone" class="w-3.5 h-3.5 text-[var(--brand-teal)]" stroke-width="2.4" />
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div class="mt-4">
-                <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-2">Description</label>
-                <div class="rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white">
-                  <textarea
-                    v-model="form.description"
-                    class="w-full min-h-[140px] px-4 py-3 text-[13.5px] leading-relaxed bg-transparent focus:outline-none resize-y"
-                  />
-                  <div class="flex items-center gap-1 px-2 h-9 border-t border-[var(--brand-border-fade)]">
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><Bold class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><Italic class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><Underline class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><Strikethrough class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <span class="w-px h-4 mx-1 bg-[var(--brand-border-fade)]" />
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><List class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><ListOrdered class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <span class="w-px h-4 mx-1 bg-[var(--brand-border-fade)]" />
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><Link2 class="w-3.5 h-3.5" stroke-width="2" /></button>
-                    <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition"><Image class="w-3.5 h-3.5" stroke-width="2" /></button>
-                  </div>
-                </div>
+                <JobEditorRichTextField
+                  v-model="form.description"
+                  label="Description"
+                  required
+                  min-height="150px"
+                />
               </div>
 
               <div class="mt-4">
-                <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-2">Requirements</label>
-                <textarea
+                <JobEditorRichTextField
                   v-model="form.requirements"
+                  label="Requirements"
                   placeholder="List the must-haves for this role…"
-                  class="w-full min-h-[100px] px-4 py-3 text-[13.5px] leading-relaxed rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none resize-y transition"
+                  min-height="110px"
                 />
               </div>
 
@@ -602,36 +657,6 @@ async function copyJobUrl() {
                   <span class="text-[14px] font-semibold text-[var(--brand-text)] mb-0.5">{{ wm.label }}</span>
                   <span class="text-[12px] text-[var(--brand-text-quiet)]">{{ wm.hint }}</span>
                 </button>
-              </div>
-            </section>
-
-            <!-- Career level -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
-              <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Career level <span class="text-[var(--brand-status-closed-text)]">*</span></h2>
-              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-4">Select the career level for this position.</p>
-              <div class="flex flex-wrap items-center gap-2 mb-4">
-                <button
-                  v-for="lv in CAREER_LEVELS"
-                  :key="lv.key"
-                  type="button"
-                  class="px-4 h-9 rounded-[8px] border-[1.5px] text-[13px] font-semibold transition"
-                  :class="form.careerLevel === lv.key
-                    ? 'bg-[var(--brand-teal)] border-[var(--brand-teal)] text-white'
-                    : 'bg-white border-[var(--brand-border)] text-[var(--brand-text-secondary)] hover:border-[var(--brand-teal)] hover:text-[var(--brand-text)]'"
-                  @click="form.careerLevel = lv.key"
-                >{{ lv.label }}</button>
-              </div>
-              <div class="max-w-[240px]">
-                <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
-                  Years of experience <span class="text-[var(--brand-status-closed-text)]">*</span>
-                </label>
-                <input
-                  v-model="form.yearsOfExperience"
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 3"
-                  class="w-full h-11 px-3.5 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
-                >
               </div>
             </section>
 
@@ -735,13 +760,14 @@ async function copyJobUrl() {
 
           <JobEditorCrossPostingTab v-else-if="activeNav === 'cross'" />
 
-          <div v-else class="max-w-[700px] mx-auto p-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
+          <div v-else class="max-w-3xl mx-auto pt-8 px-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
           </div>
 
           <!-- Shared step nav — same [← Prev] [Next →] pair under every
-               tab body, driven by the sidenav order. -->
-          <div class="max-w-[700px] mx-auto px-6 pb-8 flex items-center justify-between gap-2">
+               tab body, driven by the sidenav order. Bottom pad gives the
+               last element ~128px clearance from the viewport edge. -->
+          <div class="max-w-3xl mx-auto mt-8 pb-32 flex items-center justify-between gap-2">
             <button
               v-if="prevNav"
               class="inline-flex items-center gap-2 px-5 h-10 rounded-[9px] border border-[var(--brand-border)] bg-white text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
@@ -766,13 +792,6 @@ async function copyJobUrl() {
 
       <!-- Manage custom fields (Basic info → Manage fields) -->
       <JobDetailsFieldsModal v-model:open="fieldsModalOpen" @apply="onApplyCustomFields" />
-
-      <!-- Assign location (Location → + Assign location) -->
-      <JobDetailsLocationModal
-        v-model:open="locationModalOpen"
-        :selected-ids="form.locations"
-        @confirm="onConfirmLocations"
-      />
 
       <!-- Saved-draft toast -->
       <Transition
