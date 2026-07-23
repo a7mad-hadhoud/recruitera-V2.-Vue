@@ -16,11 +16,11 @@
   only — existing scores are preserved.
 -->
 <script setup lang="ts">
-import { FileText, X, Plus, Trash2, Eye, EyeOff, Check, AlertTriangle } from 'lucide-vue-next'
+import { FileText, X, Plus, Trash2, Check, AlertTriangle } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BrandButton, BrandLimeCheckbox } from '~/components/brand'
 
-interface Criterion { id: string; text: string; fullyMet: boolean; partiallyMet: boolean; disqualify: boolean; showInPost: boolean }
+interface Criterion { id: string; text: string; fullyMet: boolean; partiallyMet: boolean; disqualify: boolean }
 interface CriteriaGroup { id: string; title: string; weight: number; criteria: Criterion[] }
 
 const open = defineModel<boolean>('open', { default: false })
@@ -29,7 +29,7 @@ const emit = defineEmits<{ save: [groups: CriteriaGroup[]] }>()
 function cid(p: string) { return `${p}-${Math.random().toString(36).slice(2, 7)}` }
 // `level`: 'full' seeds Fully-met, 'partial' seeds Partially-met.
 function crit(text: string, level: 'full' | 'partial', disqualify = false): Criterion {
-  return { id: cid('c'), text, fullyMet: level === 'full', partiallyMet: level === 'partial', disqualify, showInPost: true }
+  return { id: cid('c'), text, fullyMet: level === 'full', partiallyMet: level === 'partial', disqualify }
 }
 
 // Recommended defaults + section weights (spec AI Weights).
@@ -82,7 +82,6 @@ function removeCriterion(group: CriteriaGroup, id: string) {
 function deleteAll(group: CriteriaGroup) {
   group.criteria = []
 }
-function toggleShow(c: Criterion) { c.showInPost = !c.showInPost }
 function resetDefaults() { groups.value = defaultGroups() }
 function onSave() {
   emit('save', groups.value)
@@ -148,7 +147,7 @@ function onSave() {
                     type="number"
                     min="0"
                     max="100"
-                    class="w-[46px] h-8 px-2 text-[13.5px] text-right tabular-nums bg-transparent focus:outline-none"
+                    class="w-[58px] h-8 px-2.5 text-[13.5px] text-center tabular-nums bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     :aria-label="`Weight for ${group.title}`"
                     @wheel="($event.target as HTMLInputElement).blur()"
                   >
@@ -163,7 +162,6 @@ function onSave() {
               <span class="w-[72px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Fully met</span>
               <span class="w-[72px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Partially met</span>
               <span class="w-[84px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Disqualify if missing</span>
-              <span class="w-[76px] shrink-0 text-center text-[11.5px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Show in job post</span>
               <span class="w-6 shrink-0" />
             </div>
 
@@ -189,20 +187,6 @@ function onSave() {
               </div>
               <div class="w-[84px] shrink-0 flex justify-center">
                 <BrandLimeCheckbox v-model="c.disqualify" :aria-label="`Disqualify if missing: ${c.text.slice(0, 24)}`" />
-              </div>
-              <div class="w-[76px] shrink-0 flex justify-center">
-                <button
-                  type="button"
-                  class="w-9 h-9 rounded-[9px] inline-flex items-center justify-center transition"
-                  :class="c.showInPost
-                    ? 'bg-[var(--brand-lime-tint)] text-[var(--brand-teal)]'
-                    : 'bg-white border border-[var(--brand-border-fade)] text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)]'"
-                  :aria-label="c.showInPost ? 'Shown in job post' : 'Hidden from job post'"
-                  :aria-pressed="c.showInPost"
-                  @click="toggleShow(c)"
-                >
-                  <component :is="c.showInPost ? Eye : EyeOff" class="w-[18px] h-[18px]" stroke-width="1.8" />
-                </button>
               </div>
               <button
                 type="button"
