@@ -94,7 +94,7 @@ function onSave() {
   <Dialog v-model:open="open">
     <DialogContent
       :show-close-button="false"
-      class="p-0 border-0 rounded-[18px] max-w-[1120px] w-[96vw] max-h-[90vh] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden flex flex-col"
+      class="p-0 border-0 rounded-[18px] !max-w-[1120px] sm:!max-w-[1120px] w-[96vw] max-h-[90vh] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden flex flex-col"
     >
       <!-- Header -->
       <div class="flex items-center gap-3 px-7 h-[68px] border-b border-[var(--brand-border-fade)] shrink-0">
