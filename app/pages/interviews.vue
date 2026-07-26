@@ -154,9 +154,9 @@ function onCreateLink(payload: Record<string, unknown>) {
                 <div class="flex items-center justify-end gap-2.5">
                   <span class="text-[13.5px] font-semibold text-[var(--brand-text)] tabular-nums">{{ l.pending }}</span>
                   <div class="flex items-center gap-1.5">
-                    <a :href="l.url" target="_blank" rel="noopener" class="inline-flex items-center justify-center px-[9px] py-[5px] rounded-[9px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)] transition-colors" title="Open link">
+                    <NuxtLink :to="`/self-schedule?name=${encodeURIComponent(l.name)}&brand=paymob`" target="_blank" class="inline-flex items-center justify-center px-[9px] py-[5px] rounded-[9px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)] transition-colors" title="Preview scheduling page">
                       <ExternalLink class="w-3.5 h-3.5" />
-                    </a>
+                    </NuxtLink>
                     <button type="button" class="inline-flex items-center justify-center px-[9px] py-[5px] rounded-[9px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] transition-colors" :class="copiedId === l.id ? 'text-[var(--brand-teal)]' : 'text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)]'" :title="copiedId === l.id ? 'Copied' : 'Copy link'" @click="copyLink(l)">
                       <component :is="copiedId === l.id ? Check : Copy" class="w-3.5 h-3.5" />
                     </button>
