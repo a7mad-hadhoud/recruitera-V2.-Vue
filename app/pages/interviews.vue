@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { Plus, ExternalLink, Copy, Pencil, CalendarClock } from 'lucide-vue-next'
 import { BrandPageTitle, BrandButton, BrandAvatarInitials, BrandEmptyState } from '~/components/brand'
+import EventSchedulerLinkModal from '~/components/interviews/EventSchedulerLinkModal.vue'
 import { useTeamMembers } from '~/composables/useTeam'
 import type { TeamMember } from '~/types'
 
@@ -58,14 +59,27 @@ async function copyLink(l: SchedulerLink) {
   if (copyTimer) clearTimeout(copyTimer)
   copyTimer = setTimeout(() => (copiedId.value = null), 1400)
 }
+const createOpen = ref(false)
 function newLink() {
-  // eslint-disable-next-line no-console
-  console.info('[scheduler] new event scheduler link')
+  createOpen.value = true
+}
+function onCreateLink(payload: Record<string, unknown>) {
+  const name = String((payload as { name?: string }).name ?? 'Untitled link')
+  links.value = [
+    { id: `s${Date.now()}`, name, interviewerIds: (payload.interviewerIds as string[]) ?? [], scheduled: 0, pending: 0, url: `https://recruitera.ai/v/i/s/${Math.random().toString(36).slice(2, 14)}` },
+    ...links.value,
+  ]
 }
 </script>
 
 <template>
-  <div class="p-6 max-w-[1100px] mx-auto">
+  <!-- Full-height panel flush against sidebar + top nav, curved at the
+       top-left (rounded-tl-[22px]) — same join treatment as the Jobs/
+       Candidates tabs. -->
+  <div class="flex h-full overflow-hidden bg-[var(--brand-canvas)]">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden rounded-tl-[22px] bg-[var(--brand-surface-white)] border-t border-l border-[var(--brand-border)]">
+      <div class="flex-1 overflow-auto">
+        <div class="px-8 pt-7 pb-10 max-w-[1180px]">
     <!-- Header -->
     <div class="flex items-start justify-between gap-4">
       <div>
@@ -147,5 +161,10 @@ function newLink() {
       title="No scheduler links yet"
       description="Create a scheduler link to share your availability and let candidates book time."
     />
+        </div>
+      </div>
+    </div>
+
+    <EventSchedulerLinkModal v-model:open="createOpen" @create="onCreateLink" />
   </div>
 </template>
