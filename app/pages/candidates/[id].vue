@@ -15,6 +15,7 @@ import CandidateWhatsAppTab from '~/components/candidates/CandidateWhatsAppTab.v
 import CandidateEvaluationTab from '~/components/candidates/CandidateEvaluationTab.vue'
 import CandidateFilesTab from '~/components/candidates/CandidateFilesTab.vue'
 import CandidateActivityTab from '~/components/candidates/CandidateActivityTab.vue'
+import CandidateScheduleModal from '~/components/candidates/CandidateScheduleModal.vue'
 import ErrorBoundary from '~/components/ErrorBoundary.vue'
 import { useCandidates, useCandidateProfile } from '~/composables/useCandidates'
 import { AddNoteSchema, type AddNoteInput } from '~/types/candidate.schema'
@@ -121,6 +122,9 @@ const localTags = ref<string[]>([])
 const localTasks = ref<{ id: string, title: string, dueDate: string | null, done: boolean }[]>([])
 const localJobs = ref<CandidateJob[]>([])
 const localTalentPools = ref<string[]>([])
+
+// Interview scheduling — "Set Interview" opens the 2-step Schedule dialog.
+const scheduleOpen = ref(false)
 watchEffect(() => {
   if (!profile.value) return
   localTags.value = [...profile.value.tags]
@@ -323,7 +327,7 @@ const submitNote = handleSubmit((values) => {
                     </div>
                   </div>
                   <div class="flex items-center gap-1 shrink-0">
-                    <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="goToTab('Events')">
+                    <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="scheduleOpen = true">
                       <Users class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
                     </BrandButton>
                     <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="goToTab('Evaluation')">
@@ -339,7 +343,7 @@ const submitNote = handleSubmit((values) => {
                   </div>
                 </div>
                 <div class="flex lg:hidden items-center gap-1 px-4 pb-3">
-                  <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="goToTab('Events')">
+                  <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="scheduleOpen = true">
                     <Users class="!w-[16px] !h-[16px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
                   </BrandButton>
                   <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="goToTab('Evaluation')">
@@ -961,5 +965,15 @@ const submitNote = handleSubmit((values) => {
       </div>
     </div>
     </div>
+
+    <!-- Interview scheduling — 2-step Schedule event dialog -->
+    <CandidateScheduleModal
+      v-if="profile"
+      v-model:open="scheduleOpen"
+      :candidate-name="profile.name"
+      :candidate-initials="profile.initials"
+      :candidate-color="profile.avatarColor"
+      :job-name="localJobs[0]?.title"
+    />
   </div>
 </template>
