@@ -77,7 +77,7 @@ function onCreateLink(payload: Record<string, unknown>) {
        top-left (rounded-tl-[22px]) — same join treatment as the Jobs/
        Candidates tabs. -->
   <div class="flex h-full overflow-hidden bg-[var(--brand-canvas)]">
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden rounded-tl-[22px] bg-[var(--brand-surface-white)] border-t border-l border-[var(--brand-border)]">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden rounded-tl-[22px] bg-white border-t border-l border-[var(--brand-border)]">
       <div class="flex-1 overflow-auto">
         <div class="px-8 pt-7 pb-10 max-w-[1180px]">
     <!-- Header -->
