@@ -9,7 +9,7 @@
   Brand --brand-* tokens only.
 -->
 <script setup lang="ts">
-import { Clock, Video, Globe, ChevronLeft, ChevronRight, ArrowLeft, Check, Plus } from 'lucide-vue-next'
+import { Clock, Video, Globe, ChevronLeft, ChevronRight, ArrowLeft, Check, Plus, Calendar, CalendarPlus, CheckCircle2, XCircle } from 'lucide-vue-next'
 import { useCompany } from '~/composables/useCompany'
 
 definePageMeta({ layout: false })
@@ -97,6 +97,34 @@ function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean)
   return ((p[0]?.[0] ?? '') + (p.length > 1 ? p[p.length - 1]![0] : '')).toUpperCase() || 'C'
 }
+
+// ── Confirmation (post-booking) ────────────────────────────────
+const interviewer = computed(() => ({
+  name: organizer.value !== 'Recruiting Team' ? organizer.value : 'Dina Ismail',
+  role: 'People & Talent Manager',
+  // Drop the headshot at public/interviewers/dina-ismail.jpg to show it;
+  // falls back to initials until the file exists.
+  photo: '/interviewers/dina-ismail.jpg',
+}))
+const photoError = ref(false)
+function parseTime(t: string) {
+  const m = t.match(/(\d+):(\d+)(am|pm)/i)
+  if (!m) return 0
+  let h = Number(m[1]) % 12
+  if (m[3].toLowerCase() === 'pm') h += 12
+  return h * 60 + Number(m[2])
+}
+function fmtMin(mins: number) {
+  const h24 = Math.floor(mins / 60) % 24
+  const mm = mins % 60
+  const ap = h24 >= 12 ? 'pm' : 'am'
+  const hh = ((h24 + 11) % 12) + 1
+  return `${hh}:${String(mm).padStart(2, '0')}${ap}`
+}
+const timeRange = computed(() =>
+  selectedTime.value ? `${selectedTime.value} – ${fmtMin(parseTime(selectedTime.value) + durationMin.value)}` : '',
+)
+const attending = ref<'yes' | 'no' | null>(null)
 </script>
 
 <template>
@@ -113,9 +141,12 @@ function initials(name: string) {
     </div>
 
     <!-- Card -->
-    <div class="w-full max-w-[980px] bg-[var(--brand-surface-white)] rounded-[18px] border border-[var(--brand-border-light)] shadow-[0_12px_40px_rgba(0,20,18,0.08)] overflow-hidden grid grid-cols-1 md:grid-cols-[minmax(280px,340px)_1fr]">
-      <!-- Left: event details -->
-      <div class="p-7 md:border-r border-[var(--brand-border-fade)]">
+    <div
+      class="w-full max-w-[980px] bg-[var(--brand-surface-white)] rounded-[18px] border border-[var(--brand-border-light)] shadow-[0_12px_40px_rgba(0,20,18,0.08)] overflow-hidden grid grid-cols-1"
+      :class="step === 'done' ? '' : 'md:grid-cols-[minmax(280px,340px)_1fr]'"
+    >
+      <!-- Left: event details (hidden on the confirmation step) -->
+      <div v-if="step !== 'done'" class="p-7 md:border-r border-[var(--brand-border-fade)]">
         <button v-if="step === 'details'" type="button" class="w-9 h-9 -ml-1 mb-4 rounded-full inline-flex items-center justify-center text-[var(--accent)] hover:bg-[var(--brand-canvas)] transition" aria-label="Back" @click="step = 'time'">
           <ArrowLeft class="w-5 h-5" stroke-width="2" />
         </button>
@@ -204,16 +235,51 @@ function initials(name: string) {
           </div>
         </template>
 
-        <!-- Step: done -->
+        <!-- Step: done — booking confirmation -->
         <template v-else>
-          <div class="flex flex-col items-center justify-center text-center h-full py-10">
-            <div class="w-16 h-16 rounded-full bg-[var(--brand-success)] inline-flex items-center justify-center mb-5"><Check class="w-8 h-8 text-[var(--brand-avatar-text)]" stroke-width="2.5" /></div>
-            <h2 class="text-[22px] font-bold text-[var(--brand-text)] mb-2">You're scheduled</h2>
-            <p class="text-[14px] text-[var(--brand-text-muted)] max-w-[360px]">A calendar invitation has been sent to <strong class="text-[var(--brand-text)]">{{ form.email }}</strong> for <strong class="text-[var(--brand-text)]">{{ eventName }}</strong> on {{ selectedDateLabel }}, {{ viewYear }} at {{ selectedTime }}.</p>
-            <div class="mt-6 flex items-center gap-2.5 px-4 py-3 rounded-[12px] bg-[var(--brand-canvas)]">
-              <span class="w-8 h-8 rounded-full bg-[var(--brand-avatar-4)] text-[var(--brand-avatar-text)] text-[12px] font-bold inline-flex items-center justify-center">{{ initials(form.name || 'Candidate') }}</span>
-              <span class="text-[13.5px] text-[var(--brand-text-secondary)]">{{ form.name }} · {{ selectedTime }}, {{ selectedDateLabel }}</span>
+          <div class="flex items-start justify-between gap-4 mb-1">
+            <h2 class="text-[24px] font-bold text-[var(--brand-text)]">Your Interview with {{ companyName }}</h2>
+            <button type="button" class="inline-flex items-center gap-2 h-10 px-3.5 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0">
+              <CalendarPlus class="w-4 h-4 text-[var(--brand-text-subtle)]" stroke-width="1.9" /> Add to calendar
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-[var(--brand-text-secondary)] mb-6">
+            <span class="inline-flex items-center gap-1.5"><Calendar class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.9" /> {{ selectedDateLabel }}, {{ viewYear }}</span>
+            <span class="inline-flex items-center gap-1.5"><Clock class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.9" /> {{ timeRange }} ({{ TZ_LABEL }})</span>
+          </div>
+
+          <div class="text-[16px] font-bold text-[var(--brand-text)] mb-3">You will be meeting:</div>
+          <div class="flex items-center gap-3 rounded-[12px] border border-[var(--brand-border-light)] px-4 py-3.5 mb-4">
+            <img v-if="interviewer.photo && !photoError" :src="interviewer.photo" :alt="interviewer.name" class="w-11 h-11 rounded-full object-cover shrink-0" @error="photoError = true">
+            <span v-else class="w-11 h-11 rounded-full inline-flex items-center justify-center text-[var(--brand-avatar-text)] text-[14px] font-bold shrink-0" style="background:var(--accent)">{{ initials(interviewer.name) }}</span>
+            <div class="min-w-0">
+              <div class="text-[15px] font-bold text-[var(--brand-text)]">{{ interviewer.name }}</div>
+              <div class="text-[13.5px] text-[var(--brand-text-muted)]">{{ interviewer.role }}</div>
             </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[var(--brand-border-light)] px-4 py-3.5 mb-4">
+            <span class="text-[14px] font-bold text-[var(--brand-text)]">Will you be attending?</span>
+            <div class="flex items-center gap-2">
+              <button type="button" class="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] text-[13.5px] font-bold transition" :class="attending === 'yes' ? 'bg-[var(--brand-success)] text-[var(--brand-avatar-text)]' : 'border border-[var(--brand-border)] text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]'" @click="attending = 'yes'">
+                <CheckCircle2 class="w-4 h-4" stroke-width="2" /> Yes
+              </button>
+              <button type="button" class="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] text-[13.5px] font-bold transition" :class="attending === 'no' ? 'bg-[var(--brand-status-closed-text)] text-[var(--brand-avatar-text)]' : 'border border-[var(--brand-border)] text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]'" @click="attending = 'no'">
+                <XCircle class="w-4 h-4" stroke-width="2" /> No
+              </button>
+              <button type="button" class="h-9 px-3.5 rounded-[9px] border border-[var(--brand-border)] text-[13.5px] font-bold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition" @click="step = 'date'; attending = null">Reschedule</button>
+            </div>
+          </div>
+
+          <div class="rounded-[12px] border border-[var(--brand-border-light)] px-4 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="inline-flex items-center gap-2.5 text-[15px] font-semibold text-[var(--brand-text)]">
+                <span class="w-7 h-7 rounded-md bg-[var(--brand-canvas)] inline-flex items-center justify-center"><Video class="w-4 h-4 text-[var(--brand-teal-secondary)]" stroke-width="1.9" /></span>
+                Google Meet
+              </div>
+              <button type="button" class="h-10 px-5 rounded-full text-[14px] font-bold text-[var(--brand-avatar-text)] hover:opacity-95 transition" style="background:var(--accent)">Join meeting</button>
+            </div>
+            <p class="text-[12.5px] text-[var(--brand-text-quiet)] text-center mt-3.5 max-w-[520px] mx-auto">By joining, you agree to this meeting being recorded to help our recruitment team review what we discuss. If you'd like the recording deleted, please let us know.</p>
           </div>
         </template>
       </div>
