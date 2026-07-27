@@ -23,6 +23,7 @@ import CandidatesPagination from './CandidatesPagination.vue'
 import SortByDropdown from './SortByDropdown.vue'
 import CandidatesColumnToggle from './CandidatesColumnToggle.vue'
 import AddCandidatesModal from './AddCandidatesModal.vue'
+import CandidateBulkEmailModal from './CandidateBulkEmailModal.vue'
 import { useCandidatesStore } from '~/stores/candidates.store'
 
 const props = defineProps<{
@@ -45,6 +46,9 @@ function toggleAllOnPage(next: boolean) {
   if (next) store.selectAll(props.pageIds)
   else store.clearSelection()
 }
+
+// Bulk "Send email" — opens the shared email composer for the current selection.
+const bulkEmailOpen = ref(false)
 </script>
 
 <template>
@@ -104,7 +108,7 @@ function toggleAllOnPage(next: boolean) {
           <DropdownMenuItem><CheckSquare class="w-3.5 h-3.5 mr-2" />Add task</DropdownMenuItem>
           <DropdownMenuItem><Ban class="w-3.5 h-3.5 mr-2" />Disqualify</DropdownMenuItem>
           <DropdownMenuItem><RotateCcw class="w-3.5 h-3.5 mr-2" />Requalify</DropdownMenuItem>
-          <DropdownMenuItem><Mail class="w-3.5 h-3.5 mr-2" />Send email</DropdownMenuItem>
+          <DropdownMenuItem @click="bulkEmailOpen = true"><Mail class="w-3.5 h-3.5 mr-2" />Send email</DropdownMenuItem>
           <DropdownMenuItem><MessageCircle class="w-3.5 h-3.5 mr-2" />Send WhatsApp</DropdownMenuItem>
           <DropdownMenuItem><UserPlus class="w-3.5 h-3.5 mr-2" />Assign</DropdownMenuItem>
           <DropdownMenuItem><Minus class="w-3.5 h-3.5 mr-2" />Remove</DropdownMenuItem>
@@ -168,5 +172,8 @@ function toggleAllOnPage(next: boolean) {
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+
+    <!-- Bulk email composer (shared EmailComposer) -->
+    <CandidateBulkEmailModal v-model:open="bulkEmailOpen" :count="store.selectedCount" @sent="store.clearSelection()" />
   </div>
 </template>

@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import {
-  X, Plus, ChevronDown, ChevronUp, Copy, Pencil, Linkedin, Github, Check,
-  Users, ThumbsUp, Tag, Share2, MoreVertical, MessageCircle, FolderCheck, Link2, Printer,
-  ExternalLink, GraduationCap, GripVertical,
+  X, Plus, ChevronDown, ChevronUp, Copy, Linkedin, Github, Check,
+  Users, Tag, MoreVertical, MessageCircle, FolderCheck, Link2, Printer,
+  ExternalLink, GraduationCap, GripVertical, Upload, RefreshCw, Trash2, FolderMinus,
+  ListOrdered, RotateCcw,
 } from 'lucide-vue-next'
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
 import { BrandAvatarInitials, BrandButton, BrandEmptyState, BrandStatusBadge, BrandLimeCheckbox } from '~/components/brand'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import CandidateCollapsibleCard from '~/components/candidates/CandidateCollapsibleCard.vue'
@@ -15,10 +14,18 @@ import CandidateWhatsAppTab from '~/components/candidates/CandidateWhatsAppTab.v
 import CandidateEvaluationTab from '~/components/candidates/CandidateEvaluationTab.vue'
 import CandidateFilesTab from '~/components/candidates/CandidateFilesTab.vue'
 import CandidateActivityTab from '~/components/candidates/CandidateActivityTab.vue'
+import CandidateEventsTab from '~/components/candidates/CandidateEventsTab.vue'
 import CandidateScheduleModal from '~/components/candidates/CandidateScheduleModal.vue'
+import CandidateTagMenu from '~/components/candidates/CandidateTagMenu.vue'
+import CandidateSourceMenu from '~/components/candidates/CandidateSourceMenu.vue'
+import CandidateQuickEvalPopover from '~/components/candidates/CandidateQuickEvalPopover.vue'
+import CandidateAssignModal from '~/components/candidates/CandidateAssignModal.vue'
+import CandidateShareMenu from '~/components/candidates/CandidateShareMenu.vue'
+import CandidateConfirmDialog from '~/components/candidates/CandidateConfirmDialog.vue'
+import CandidateTaskComposer from '~/components/candidates/CandidateTaskComposer.vue'
+import CandidateNotesComposer from '~/components/candidates/CandidateNotesComposer.vue'
 import ErrorBoundary from '~/components/ErrorBoundary.vue'
 import { useCandidates, useCandidateProfile } from '~/composables/useCandidates'
-import { AddNoteSchema, type AddNoteInput } from '~/types/candidate.schema'
 import type { CandidateJob, CandidateProfile } from '~/types'
 
 definePageMeta({ layout: 'default' })
@@ -136,31 +143,101 @@ watchEffect(() => {
 function removeTag(t: string) {
   localTags.value = localTags.value.filter(x => x !== t)
 }
-function addTag() {
-  const name = window.prompt('Tag name')
-  if (name?.trim()) localTags.value.push(name.trim())
+function onSelectTag(name: string) {
+  if (!localTags.value.includes(name)) localTags.value.push(name)
 }
 
-function disqualifyJob(i: number) {
+// Source — editable via the searchable source menu (client-only).
+const source = ref('')
+watchEffect(() => { if (profile.value) source.value = profile.value.source })
+
+// Assign modal — ticks jobs + talent pools, appends them to local state.
+const assignOpen = ref(false)
+function onAssignConfirm(payload: { jobs: string[], pools: string[] }) {
+  if (!profile.value) return
+  for (const title of payload.jobs) {
+    if (!localJobs.value.some(j => j.title === title)) {
+      localJobs.value.push({ title, status: 'internal', location: profile.value.location, assignedDate: 'Just now' })
+    }
+  }
+  for (const pool of payload.pools) {
+    if (!localTalentPools.value.includes(pool)) localTalentPools.value.push(pool)
+  }
+}
+
+function disqualifyJob(i: number, _reason: string) {
   const job = localJobs.value[i]
   if (job) job.disqualified = true
-}
-function requalifyJob(i: number) {
-  const job = localJobs.value[i]
-  if (job) job.disqualified = false
 }
 function proceedJob(_i: number) {
   // No further pipeline stage exists in the mock model yet — Proceed is a no-op signal for now.
 }
-function assignJob() {
-  const title = window.prompt('Job title to assign')
-  if (!title?.trim() || !profile.value) return
-  localJobs.value.push({ title: title.trim(), status: 'internal', location: profile.value.location, assignedDate: 'Just now' })
+
+// Requalify — guarded by a confirm dialog.
+const requalifyOpen = ref(false)
+const requalifyIndex = ref<number | null>(null)
+function askRequalify(i: number) { requalifyIndex.value = i; requalifyOpen.value = true }
+function confirmRequalify() {
+  const job = requalifyIndex.value !== null ? localJobs.value[requalifyIndex.value] : null
+  if (job) job.disqualified = false
+  requalifyIndex.value = null
 }
 
-function removeTalentPool(p: string) {
-  localTalentPools.value = localTalentPools.value.filter(x => x !== p)
+// Remove-from-pool — guarded by a confirm dialog.
+const removePoolOpen = ref(false)
+const removePoolName = ref<string | null>(null)
+function askRemovePool(p: string) { removePoolName.value = p; removePoolOpen.value = true }
+function confirmRemovePool() {
+  if (removePoolName.value) localTalentPools.value = localTalentPools.value.filter(x => x !== removePoolName.value)
+  removePoolName.value = null
 }
+
+// Delete candidate — guarded by a confirm dialog, then returns to the list.
+const deleteOpen = ref(false)
+function confirmDelete() { close() }
+
+// CV resume ⋯ actions (client-only, mirror the reference's confirm modals).
+const uploadResumeOpen = ref(false)
+const reparseOpen = ref(false)
+const deleteResumeOpen = ref(false)
+function confirmUploadResume() { /* TODO: POST resume once the endpoint exists */ }
+function confirmReparse() { /* TODO: POST re-parse once the endpoint exists */ }
+function confirmDeleteResume() { /* TODO: DELETE resume once the endpoint exists */ }
+
+// Overview section reordering — drag-to-reorder + "Save as default" (persisted).
+const OVERVIEW_ORDER_KEY = 'candidate-overview-order'
+const DEFAULT_OVERVIEW_ORDER = ['details', 'contact', 'fields', 'summary', 'screening', 'cv']
+const overviewOrder = ref<string[]>([...DEFAULT_OVERVIEW_ORDER])
+const reordering = ref(false)
+const dragKey = ref<string | null>(null)
+onMounted(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(OVERVIEW_ORDER_KEY) || '[]')
+    if (Array.isArray(saved) && saved.length && DEFAULT_OVERVIEW_ORDER.every(k => saved.includes(k))) {
+      overviewOrder.value = saved
+    }
+  }
+  catch {}
+})
+function startReorder() { activeTab.value = 'Overview'; reordering.value = true }
+function cancelReorder() { reordering.value = false }
+function saveReorder() {
+  try { localStorage.setItem(OVERVIEW_ORDER_KEY, JSON.stringify(overviewOrder.value)) }
+  catch {}
+  reordering.value = false
+}
+function onDragStart(key: string) { if (reordering.value) dragKey.value = key }
+function onDragOver(key: string) {
+  if (!reordering.value || !dragKey.value || dragKey.value === key) return
+  const from = overviewOrder.value.indexOf(dragKey.value)
+  const to = overviewOrder.value.indexOf(key)
+  if (from === -1 || to === -1) return
+  const next = [...overviewOrder.value]
+  next.splice(from, 1)
+  next.splice(to, 0, dragKey.value)
+  overviewOrder.value = next
+}
+function onDragEnd() { dragKey.value = null }
 
 // Contact — static placeholder social links (no linkedin/github fields on the
 // mock Candidate type yet; mirrors the reference mockup's placeholder data-init).
@@ -259,30 +336,42 @@ function printProfile() {
   window.print()
 }
 
-// Tasks composer — local state only (no write endpoint yet).
-const newTask = ref('')
-function addTask() {
-  if (!newTask.value.trim()) return
-  localTasks.value.push({ id: `local-${Date.now()}`, title: newTask.value.trim(), dueDate: null, done: false })
-  newTask.value = ''
+// Tasks composer — the composer emits { title, dueLabel }; local state only.
+function addTask(payload: { title: string, dueLabel: string | null }) {
+  localTasks.value.unshift({ id: `local-${Date.now()}`, title: payload.title, dueDate: payload.dueLabel, done: false })
 }
 function toggleTask(id: string, done: boolean) {
   const t = localTasks.value.find(x => x.id === id)
   if (t) t.done = done
 }
 
-// Notes composer — same validate-on-submit pattern as the Add-candidate form.
-const { handleSubmit, resetForm, errors, defineField } = useForm<AddNoteInput>({
-  validationSchema: toTypedSchema(AddNoteSchema),
-  initialValues: { body: '' },
+// Notes — local list seeded from the profile; the composer prepends new notes,
+// and each note supports an inline reply (all client-only for now).
+interface LocalNoteReply { id: string, author: string, authorInitials: string, body: string, createdAt: string }
+interface LocalNote { id: string, author: string, authorInitials: string, body: string, createdAt: string, replies: LocalNoteReply[] }
+const localNotes = ref<LocalNote[]>([])
+watchEffect(() => {
+  if (!profile.value) return
+  localNotes.value = profile.value.notes.map(n => ({
+    id: n.id, author: n.author, authorInitials: n.authorInitials, body: n.body, createdAt: n.createdAt, replies: [],
+  }))
 })
-const [body, bodyAttrs] = defineField('body')
-
-const submitNote = handleSubmit((values) => {
-  // TODO: POST to /api/candidates/:id/notes once the write endpoint exists.
-  console.log('Add note', values)
-  resetForm()
-})
+function addNote(text: string) {
+  if (!profile.value) return
+  localNotes.value.unshift({
+    id: `local-${Date.now()}`, author: profile.value.owner, authorInitials: profile.value.ownerInitials,
+    body: text, createdAt: 'now', replies: [],
+  })
+}
+const replyingId = ref<string | null>(null)
+const replyText = ref('')
+function startReply(id: string) { replyingId.value = id; replyText.value = '' }
+function cancelReply() { replyingId.value = null; replyText.value = '' }
+function sendReply(note: LocalNote) {
+  if (!replyText.value.trim() || !profile.value) return
+  note.replies.push({ id: `r-${Date.now()}`, author: profile.value.owner, authorInitials: profile.value.ownerInitials, body: replyText.value.trim(), createdAt: 'now' })
+  cancelReply()
+}
 </script>
 
 <template>
@@ -330,9 +419,7 @@ const submitNote = handleSubmit((values) => {
                     <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="scheduleOpen = true">
                       <Users class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
                     </BrandButton>
-                    <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="goToTab('Evaluation')">
-                      <ThumbsUp class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.6" />Evaluate
-                    </BrandButton>
+                    <span class="hidden lg:inline-flex"><CandidateQuickEvalPopover :candidate-name="profile.name" /></span>
                     <button
                       class="lg:hidden w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--brand-icon-default)] hover:bg-[var(--brand-surface-hover)]"
                       aria-label="Close"
@@ -346,9 +433,7 @@ const submitNote = handleSubmit((values) => {
                   <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="scheduleOpen = true">
                     <Users class="!w-[16px] !h-[16px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
                   </BrandButton>
-                  <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="goToTab('Evaluation')">
-                    <ThumbsUp class="!w-[16px] !h-[16px] text-[var(--brand-text)]" stroke-width="1.6" />Evaluate
-                  </BrandButton>
+                  <CandidateQuickEvalPopover :candidate-name="profile.name" />
                 </div>
 
                 <!-- Tabs -->
@@ -385,17 +470,26 @@ const submitNote = handleSubmit((values) => {
                     {{ t }}
                     <X class="w-3.5 h-3.5 text-[var(--brand-text-quiet)] hover:text-[var(--brand-danger)] cursor-pointer" stroke-width="1.7" @click="removeTag(t)" />
                   </span>
-                  <button
-                    type="button"
-                    class="w-[30px] h-[30px] inline-flex items-center justify-center border border-[var(--brand-border)] rounded-[9px] text-[var(--brand-icon-default)] hover:bg-[var(--brand-surface-hover)] cursor-pointer"
-                    title="Add tag"
-                    @click="addTag"
-                  >
-                    <Plus class="w-3.5 h-3.5" stroke-width="1.8" />
-                  </button>
+                  <CandidateTagMenu :applied="localTags" @select="onSelectTag" />
+                </div>
+
+                <!-- Reorder toolbar (Overview sections) -->
+                <div v-if="reordering" class="flex items-center justify-end gap-2.5">
+                  <BrandButton variant="outline" size="sm" @click="cancelReorder">Cancel</BrandButton>
+                  <BrandButton variant="primary-teal" size="sm" @click="saveReorder">Save as default</BrandButton>
                 </div>
 
                 <!-- Details -->
+                <div
+                  :style="{ order: overviewOrder.indexOf('details') }"
+                  :draggable="reordering"
+                  class="relative"
+                  :class="reordering ? 'ring-1 ring-[var(--brand-lime)] rounded-[15px] cursor-grab' : ''"
+                  @dragstart="onDragStart('details')"
+                  @dragover.prevent="onDragOver('details')"
+                  @dragend="onDragEnd"
+                >
+                  <span v-if="reordering" class="absolute -left-2 top-4 z-10 text-[var(--brand-icon-muted)]"><GripVertical class="w-3.5 h-4" /></span>
                 <CandidateCollapsibleCard title="Details">
                   <div class="flex items-center gap-4 text-[14px] py-1">
                     <span class="w-[96px] shrink-0 text-[var(--brand-text-quiet)]">Date created</span>
@@ -404,10 +498,8 @@ const submitNote = handleSubmit((values) => {
                   <div class="flex items-center gap-4 text-[14px] py-1">
                     <span class="w-[96px] shrink-0 text-[var(--brand-text-quiet)]">Source</span>
                     <span class="flex-1 min-w-0 flex items-center gap-2">
-                      <span class="inline-flex items-center h-[24px] text-[12.5px] font-semibold text-[var(--brand-pipeline-purple)] bg-[var(--brand-surface-badge)] rounded-[7px] px-2.5">{{ profile.source }}</span>
-                      <button class="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)]" title="Edit source">
-                        <Pencil class="w-3.5 h-3.5" stroke-width="1.7" />
-                      </button>
+                      <span class="inline-flex items-center h-[24px] text-[12.5px] font-semibold text-[var(--brand-pipeline-purple)] bg-[var(--brand-surface-badge)] rounded-[7px] px-2.5">{{ source }}</span>
+                      <CandidateSourceMenu @select="v => source = v" />
                     </span>
                   </div>
                   <div v-if="profile.lastActivityDetail" class="flex items-center gap-4 text-[14px] py-1">
@@ -422,7 +514,18 @@ const submitNote = handleSubmit((values) => {
                   </div>
                 </CandidateCollapsibleCard>
 
+                </div>
                 <!-- Contact -->
+                <div
+                  :style="{ order: overviewOrder.indexOf('contact') }"
+                  :draggable="reordering"
+                  class="relative"
+                  :class="reordering ? 'ring-1 ring-[var(--brand-lime)] rounded-[15px] cursor-grab' : ''"
+                  @dragstart="onDragStart('contact')"
+                  @dragover.prevent="onDragOver('contact')"
+                  @dragend="onDragEnd"
+                >
+                  <span v-if="reordering" class="absolute -left-2 top-4 z-10 text-[var(--brand-icon-muted)]"><GripVertical class="w-3.5 h-4" /></span>
                 <CandidateCollapsibleCard title="Contact">
                   <template #actions>
                     <span class="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--brand-teal-secondary)] cursor-pointer hover:underline" @click="goToTab('WhatsApp')">
@@ -593,7 +696,18 @@ const submitNote = handleSubmit((values) => {
                   </div>
                 </CandidateCollapsibleCard>
 
+                </div>
                 <!-- Profile fields -->
+                <div
+                  :style="{ order: overviewOrder.indexOf('fields') }"
+                  :draggable="reordering"
+                  class="relative"
+                  :class="reordering ? 'ring-1 ring-[var(--brand-lime)] rounded-[15px] cursor-grab' : ''"
+                  @dragstart="onDragStart('fields')"
+                  @dragover.prevent="onDragOver('fields')"
+                  @dragend="onDragEnd"
+                >
+                  <span v-if="reordering" class="absolute -left-2 top-4 z-10 text-[var(--brand-icon-muted)]"><GripVertical class="w-3.5 h-4" /></span>
                 <CandidateCollapsibleCard title="Profile fields">
                   <div v-for="f in PROFILE_FIELD_ROWS" :key="f.label" class="flex items-center gap-4 text-[14px] py-1">
                     <span class="w-[144px] shrink-0 text-[var(--brand-text-quiet)]">{{ f.label }}</span>
@@ -604,7 +718,18 @@ const submitNote = handleSubmit((values) => {
                   </div>
                 </CandidateCollapsibleCard>
 
+                </div>
                 <!-- AI Summary -->
+                <div
+                  :style="{ order: overviewOrder.indexOf('summary') }"
+                  :draggable="reordering"
+                  class="relative"
+                  :class="reordering ? 'ring-1 ring-[var(--brand-lime)] rounded-[15px] cursor-grab' : ''"
+                  @dragstart="onDragStart('summary')"
+                  @dragover.prevent="onDragOver('summary')"
+                  @dragend="onDragEnd"
+                >
+                  <span v-if="reordering" class="absolute -left-2 top-4 z-10 text-[var(--brand-icon-muted)]"><GripVertical class="w-3.5 h-4" /></span>
                 <CandidateCollapsibleCard title="AI Summary">
                   <template #icon>
                     <svg width="18" height="21" viewBox="0 0 23.272 28" fill="var(--brand-ai-accent)">
@@ -625,7 +750,18 @@ const submitNote = handleSubmit((values) => {
                   >{{ summaryExpanded ? 'See less' : 'See more' }}</span>
                 </CandidateCollapsibleCard>
 
+                </div>
                 <!-- Screening questions -->
+                <div
+                  :style="{ order: overviewOrder.indexOf('screening') }"
+                  :draggable="reordering"
+                  class="relative"
+                  :class="reordering ? 'ring-1 ring-[var(--brand-lime)] rounded-[15px] cursor-grab' : ''"
+                  @dragstart="onDragStart('screening')"
+                  @dragover.prevent="onDragOver('screening')"
+                  @dragend="onDragEnd"
+                >
+                  <span v-if="reordering" class="absolute -left-2 top-4 z-10 text-[var(--brand-icon-muted)]"><GripVertical class="w-3.5 h-4" /></span>
                 <CandidateCollapsibleCard title="Screening questions">
                   <template #actions>
                     <span v-if="profile.screenedAt" class="text-[12.5px] text-[var(--brand-text-quiet)]">Screened {{ profile.screenedAt }}</span>
@@ -639,7 +775,18 @@ const submitNote = handleSubmit((values) => {
                   <BrandEmptyState v-else title="No screening questions" description="This candidate hasn't been screened yet." />
                 </CandidateCollapsibleCard>
 
+                </div>
                 <!-- CV -->
+                <div
+                  :style="{ order: overviewOrder.indexOf('cv') }"
+                  :draggable="reordering"
+                  class="relative"
+                  :class="reordering ? 'ring-1 ring-[var(--brand-lime)] rounded-[15px] cursor-grab' : ''"
+                  @dragstart="onDragStart('cv')"
+                  @dragover.prevent="onDragOver('cv')"
+                  @dragend="onDragEnd"
+                >
+                  <span v-if="reordering" class="absolute -left-2 top-4 z-10 text-[var(--brand-icon-muted)]"><GripVertical class="w-3.5 h-4" /></span>
                 <CandidateCollapsibleCard title="CV">
                   <template v-if="profile.cv" #title-controls>
                     <div class="inline-flex items-center gap-0.5 rounded-[9px] bg-[var(--brand-surface-hover)] p-0.5 ml-1">
@@ -664,9 +811,16 @@ const submitNote = handleSubmit((values) => {
                             <MoreVertical class="w-3.5 h-3.5" stroke-width="1.7" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" class="min-w-[160px] p-1.5 rounded-[12px]">
-                          <DropdownMenuItem class="text-[13.5px]">Download</DropdownMenuItem>
-                          <DropdownMenuItem class="text-[13.5px]">Print</DropdownMenuItem>
+                        <DropdownMenuContent align="end" class="min-w-[210px] p-1.5 rounded-[12px]">
+                          <DropdownMenuItem class="flex items-center gap-2.5 text-[13.5px]" @click="uploadResumeOpen = true">
+                            <Upload class="w-4 h-4 text-[var(--brand-text-secondary)]" stroke-width="1.8" />Upload new resume
+                          </DropdownMenuItem>
+                          <DropdownMenuItem class="flex items-center gap-2.5 text-[13.5px]" @click="reparseOpen = true">
+                            <RefreshCw class="w-4 h-4 text-[var(--brand-text-secondary)]" stroke-width="1.8" />Re-parse resume
+                          </DropdownMenuItem>
+                          <DropdownMenuItem class="flex items-center gap-2.5 text-[13.5px] !text-[var(--brand-danger)]" @click="deleteResumeOpen = true">
+                            <Trash2 class="w-4 h-4" stroke-width="1.8" />Delete resume
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </template>
@@ -738,15 +892,12 @@ const submitNote = handleSubmit((values) => {
                   </template>
                   <BrandEmptyState v-else title="No CV on file" description="This candidate hasn't uploaded a resume yet." />
                 </CandidateCollapsibleCard>
+                </div>
               </div>
 
                 <CandidateEmailsTab v-else-if="activeTab === 'Emails' && profile" :profile="profile" />
                 <CandidateWhatsAppTab v-else-if="activeTab === 'WhatsApp' && profile" :profile="profile" />
-                <BrandEmptyState
-                  v-else-if="activeTab === 'Events'"
-                  title="Events"
-                  description="No interviews scheduled. Use Schedule to add one."
-                />
+                <CandidateEventsTab v-else-if="activeTab === 'Events' && profile" :profile="profile" @schedule="scheduleOpen = true" />
                 <CandidateEvaluationTab v-else-if="activeTab === 'Evaluation' && profile" :profile="profile" />
                 <CandidateFilesTab v-else-if="activeTab === 'Files' && profile" :profile="profile" />
                 <CandidateActivityTab v-else-if="activeTab === 'Activity' && profile" :profile="profile" />
@@ -773,25 +924,35 @@ const submitNote = handleSubmit((values) => {
             >
               <!-- Actions row — sits above the job pipeline card -->
               <div class="shrink-0 flex items-center justify-between gap-2 px-6 pt-5 pb-4">
-                <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="assignJob">
+                <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="assignOpen = true">
                   <Plus class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.8" />Assign
                 </BrandButton>
                 <div class="flex items-center gap-1">
-                  <BrandButton variant="primary-lime" size="md" @click="copyShareLink">
-                    <Share2 class="w-4 h-4" stroke-width="1.7" />{{ shareCopied ? 'Copied!' : 'Share' }}
-                  </BrandButton>
+                  <CandidateShareMenu
+                    :candidate-name="profile.name"
+                    :candidate-initials="profile.initials"
+                    :candidate-color="profile.avatarColor"
+                    :owner="profile.owner"
+                    :owner-initials="profile.ownerInitials"
+                  />
                   <DropdownMenu>
                     <DropdownMenuTrigger as-child>
                       <button class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--brand-text-secondary)] hover:bg-[var(--brand-surface-hover)]" title="More options">
                         <MoreVertical class="w-[18px] h-[18px]" stroke-width="1.8" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" class="min-w-[190px] p-1.5 rounded-[12px]">
+                    <DropdownMenuContent align="end" class="min-w-[200px] p-1.5 rounded-[12px]">
+                      <DropdownMenuItem class="flex items-center gap-2 text-[13.5px]" @click="startReorder">
+                        <ListOrdered class="w-3.5 h-3.5" stroke-width="1.8" />Reorder sections
+                      </DropdownMenuItem>
                       <DropdownMenuItem class="flex items-center gap-2 text-[13.5px]" @click="copyShareLink">
-                        <Link2 class="w-3.5 h-3.5" stroke-width="1.8" />Copy profile link
+                        <Link2 class="w-3.5 h-3.5" stroke-width="1.8" />{{ shareCopied ? 'Copied!' : 'Copy profile link' }}
                       </DropdownMenuItem>
                       <DropdownMenuItem class="flex items-center gap-2 text-[13.5px]" @click="printProfile">
                         <Printer class="w-3.5 h-3.5" stroke-width="1.8" />Print profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem class="flex items-center gap-2 text-[13.5px] !text-[var(--brand-danger)]" @click="deleteOpen = true">
+                        <Trash2 class="w-3.5 h-3.5" stroke-width="1.8" />Delete candidate
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -807,8 +968,8 @@ const submitNote = handleSubmit((values) => {
                     :job="j"
                     :location="j.location || profile.location"
                     :assigned-date="j.assignedDate || profile.createdDate"
-                    @disqualify="disqualifyJob(i)"
-                    @requalify="requalifyJob(i)"
+                    @disqualify="reason => disqualifyJob(i, reason)"
+                    @requalify="askRequalify(i)"
                     @proceed="proceedJob(i)"
                   />
                 </div>
@@ -864,7 +1025,7 @@ const submitNote = handleSubmit((values) => {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" class="min-w-[180px] p-1.5 rounded-[12px]">
-                          <DropdownMenuItem class="text-[13.5px] !text-[var(--brand-danger)]" @click="removeTalentPool(p)">
+                          <DropdownMenuItem class="text-[13.5px] !text-[var(--brand-danger)]" @click="askRemovePool(p)">
                             Remove from pool
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -876,13 +1037,7 @@ const submitNote = handleSubmit((values) => {
 
                 <!-- Tasks -->
                 <CandidateCollapsibleCard title="Tasks">
-                  <input
-                    v-model="newTask"
-                    type="text"
-                    placeholder="Add a task…"
-                    class="w-full box-border border border-[var(--brand-border)] rounded-[10px] px-3 py-2.5 text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)] outline-none focus:border-[var(--brand-ai-accent)] mb-3.5"
-                    @keydown.enter="addTask"
-                  >
+                  <CandidateTaskComposer :owner-initials="profile.ownerInitials" @add="addTask" />
                   <div v-if="localTasks.length" class="flex flex-col gap-1">
                     <label
                       v-for="t in localTasks"
@@ -900,28 +1055,48 @@ const submitNote = handleSubmit((values) => {
 
                 <!-- Notes -->
                 <CandidateCollapsibleCard title="Notes">
-                  <form class="flex flex-col gap-1.5 mb-4" @submit.prevent="submitNote">
-                    <textarea
-                      v-model="body"
-                      v-bind="bodyAttrs"
-                      rows="2"
-                      placeholder="Add a note…"
-                      class="w-full resize-none box-border rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3 py-2.5 text-[14px] text-[var(--brand-text)] placeholder:text-[var(--brand-text-quiet)] outline-none focus:border-[var(--brand-ai-accent)]"
-                    />
-                    <p v-if="errors.body" class="m-0 text-[11.5px] text-[var(--brand-danger)]">{{ errors.body }}</p>
-                    <BrandButton type="submit" size="sm" variant="primary-teal" class="self-end">Save</BrandButton>
-                  </form>
+                  <CandidateNotesComposer @save="addNote" />
 
-                  <div v-if="profile.notes.length" class="flex flex-col gap-4">
-                    <div v-for="n in profile.notes" :key="n.id" class="flex gap-3">
+                  <div v-if="localNotes.length" class="flex flex-col gap-4">
+                    <div v-for="n in localNotes" :key="n.id" class="flex gap-3">
                       <BrandAvatarInitials :initials="n.authorInitials" size="sm" />
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between gap-2">
                           <span class="font-semibold text-[14px] text-[var(--brand-text)]">{{ n.author }}</span>
                           <span class="text-[12px] text-[var(--brand-text-quiet)]">{{ n.createdAt }}</span>
                         </div>
-                        <p class="m-0 mt-1 text-[14px] text-[var(--brand-text-secondary)]">{{ n.body }}</p>
-                        <span class="inline-block mt-2 text-[13px] font-semibold text-[var(--brand-teal-secondary)] cursor-pointer hover:underline" @click="replyToNote(n.author)">Reply</span>
+                        <p class="m-0 mt-1 text-[14px] text-[var(--brand-text-secondary)] whitespace-pre-wrap">{{ n.body }}</p>
+                        <span class="inline-block mt-2 text-[13px] font-semibold text-[var(--brand-teal-secondary)] cursor-pointer hover:underline" @click="startReply(n.id)">Reply</span>
+
+                        <!-- Replies -->
+                        <div v-if="n.replies.length" class="flex flex-col gap-3 mt-3">
+                          <div v-for="r in n.replies" :key="r.id" class="flex gap-2.5">
+                            <BrandAvatarInitials :initials="r.authorInitials" size="xs" />
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center justify-between gap-2">
+                                <span class="font-semibold text-[13px] text-[var(--brand-text)]">{{ r.author }}</span>
+                                <span class="text-[11.5px] text-[var(--brand-text-quiet)]">{{ r.createdAt }}</span>
+                              </div>
+                              <p class="m-0 mt-0.5 text-[13.5px] text-[var(--brand-text-secondary)]">{{ r.body }}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Reply box -->
+                        <div v-if="replyingId === n.id" class="mt-2.5">
+                          <input
+                            v-model="replyText"
+                            type="text"
+                            placeholder="Write a reply…"
+                            class="w-full box-border border-[1.6px] border-[var(--brand-border)] rounded-[10px] px-3 py-2 text-[13.5px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
+                            @keydown.enter="sendReply(n)"
+                            @keydown.esc="cancelReply"
+                          >
+                          <div class="flex justify-end gap-2 mt-2">
+                            <BrandButton variant="outline" size="sm" @click="cancelReply">Cancel</BrandButton>
+                            <BrandButton variant="primary-teal" size="sm" @click="sendReply(n)">Reply</BrandButton>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -975,5 +1150,82 @@ const submitNote = handleSubmit((values) => {
       :candidate-color="profile.avatarColor"
       :job-name="localJobs[0]?.title"
     />
+
+    <!-- Assign candidate -->
+    <CandidateAssignModal v-if="profile" v-model:open="assignOpen" @confirm="onAssignConfirm" />
+
+    <!-- Guarded actions -->
+    <CandidateConfirmDialog
+      v-if="profile"
+      v-model:open="requalifyOpen"
+      title="Requalify candidate?"
+      :description="`This will move ${profile.name} back into the active pipeline and clear the disqualification reason.`"
+      confirm-label="Requalify"
+      tone="success"
+      :icon="RotateCcw"
+      @confirm="confirmRequalify"
+    />
+    <CandidateConfirmDialog
+      v-if="profile"
+      v-model:open="removePoolOpen"
+      title="Remove from talent pool?"
+      :description="`This will remove ${profile.name} from the &quot;${removePoolName}&quot; talent pool. You can add them back at any time.`"
+      confirm-label="Remove"
+      tone="danger"
+      :icon="FolderMinus"
+      @confirm="confirmRemovePool"
+    />
+    <CandidateConfirmDialog
+      v-if="profile"
+      v-model:open="deleteOpen"
+      title="Delete candidate?"
+      :description="`This will permanently remove ${profile.name} and all associated data from your workspace. This action cannot be undone.`"
+      confirm-label="Delete"
+      tone="danger"
+      :icon="Trash2"
+      @confirm="confirmDelete"
+    />
+
+    <!-- CV resume actions -->
+    <CandidateConfirmDialog
+      v-model:open="reparseOpen"
+      title="Re-parse resume?"
+      description="We'll re-analyze the current resume and refresh the candidate's parsed details. This may take a few minutes and will overwrite existing parsed fields."
+      confirm-label="Re-parse"
+      tone="success"
+      :icon="RefreshCw"
+      @confirm="confirmReparse"
+    />
+    <CandidateConfirmDialog
+      v-model:open="deleteResumeOpen"
+      title="Delete resume?"
+      description="This will permanently remove the current resume file from the candidate's profile. This action cannot be undone."
+      confirm-label="Delete"
+      tone="danger"
+      :icon="Trash2"
+      @confirm="confirmDeleteResume"
+    />
+    <CandidateConfirmDialog
+      v-model:open="uploadResumeOpen"
+      title="Upload new resume"
+      confirm-label="Upload"
+      tone="neutral"
+      :icon="Upload"
+      @confirm="confirmUploadResume"
+    >
+      <div class="mt-2">
+        <ul class="m-0 mb-4 pl-4 text-[13.5px] leading-[1.7] text-[var(--brand-text-secondary)] list-disc">
+          <li>Uploading a new resume will replace the existing file.</li>
+          <li>You'll still be able to view the previous file in the Files tab.</li>
+          <li>Re-parsing the resume may take a few minutes.</li>
+        </ul>
+        <label class="flex flex-col items-center justify-center gap-2 border-[1.6px] border-dashed border-[var(--brand-border-mid)] rounded-xl px-5 py-7 cursor-pointer hover:border-[var(--brand-lime)] hover:bg-[var(--brand-lime-tint)]/40 transition-colors">
+          <Upload class="w-7 h-7 text-[var(--brand-icon-muted)]" stroke-width="1.5" />
+          <span class="text-[14px] text-[var(--brand-text-secondary)]"><span class="text-[var(--brand-teal-secondary)] font-bold">Upload a file</span> or drag and drop</span>
+          <span class="text-[12px] text-[var(--brand-text-faint)]">PDF, Word — up to 10MB</span>
+          <input type="file" accept=".pdf,.doc,.docx" class="hidden">
+        </label>
+      </div>
+    </CandidateConfirmDialog>
   </div>
 </template>

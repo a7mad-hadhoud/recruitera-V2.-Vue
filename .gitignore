@@ -28,3 +28,7 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# local tooling (not app code)
+.claude/
+.superpowers/

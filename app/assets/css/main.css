@@ -48,6 +48,15 @@
   --brand-teal-secondary: #127295;
   --brand-linkedin: #0a66c2;                      /* LinkedIn icon chip */
 
+  /* Brand palette (official) — main + accents */
+  --brand-cream: #FFF7D7;                         /* warm-light surface (hero) */
+  --brand-auth-card: #fff5ed;                     /* warm off-white — auth card box */
+  --brand-paper: #F4F7EF;                         /* product BG */
+  --brand-cyan: #22AEE2;                          /* product features, data, integrations */
+  --brand-ocean: #127295;                         /* links, info states, secondary chart */
+  --brand-plum: #534287;                          /* culture, events, community */
+  --brand-flame: #FF5400;                         /* announcements, urgency */
+
   /* Canvas + surfaces */
   --brand-canvas: #f7f8f9;                        /* app background */
   --brand-surface-white: #ffffff;
@@ -202,9 +211,54 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* ── 8-point radius scale (standardized corners) ── */
+  --radius-sm: 4px;    /* chips, micro controls */
+  --radius-md: 8px;    /* inputs, small buttons */
+  --radius-lg: 12px;   /* buttons, cards, popovers */
+  --radius-xl: 16px;   /* large cards, modals */
+  --radius-2xl: 24px;  /* hero / auth panels */
+  --radius-full: 9999px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   8-POINT GRID FOUNDATION  (single source of truth)
+   Spacing is always a multiple of 8 — 8, 16, 24, 32, 40, 48, 64.
+   4px is allowed ONLY for micro gaps (icon↔label, compact chips).
+   Tailwind's 4px base means: use the EVEN steps for real spacing —
+   p-2=8  p-4=16  p-6=24  p-8=32  p-10=40  p-12=48  p-16=64 ; p-1=4 (micro only).
+   Radius: rounded-sm=4 md=8 lg=12 xl=16 2xl=24.
+   Control heights: sm=32  md=40  lg=48.
+   Layout: 12 cols desktop / 8 tablet / 4 mobile, 24px gutter, 24–32px page margins.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  /* spacing scale */
+  --space-1: 8px;  --space-2: 16px; --space-3: 24px; --space-4: 32px;
+  --space-5: 40px; --space-6: 48px; --space-8: 64px; --space-micro: 4px;
+  /* standardized control heights */
+  --control-sm: 32px; --control-md: 40px; --control-lg: 48px;
+  /* grid */
+  --grid-gutter: 24px;
+  --grid-margin: 24px;
+}
+@media (min-width: 1024px) { :root { --grid-margin: 32px; } }
+
+@layer components {
+  /* Responsive page grid: 4 (mobile) → 8 (tablet ≥768) → 12 (desktop ≥1024) */
+  .page-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--grid-gutter);
+  }
+  @media (min-width: 768px)  { .page-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+  @media (min-width: 1024px) { .page-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); } }
+
+  /* Centered content column with consistent page margins */
+  .page-container {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: var(--grid-margin);
+  }
 }
 
 @layer base {

@@ -14,6 +14,7 @@ import SettingsRenameModal from '~/components/settings/SettingsRenameModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
 import SettingsDuplicatePickerModal from '~/components/settings/SettingsDuplicatePickerModal.vue'
+import EmailComposer from '~/components/EmailComposer.vue'
 import { BrandButton, BrandSearchBar } from '~/components/brand'
 import { useEmailTemplates } from '~/composables/useTemplates'
 import type { EmailTemplate, TemplateCategory } from '~/types'
@@ -76,14 +77,15 @@ function newId() {
 }
 
 // ─────────────── Editor state ───────────────
+// The editor UI lives in the shared <EmailComposer>; this page just owns the
+// subject + body (HTML) models and syncs them with the selected template.
 const subjectDraft = ref('')
-const bodyEl = ref<HTMLDivElement | null>(null)
+const bodyHtml = ref('')
 const savedLabel = ref('Saved 16 days ago')
 
 function tokenSpan(token: string) {
-  return `<span style="background:var(--brand-email-highlight-bg);color:var(--brand-teal);padding:1px 6px;border-radius:4px;font-size:13px;font-weight:600">[ ${token} ]</span>`
+  return `<span contenteditable="false" style="background:var(--brand-email-highlight-bg);color:var(--brand-teal);padding:1px 6px;border-radius:4px;font-size:13px;font-weight:600">[ ${token} ]</span>`
 }
-
 function renderBodyHtml(text: string) {
   return text
     .split('\n\n')
@@ -94,9 +96,9 @@ function renderBodyHtml(text: string) {
 watch(selected, (t) => {
   subjectDraft.value = t?.subject ?? ''
   savedLabel.value = 'Saved 16 days ago'
-  nextTick(() => {
-    if (bodyEl.value) bodyEl.value.innerHTML = t ? renderBodyHtml(t.body) : ''
-  })
+  // Stored fixture bodies use {{token}} + blank-line paragraphs; a re-saved
+  // body is already HTML — detect and pass through so we don't double-encode.
+  bodyHtml.value = t ? (t.body.includes('<') ? t.body : renderBodyHtml(t.body)) : ''
 }, { immediate: true })
 
 function saveTemplate() {
@@ -106,26 +108,9 @@ function saveTemplate() {
   templates.value[idx] = {
     ...templates.value[idx],
     subject: subjectDraft.value,
-    body: bodyEl.value?.innerText ?? templates.value[idx].body,
+    body: bodyHtml.value,
   }
   savedLabel.value = 'Saved just now'
-}
-
-function exec(cmd: string, value?: string) {
-  bodyEl.value?.focus()
-  document.execCommand(cmd, false, value)
-}
-function insertLink() {
-  const url = window.prompt('Link URL')
-  if (url) exec('createLink', url)
-}
-function insertImage() {
-  const url = window.prompt('Image URL')
-  if (url) exec('insertImage', url)
-}
-function insertToken(token: string) {
-  bodyEl.value?.focus()
-  document.execCommand('insertHTML', false, `${tokenSpan(token)}&nbsp;`)
 }
 
 // ─────────────── Rename ───────────────
@@ -229,17 +214,6 @@ const jobsFiltered = computed(() => {
   if (!q) return list
   return list.filter(j => j.name.toLowerCase().includes(q))
 })
-
-// ─────────────── Attachments ───────────────
-const attachments = ref<string[]>([])
-function onFilesChosen(e: Event) {
-  const files = (e.target as HTMLInputElement).files
-  if (!files) return
-  attachments.value.push(...Array.from(files).map(f => f.name))
-}
-function removeAttachment(name: string) {
-  attachments.value = attachments.value.filter(a => a !== name)
-}
 </script>
 
 <template>
@@ -326,140 +300,7 @@ function removeAttachment(name: string) {
         </div>
 
         <div class="flex-1 overflow-y-auto p-6">
-          <div class="bg-[var(--brand-surface-white)] border border-[var(--brand-border-light)] rounded-[12px] overflow-hidden mb-4">
-            <div class="px-4 py-3 border-b border-[var(--brand-border-fade)]">
-              <input
-                v-model="subjectDraft"
-                type="text"
-                placeholder="Subject line"
-                class="w-full border-0 outline-none text-[14px] text-[var(--brand-text)] bg-transparent"
-              >
-            </div>
-
-            <div class="flex items-center gap-1 px-3.5 py-2.5 border-b border-[var(--brand-border-fade)] flex-wrap">
-              <button type="button" class="w-8 h-8 rounded-[6px] inline-flex items-center justify-center text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" @click="exec('bold')"><Bold class="w-3.5 h-3.5" /></button>
-              <button type="button" class="w-8 h-8 rounded-[6px] inline-flex items-center justify-center text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" @click="exec('italic')"><Italic class="w-3.5 h-3.5" /></button>
-              <button type="button" class="w-8 h-8 rounded-[6px] inline-flex items-center justify-center text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" @click="exec('underline')"><Underline class="w-3.5 h-3.5" /></button>
-              <div class="w-px h-4 bg-[var(--brand-border-light)] mx-1" />
-              <button type="button" class="w-8 h-8 rounded-[6px] inline-flex items-center justify-center text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" title="Insert link" @click="insertLink"><Link2 class="w-3.5 h-3.5" /></button>
-              <button type="button" class="w-8 h-8 rounded-[6px] inline-flex items-center justify-center text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors" title="Insert image" @click="insertImage"><ImageIcon class="w-3.5 h-3.5" /></button>
-
-              <div class="ml-auto">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <button type="button" class="flex items-center gap-1.5 bg-[var(--brand-canvas)] border border-[var(--brand-border-light)] rounded-[8px] px-3 py-[5px] text-[12.5px] font-medium text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors">
-                      <ListChecks class="w-3 h-3" />
-                      Insert...
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-[300px]">
-                    <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('Questionnaire link')">
-                      <span class="text-[13.5px] font-bold text-[var(--brand-text)]">Questionnaires</span>
-                      <span class="text-[12px] text-[var(--brand-text-quiet)]">Send a link to sets of questions for candidates.</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('Event scheduler link')">
-                      <span class="text-[13.5px] font-bold text-[var(--brand-text)]">Event scheduler</span>
-                      <span class="text-[12px] text-[var(--brand-text-quiet)]">Send your availability to a candidate and schedule an interview.</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            <div
-              ref="bodyEl"
-              contenteditable="true"
-              class="px-[18px] py-[18px] min-h-[220px] text-[14px] text-[var(--brand-text)] outline-none leading-[1.7]"
-              @input="() => {}"
-            />
-
-            <div v-if="attachments.length" class="border-t border-[var(--brand-border-fade)] px-4 py-3 flex flex-wrap gap-2">
-              <span
-                v-for="a in attachments"
-                :key="a"
-                class="inline-flex items-center gap-1.5 bg-[var(--brand-canvas)] border border-[var(--brand-border-light)] rounded-[7px] px-2.5 py-1 text-[12px] text-[var(--brand-text)]"
-              >
-                {{ a }}
-                <button type="button" class="text-[var(--brand-icon-muted)] outline-none hover:text-[var(--brand-text)]" @click="removeAttachment(a)"><X class="w-3 h-3" /></button>
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2 px-4 py-2.5 border-t border-[var(--brand-border-fade)]">
-              <Paperclip class="w-3.5 h-3.5 text-[var(--brand-nav-text)]" />
-              <label class="text-[13px] font-semibold text-[var(--brand-nav-text)] cursor-pointer">
-                Attach file
-                <input type="file" multiple class="hidden" @change="onFilesChosen">
-              </label>
-            </div>
-
-            <div class="flex items-center gap-2 px-4 py-2.5 border-t border-[var(--brand-border-fade)] flex-wrap">
-              <span class="text-[13px] font-medium text-[var(--brand-text-quiet)]">Placeholders</span>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <button type="button" class="flex items-center gap-1 bg-[var(--brand-canvas)] border border-[var(--brand-border-mid)] rounded-full px-3 py-1 text-[13px] text-[var(--brand-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors">
-                    Candidate
-                    <ChevronDown class="w-2.5 h-2.5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" class="w-[280px]">
-                  <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('candidate.first')">
-                    <span class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ candidate.first ]</span>
-                    <span class="text-[12px] text-[var(--brand-text-quiet)]">Candidate's first name</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('candidate.last')">
-                    <span class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ candidate.last ]</span>
-                    <span class="text-[12px] text-[var(--brand-text-quiet)]">Candidate's last name</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('candidate.full')">
-                    <span class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ candidate.full ]</span>
-                    <span class="text-[12px] text-[var(--brand-text-quiet)]">Candidate's full name</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('candidate.full_email')">
-                    <span class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ candidate.full_email ]</span>
-                    <span class="text-[12px] text-[var(--brand-text-quiet)]">Candidate's full name and email address</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="flex-col items-start gap-0.5 py-2.5 cursor-pointer" @click="insertToken('candidate.email')">
-                    <span class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ candidate.email ]</span>
-                    <span class="text-[12px] text-[var(--brand-text-quiet)]">Candidate's email address</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <button type="button" class="bg-[var(--brand-surface-white)] border border-[var(--brand-teal)] rounded-full px-3 py-1 text-[13px] font-semibold text-[var(--brand-teal)] outline-none" @click="insertToken('job_offer')">
-                [ job_offer ]
-              </button>
-              <button type="button" class="bg-[var(--brand-surface-white)] border border-[var(--brand-teal)] rounded-full px-3 py-1 text-[13px] font-semibold text-[var(--brand-teal)] outline-none" @click="insertToken('company')">
-                [ company ]
-              </button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <button type="button" class="flex items-center gap-1 bg-[var(--brand-canvas)] border border-[var(--brand-border-mid)] rounded-full px-3 py-1 text-[13px] text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors">
-                    <MoreHorizontal class="w-3 h-3" />
-                    More
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" class="w-[280px]">
-                  <DropdownMenuItem class="justify-between py-3 cursor-pointer" @click="insertToken('hiring_manager.name')">
-                    <div>
-                      <div class="text-[13.5px] font-bold text-[var(--brand-text)]">Hiring manager</div>
-                      <div class="text-[12px] text-[var(--brand-text-quiet)]">Hiring manager-related placeholders</div>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="justify-between py-3 cursor-pointer" @click="insertToken('recruiter.name')">
-                    <div>
-                      <div class="text-[13.5px] font-bold text-[var(--brand-text)]">Recruiter</div>
-                      <div class="text-[12px] text-[var(--brand-text-quiet)]">Recruiter-related placeholders</div>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="py-3 cursor-pointer" @click="insertToken('department')">
-                    <div class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ department ]</div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
+          <EmailComposer v-model:subject="subjectDraft" v-model:body="bodyHtml" />
 
           <div class="flex items-start gap-2.5 bg-[var(--brand-email-highlight-bg)] border border-[var(--brand-email-highlight-border)] rounded-[10px] px-4 py-3">
             <Info class="w-[15px] h-[15px] text-[var(--brand-badge-settings-text)] shrink-0 mt-0.5" />
