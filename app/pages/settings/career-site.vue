@@ -16,25 +16,53 @@ import {
   MessageSquare,
   Monitor,
   Palette,
+  Pencil,
   Play,
   Quote,
   Smartphone,
   Target,
+  Trash2,
   Upload,
   Youtube,
+  Rocket,
+  Heart,
+  Shield,
+  Zap,
+  Users,
+  Award,
+  Star,
+  ThumbsUp,
+  Lightbulb,
+  Handshake,
+  TrendingUp,
+  Sparkles,
+  Compass,
+  Flag,
+  Trophy,
+  Leaf,
+  Scale,
+  Eye,
+  Smile,
+  Anchor,
+  Feather,
+  Puzzle,
+  Gauge,
+  Hexagon,
 } from 'lucide-vue-next'
+import { onBeforeRouteLeave } from 'vue-router'
 import { BrandButton, BrandStatusBadge } from '~/components/brand'
 import { Switch } from '~/components/ui/switch'
 import { Input } from '~/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
+import { Dialog, DialogScrollContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 
 definePageMeta({ layout: 'settings' })
 
 // ─────────────── Toggles ───────────────
 const generalApplicationOn = ref(false)
 const forEmployeesOn = ref(true)
-const publishedOn = ref(true)
-const liveOn = ref(true)
+// Single source of truth for publish state (was: publishedOn + liveOn + a badge).
+const published = ref(true)
 
 // ─────────────── Accordions ───────────────
 type AccordionKey = 'branding' | 'hero' | 'video' | 'values' | 'testimonials' | 'employees' | 'publish'
@@ -94,30 +122,80 @@ const videoUrl = ref('')
 
 // ─────────────── Values ───────────────
 interface ValueItem { icon: number, name: string, desc: string }
-const VALUE_ICONS = [Target, Gem, MessageSquare, Palette, Globe, IdCard, Youtube, Quote]
+const VALUE_ICONS = [
+  Target, Gem, MessageSquare, Palette, Globe, IdCard, Youtube, Quote,
+  Rocket, Heart, Shield, Zap, Users, Award, Star, ThumbsUp, Lightbulb,
+  Handshake, TrendingUp, Sparkles, Compass, Flag, Trophy, Leaf, Scale,
+  Eye, Smile, Anchor, Feather, Puzzle, Gauge, Hexagon,
+]
 const values = ref<ValueItem[]>([
   { icon: 0, name: 'Ownership', desc: 'We take end-to-end ownership of outcomes, not tasks.' },
   { icon: 1, name: 'Craft', desc: 'We sweat the details and ship work we are proud of.' },
   { icon: 2, name: 'Candor', desc: 'We speak honestly and assume good intent from each other.' },
 ])
-function addValue() {
-  if (values.value.length < 6) values.value.push({ icon: 0, name: '', desc: '' })
-}
 function removeValue(i: number) {
   values.value.splice(i, 1)
 }
+// Add/Edit Value — pop-up dialog
+const valueModalOpen = ref(false)
+const editingValueIndex = ref<number | null>(null)
+const valueDraft = reactive<ValueItem>({ icon: 0, name: '', desc: '' })
+const valueValid = computed(() => valueDraft.name.trim().length > 0)
+function openAddValue() {
+  editingValueIndex.value = null
+  Object.assign(valueDraft, { icon: 0, name: '', desc: '' })
+  valueModalOpen.value = true
+}
+function openEditValue(i: number) {
+  editingValueIndex.value = i
+  Object.assign(valueDraft, JSON.parse(JSON.stringify(values.value[i])))
+  valueModalOpen.value = true
+}
+function saveValue() {
+  if (!valueValid.value) return
+  const v: ValueItem = { icon: valueDraft.icon, name: valueDraft.name.trim(), desc: valueDraft.desc.trim() }
+  if (editingValueIndex.value === null) values.value.push(v)
+  else values.value[editingValueIndex.value] = v
+  valueModalOpen.value = false
+}
 
 // ─────────────── Testimonials ───────────────
-interface TestimonialItem { name: string, role: string, quote: string }
+interface TestimonialItem { name: string, role: string, quote: string, photo?: string }
 const testimonials = ref<TestimonialItem[]>([
   { name: 'Mariam Adel', role: 'Senior Engineer', quote: 'The best team I have worked with — real autonomy and real impact from day one.' },
   { name: 'Omar Khaled', role: 'Product Designer', quote: 'Culture of craft is not a slogan here. It shows up in every review and ship.' },
 ])
-function addTestimonial() {
-  if (testimonials.value.length < 5) testimonials.value.push({ name: '', role: '', quote: '' })
-}
 function removeTestimonial(i: number) {
   testimonials.value.splice(i, 1)
+}
+// Add/Edit Testimonial — pop-up dialog
+const testimonialModalOpen = ref(false)
+const editingTestimonialIndex = ref<number | null>(null)
+const testimonialDraft = reactive<TestimonialItem>({ name: '', role: '', quote: '', photo: '' })
+const testimonialValid = computed(() => testimonialDraft.name.trim().length > 0 && testimonialDraft.quote.trim().length > 0)
+function openAddTestimonial() {
+  editingTestimonialIndex.value = null
+  Object.assign(testimonialDraft, { name: '', role: '', quote: '', photo: '' })
+  testimonialModalOpen.value = true
+}
+function openEditTestimonial(i: number) {
+  editingTestimonialIndex.value = i
+  Object.assign(testimonialDraft, { photo: '', ...JSON.parse(JSON.stringify(testimonials.value[i])) })
+  testimonialModalOpen.value = true
+}
+function onTestimonialPhoto(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => { testimonialDraft.photo = String(reader.result) }
+  reader.readAsDataURL(file)
+}
+function saveTestimonial() {
+  if (!testimonialValid.value) return
+  const t: TestimonialItem = { name: testimonialDraft.name.trim(), role: testimonialDraft.role.trim(), quote: testimonialDraft.quote.trim(), photo: testimonialDraft.photo || '' }
+  if (editingTestimonialIndex.value === null) testimonials.value.push(t)
+  else testimonials.value[editingTestimonialIndex.value] = t
+  testimonialModalOpen.value = false
 }
 function initials(name: string) {
   return name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase() || '?'
@@ -137,14 +215,70 @@ async function copyLink() {
   setTimeout(() => { copied.value = false }, 2000)
 }
 
+// ─────────────── Contrast (WCAG) helpers ───────────────
+function _rgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '')
+  const s = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  const n = parseInt(s, 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+function _lum(hex: string) {
+  const a = _rgb(hex).map((v) => {
+    const x = v / 255
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]
+}
+function contrast(a: string, b: string) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(a) || !/^#[0-9a-fA-F]{6}$/.test(b)) return 0
+  const l1 = _lum(a); const l2 = _lum(b)
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+}
+const cPrimaryOnWhite = computed(() => contrast(primaryColor.value, '#ffffff'))
+const cHeaderOnWhite = computed(() => contrast(headerColor.value, '#ffffff'))
+const cLabelOnBtn = computed(() => contrast('#ffffff', btnColor.value))
+const cBtnOnHero = computed(() => contrast(btnColor.value, primaryColor.value))
+
+// ─────────────── Save / dirty / discard ───────────────
+function snapshot() {
+  return JSON.stringify({
+    g: generalApplicationOn.value, fe: forEmployeesOn.value, pub: published.value,
+    pc: primaryColor.value, hc: headerColor.value, bc: btnColor.value, cc: ctaColor.value,
+    font: font.value, hl: headline.value, intro: intro.value, video: videoUrl.value,
+    values: values.value, testimonials: testimonials.value, ed: employeeDomain.value, sub: subdomain.value,
+  })
+}
+const savedSnapshot = ref('')
+const dirty = computed(() => savedSnapshot.value !== '' && snapshot() !== savedSnapshot.value)
+
 const saved = ref(false)
 function saveChanges() {
+  if (!dirty.value) return
+  savedSnapshot.value = snapshot()
   saved.value = true
   setTimeout(() => { saved.value = false }, 1800)
 }
+function discardChanges() {
+  if (!savedSnapshot.value) return
+  const s = JSON.parse(savedSnapshot.value)
+  generalApplicationOn.value = s.g; forEmployeesOn.value = s.fe; published.value = s.pub
+  primaryColor.value = s.pc; headerColor.value = s.hc; btnColor.value = s.bc; ctaColor.value = s.cc
+  font.value = s.font; headline.value = s.hl; intro.value = s.intro; videoUrl.value = s.video
+  values.value = JSON.parse(JSON.stringify(s.values)); testimonials.value = JSON.parse(JSON.stringify(s.testimonials))
+  employeeDomain.value = s.ed; subdomain.value = s.sub
+}
 
-// ─────────────── Preview device ───────────────
-const previewMode = ref<'desktop' | 'mobile'>('desktop')
+// Warn before leaving with unsaved changes (route change + full page unload).
+onBeforeRouteLeave(() => (dirty.value ? window.confirm('You have unsaved changes. Leave without saving?') : true))
+function beforeUnload(e: BeforeUnloadEvent) { if (dirty.value) { e.preventDefault(); e.returnValue = '' } }
+onMounted(() => {
+  savedSnapshot.value = snapshot()
+  window.addEventListener('beforeunload', beforeUnload)
+})
+onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload))
+
+// ─────────────── Preview device (mobile-first) ───────────────
+const previewMode = ref<'desktop' | 'mobile'>('mobile')
 
 // ─────────────── Jobs (preview mockup content) ───────────────
 interface JobItem { title: string, type: 'white' | 'blue', desc: string, location: string, posted: string, employment: string }
@@ -162,7 +296,7 @@ const filteredJobs = computed(() => jobFilter.value === 'all' ? JOBS : JOBS.filt
 // ─────────────── Preview computed styles ───────────────
 const heroBackground = computed(() => `linear-gradient(135deg, ${primaryColor.value} 0%, ${headerColor.value} 130%)`)
 const videoBackground = computed(() => `linear-gradient(135deg, ${headerColor.value}, ${primaryColor.value})`)
-const previewWidth = computed(() => (previewMode.value === 'desktop' ? '1200px' : '390px'))
+const previewWidth = computed(() => (previewMode.value === 'desktop' ? '1200px' : '320px'))
 const jobsGridClass = computed(() => (previewMode.value === 'desktop' ? 'grid-cols-3' : 'grid-cols-1'))
 const valuesGridClass = computed(() => (previewMode.value === 'desktop' ? 'grid-cols-3' : 'grid-cols-1'))
 const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'))
@@ -171,22 +305,32 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
 <template>
   <div style="margin:-32px -40px;height:calc(100% + 64px);overflow:hidden;display:flex" class="bg-[var(--brand-canvas)]">
     <!-- LEFT SETTINGS PANEL -->
-    <div class="w-[340px] shrink-0 flex flex-col border-r border-[var(--brand-border-light)] bg-[var(--brand-surface-white)]">
+    <div class="w-[460px] shrink-0 flex flex-col border-r border-[var(--brand-border-light)] bg-[var(--brand-surface-white)]">
       <div class="shrink-0 px-5 pt-[22px] pb-4 border-b border-[var(--brand-border-light)]">
-        <div class="text-[20px] font-extrabold text-[var(--brand-text)] tracking-tight mb-3.5">Career Site</div>
+        <div class="flex items-center gap-2.5 mb-3.5">
+          <div class="text-[20px] font-extrabold text-[var(--brand-text)] tracking-tight">Career Site</div>
+          <span
+            v-if="dirty"
+            class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--brand-status-pending-text)] bg-[var(--brand-status-pending-bg)] px-2 py-0.5 rounded-full"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-[var(--brand-status-pending-text)]" />Unsaved changes
+          </span>
+        </div>
         <div class="flex gap-2">
           <a
             :href="`https://${previewDomain}`"
             target="_blank"
             rel="noopener"
-            class="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] no-underline hover:bg-[var(--brand-lime-tint)] transition-colors"
+            class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] text-[13.5px] font-semibold text-[var(--brand-text)] no-underline hover:bg-[var(--brand-lime-tint)] transition-colors"
           >
             <ExternalLink :size="13" :stroke-width="1.9" />
             Visit site
           </a>
+          <BrandButton v-if="dirty" variant="outline" @click="discardChanges">Discard</BrandButton>
           <BrandButton
             variant="primary-teal"
             class="flex-1"
+            :disabled="!dirty && !saved"
             :class="saved ? 'bg-[var(--brand-status-teal-green)] hover:bg-[var(--brand-status-teal-green)]' : ''"
             @click="saveChanges"
           >
@@ -249,6 +393,11 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
             <div class="flex items-center justify-between gap-3">
               <span class="text-[13px] text-[var(--brand-text)]">Primary color</span>
               <div class="flex items-center gap-2">
+                <span
+                  class="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                  :class="cPrimaryOnWhite >= 4.5 ? 'bg-[var(--brand-status-approved-bg)] text-[var(--brand-status-approved-text)]' : 'bg-[var(--brand-status-closed-bg)] text-[var(--brand-status-closed-text)]'"
+                  :title="`Contrast on white: ${cPrimaryOnWhite.toFixed(1)}:1 · AA needs 4.5:1`"
+                >AA {{ cPrimaryOnWhite >= 4.5 ? '✓' : '✗' }}</span>
                 <input type="color" :value="primaryColor" class="size-8 cursor-pointer rounded border border-[var(--brand-border)]" @input="onPrimaryChange(($event.target as HTMLInputElement).value)">
                 <Input :model-value="primaryColor" maxlength="7" class="h-8 w-24 font-mono text-xs" @update:model-value="v => hexInput(String(v), onPrimaryChange)" />
               </div>
@@ -256,6 +405,11 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
             <div class="flex items-center justify-between gap-3">
               <span class="text-[13px] text-[var(--brand-text)]">Header / text color</span>
               <div class="flex items-center gap-2">
+                <span
+                  class="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                  :class="cHeaderOnWhite >= 4.5 ? 'bg-[var(--brand-status-approved-bg)] text-[var(--brand-status-approved-text)]' : 'bg-[var(--brand-status-closed-bg)] text-[var(--brand-status-closed-text)]'"
+                  :title="`Text contrast on white: ${cHeaderOnWhite.toFixed(1)}:1 · AA needs 4.5:1`"
+                >AA {{ cHeaderOnWhite >= 4.5 ? '✓' : '✗' }}</span>
                 <input type="color" :value="headerColor" class="size-8 cursor-pointer rounded border border-[var(--brand-border)]" @input="headerColor = ($event.target as HTMLInputElement).value">
                 <Input :model-value="headerColor" maxlength="7" class="h-8 w-24 font-mono text-xs" @update:model-value="v => hexInput(String(v), (nv) => headerColor = nv)" />
               </div>
@@ -263,9 +417,23 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
             <div class="flex items-center justify-between gap-3">
               <span class="text-[13px] text-[var(--brand-text)]">Buttons color</span>
               <div class="flex items-center gap-2">
+                <span
+                  class="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                  :class="cLabelOnBtn >= 4.5 ? 'bg-[var(--brand-status-approved-bg)] text-[var(--brand-status-approved-text)]' : 'bg-[var(--brand-status-closed-bg)] text-[var(--brand-status-closed-text)]'"
+                  :title="`White label on button: ${cLabelOnBtn.toFixed(1)}:1 · AA needs 4.5:1`"
+                >AA {{ cLabelOnBtn >= 4.5 ? '✓' : '✗' }}</span>
                 <input type="color" :value="btnColor" class="size-8 cursor-pointer rounded border border-[var(--brand-border)]" @input="onBtnChange(($event.target as HTMLInputElement).value)">
                 <Input :model-value="btnColor" maxlength="7" class="h-8 w-24 font-mono text-xs" @update:model-value="v => hexInput(String(v), onBtnChange)" />
               </div>
+            </div>
+
+            <!-- Button-on-hero contrast warning (CTA can vanish into the hero gradient) -->
+            <div
+              v-if="cBtnOnHero < 3"
+              class="flex items-start gap-2 rounded-lg bg-[var(--brand-status-pending-bg)] px-3 py-2 text-[12px] leading-[1.45] text-[var(--brand-status-pending-text)]"
+            >
+              <span class="shrink-0">⚠</span>
+              <span>The button color blends into the hero background ({{ cBtnOnHero.toFixed(1) }}:1). Pick a lighter or contrasting button color so the CTA stands out.</span>
             </div>
 
             <div class="space-y-1.5">
@@ -301,51 +469,65 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
           </div>
 
           <!-- Values -->
-          <div v-else-if="s.key === 'values'" v-show="openAccordions.values" class="space-y-3 border-t border-[var(--brand-border-fade)] px-3.5 py-4">
-            <div v-for="(v, i) in values" :key="i" class="rounded-[10px] border border-[var(--brand-border-light)] p-3.5 space-y-2">
-              <div class="flex flex-wrap gap-1.5">
-                <button
-                  v-for="(Ic, idx) in VALUE_ICONS" :key="idx"
-                  type="button"
-                  class="grid size-8 place-items-center rounded-lg border transition-colors"
-                  :class="idx === v.icon ? 'border-[var(--brand-text)] bg-[var(--brand-lime-tint)]' : 'border-[var(--brand-border-light)] hover:border-[var(--brand-border)]'"
-                  @click="v.icon = idx"
-                >
-                  <component :is="Ic" class="w-[15px] h-[15px] text-[var(--brand-text)]" />
-                </button>
+          <div v-else-if="s.key === 'values'" v-show="openAccordions.values" class="space-y-2 border-t border-[var(--brand-border-fade)] px-3.5 py-4">
+            <div
+              v-for="(v, i) in values"
+              :key="i"
+              class="group flex items-center gap-3 rounded-[10px] border border-[var(--brand-border-light)] px-3 py-2.5"
+            >
+              <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--brand-lime-tint)]">
+                <component :is="VALUE_ICONS[v.icon]" class="w-[15px] h-[15px] text-[var(--brand-text)]" />
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13.5px] font-semibold text-[var(--brand-text)] truncate">{{ v.name || 'Untitled value' }}</div>
+                <div class="text-[12px] text-[var(--brand-text-quiet)] truncate">{{ v.desc || 'No description' }}</div>
               </div>
-              <Input v-model="v.name" type="text" placeholder="Value name" class="w-full" />
-              <textarea v-model="v.desc" rows="2" placeholder="Description" class="w-full box-border resize-none rounded-[9px] border-[1.5px] border-[var(--brand-border)] px-3 py-2 text-[13.5px] text-[var(--brand-text)] leading-[1.5] outline-none focus:border-[var(--brand-teal)] transition-colors" />
-              <BrandButton variant="danger-ghost" size="sm" class="px-0 h-auto justify-start font-semibold" @click="removeValue(i)">Remove</BrandButton>
+              <button type="button" class="shrink-0 grid size-7 place-items-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)]" title="Edit" @click="openEditValue(i)">
+                <Pencil class="w-[14px] h-[14px]" />
+              </button>
+              <button type="button" class="shrink-0 grid size-7 place-items-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-settings-danger)] hover:bg-[var(--brand-settings-danger-hover-bg)]" title="Remove" @click="removeValue(i)">
+                <Trash2 class="w-[14px] h-[14px]" />
+              </button>
             </div>
             <BrandButton
               v-if="values.length < 6"
               variant="outline"
               class="w-full border-dashed border-[1.5px] hover:border-[var(--brand-teal)]"
-              @click="addValue"
+              @click="openAddValue"
             >
               + Add value ({{ values.length }}/6)
             </BrandButton>
           </div>
 
           <!-- Testimonials -->
-          <div v-else-if="s.key === 'testimonials'" v-show="openAccordions.testimonials" class="space-y-3 border-t border-[var(--brand-border-fade)] px-3.5 py-4">
-            <div v-for="(t, i) in testimonials" :key="i" class="rounded-[10px] border border-[var(--brand-border-light)] p-3.5 space-y-2">
-              <div class="flex items-center gap-2.5">
-                <div class="grid size-9 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white" :style="{ background: primaryColor }">{{ initials(t.name) }}</div>
-                <Input v-model="t.name" type="text" placeholder="Name" class="flex-1" />
+          <div v-else-if="s.key === 'testimonials'" v-show="openAccordions.testimonials" class="space-y-2 border-t border-[var(--brand-border-fade)] px-3.5 py-4">
+            <div
+              v-for="(t, i) in testimonials"
+              :key="i"
+              class="group flex items-center gap-3 rounded-[10px] border border-[var(--brand-border-light)] px-3 py-2.5"
+            >
+              <div class="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-full text-[12px] font-bold text-white" :style="!t.photo ? { background: primaryColor } : {}">
+                <img v-if="t.photo" :src="t.photo" alt="" class="absolute inset-0 h-full w-full object-cover">
+                <span v-else>{{ initials(t.name) }}</span>
               </div>
-              <Input v-model="t.role" type="text" placeholder="Job title" class="w-full" />
-              <textarea v-model="t.quote" rows="3" placeholder="Quote" class="w-full box-border resize-none rounded-[9px] border-[1.5px] border-[var(--brand-border)] px-3 py-2 text-[13.5px] text-[var(--brand-text)] leading-[1.5] outline-none focus:border-[var(--brand-teal)] transition-colors" />
-              <BrandButton variant="danger-ghost" size="sm" class="px-0 h-auto justify-start font-semibold" @click="removeTestimonial(i)">Remove</BrandButton>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13.5px] font-semibold text-[var(--brand-text)] truncate">{{ t.name || 'Unnamed' }}</div>
+                <div class="text-[12px] text-[var(--brand-text-quiet)] truncate">{{ t.role || t.quote || 'No details' }}</div>
+              </div>
+              <button type="button" class="shrink-0 grid size-7 place-items-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)]" title="Edit" @click="openEditTestimonial(i)">
+                <Pencil class="w-[14px] h-[14px]" />
+              </button>
+              <button type="button" class="shrink-0 grid size-7 place-items-center rounded-md text-[var(--brand-icon-muted)] hover:text-[var(--brand-settings-danger)] hover:bg-[var(--brand-settings-danger-hover-bg)]" title="Remove" @click="removeTestimonial(i)">
+                <Trash2 class="w-[14px] h-[14px]" />
+              </button>
             </div>
             <BrandButton
               v-if="testimonials.length < 5"
               variant="outline"
               class="w-full border-dashed border-[1.5px] hover:border-[var(--brand-teal)]"
-              @click="addTestimonial"
+              @click="openAddTestimonial"
             >
-              + Add testimonial ({{ testimonials.length }}/5)
+              + New testimonial ({{ testimonials.length }}/5)
             </BrandButton>
           </div>
 
@@ -371,10 +553,16 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
           <div v-else-if="s.key === 'publish'" v-show="openAccordions.publish" class="space-y-4 border-t border-[var(--brand-border-fade)] px-3.5 py-4">
             <div class="flex items-start justify-between gap-3">
               <div class="flex-1">
-                <div class="text-[13.5px] font-semibold text-[var(--brand-text)] mb-0.5">Published</div>
-                <div class="text-[12.5px] text-[var(--brand-text-quiet)]">Live and publicly accessible.</div>
+                <div class="text-[13.5px] font-semibold text-[var(--brand-text)] mb-0.5">Status</div>
+                <div class="text-[12.5px] text-[var(--brand-text-quiet)]">Toggle publish from the bar above the preview.</div>
               </div>
-              <Switch v-model="publishedOn" class="shrink-0 mt-0.5 data-[state=checked]:bg-[var(--brand-teal)]" />
+              <span
+                class="shrink-0 mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-full"
+                :class="published ? 'bg-[var(--brand-status-approved-bg)] text-[var(--brand-status-approved-text)]' : 'bg-[var(--brand-surface-badge)] text-[var(--brand-text-quiet)]'"
+              >
+                <span class="w-1.5 h-1.5 rounded-full" :class="published ? 'bg-[var(--brand-status-approved-text)]' : 'bg-[var(--brand-text-quiet)]'" />
+                {{ published ? 'Published' : 'Draft' }}
+              </span>
             </div>
             <div class="space-y-1.5">
               <div class="text-[12px] font-semibold text-[var(--brand-text-secondary)]">Subdomain</div>
@@ -396,13 +584,13 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
     <!-- RIGHT PREVIEW PANEL -->
     <div class="flex-1 flex flex-col overflow-hidden min-w-0 bg-[var(--brand-canvas)]">
       <div class="shrink-0 px-5 py-2.5 bg-[var(--brand-surface-white)] border-b border-[var(--brand-border-light)] flex items-center gap-3">
-        <BrandStatusBadge variant="solid" tone="approved" label="Published" />
+        <BrandStatusBadge variant="solid" :tone="published ? 'approved' : 'neutral'" :label="published ? 'Published' : 'Draft'" />
         <Globe class="w-[14px] h-[14px] text-[var(--brand-icon-muted)] shrink-0" />
         <span class="text-[13px] text-[var(--brand-text)] font-semibold">{{ previewDomain }}</span>
         <Copy class="cursor-pointer shrink-0 w-[13px] h-[13px] text-[var(--brand-icon-muted)]" @click="copyLink" />
         <span class="flex-1" />
-        <span class="text-[13px] text-[var(--brand-text)] font-semibold mr-1.5">Live</span>
-        <Switch v-model="liveOn" class="shrink-0 data-[state=checked]:bg-[var(--brand-teal)]" />
+        <span class="text-[13px] text-[var(--brand-text)] font-semibold mr-1.5">Published</span>
+        <Switch v-model="published" class="shrink-0 data-[state=checked]:bg-[var(--brand-teal)]" />
       </div>
       <div class="shrink-0 px-5 py-2 bg-[var(--brand-surface-white)] border-b border-[var(--brand-border-light)] flex items-center gap-2.5">
         <Lock class="w-[13px] h-[13px] text-[var(--brand-icon-muted)] shrink-0" />
@@ -446,11 +634,17 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
                 <div class="grid size-8 shrink-0 place-items-center rounded-lg text-[11px] font-bold text-white" :style="{ background: primaryColor }">AT</div>
                 <span class="text-[15px] font-semibold" :style="{ color: headerColor }">Acme Talent</span>
               </div>
-              <nav class="flex items-center gap-6 text-[13px] font-medium">
+              <nav v-if="previewMode === 'desktop'" class="flex items-center gap-6 text-[13px] font-medium">
                 <span class="text-[var(--brand-preview-text-heading)]">Home</span>
                 <span :style="{ color: primaryColor }">Opportunities</span>
                 <span v-if="forEmployeesOn" class="rounded-lg border px-3 py-1.5" :style="{ color: primaryColor, borderColor: primaryColor }">For Employees</span>
               </nav>
+              <!-- mobile: collapse nav into a menu button so it never overflows the phone -->
+              <span v-else class="grid size-8 place-items-center" aria-label="Menu">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="{ color: headerColor }">
+                  <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </span>
             </header>
 
             <!-- Hero -->
@@ -575,5 +769,96 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
         </div>
       </div>
     </div>
+
+    <!-- Add / Edit Value modal -->
+    <Dialog v-model:open="valueModalOpen">
+      <DialogScrollContent class="max-w-[460px] p-0 gap-0 overflow-hidden">
+        <DialogHeader class="px-6 py-5 border-b border-[var(--brand-border-hairline)] text-left space-y-1">
+          <DialogTitle class="text-[18px] font-bold text-[var(--brand-text)]">{{ editingValueIndex === null ? 'Add value' : 'Edit value' }}</DialogTitle>
+        </DialogHeader>
+        <div class="px-6 py-5 space-y-4">
+          <div>
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-2">Value icon</span>
+            <!-- selected-icon preview -->
+            <div class="mb-3 flex h-20 items-center justify-center rounded-xl border border-[var(--brand-border-light)] bg-[var(--brand-canvas)]">
+              <span class="grid size-12 place-items-center rounded-xl bg-[var(--brand-lime-tint)]">
+                <component :is="VALUE_ICONS[valueDraft.icon]" class="h-6 w-6 text-[var(--brand-text)]" />
+              </span>
+            </div>
+            <!-- icon library grid (choose from library) -->
+            <div class="rounded-xl border border-[var(--brand-border-light)] p-2">
+              <div class="px-1 pb-1.5 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--brand-text-quiet)]">Icon library</div>
+              <div class="grid max-h-[176px] grid-cols-6 gap-1.5 overflow-y-auto pr-0.5">
+                <button
+                  v-for="(Ic, idx) in VALUE_ICONS"
+                  :key="idx"
+                  type="button"
+                  class="grid aspect-square place-items-center rounded-lg border transition-colors"
+                  :class="idx === valueDraft.icon ? 'border-[var(--brand-teal)] bg-[var(--brand-lime-tint)]' : 'border-transparent hover:bg-[var(--brand-surface-hover)]'"
+                  @click="valueDraft.icon = idx"
+                >
+                  <component :is="Ic" class="h-[17px] w-[17px] text-[var(--brand-text)]" />
+                </button>
+              </div>
+            </div>
+          </div>
+          <label class="block">
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Value name <span class="text-[var(--brand-danger)]">*</span></span>
+            <Input v-model="valueDraft.name" type="text" placeholder="e.g. Ownership" class="w-full" />
+          </label>
+          <label class="block">
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Description</span>
+            <textarea v-model="valueDraft.desc" rows="3" placeholder="What does this value mean at your company?" class="w-full box-border resize-none rounded-[9px] border-[1.5px] border-[var(--brand-border)] px-3 py-2 text-[14px] text-[var(--brand-text)] leading-[1.55] outline-none focus:border-[var(--brand-teal)] transition-colors" />
+          </label>
+        </div>
+        <DialogFooter class="px-6 py-4 border-t border-[var(--brand-border-hairline)] gap-2 sm:justify-end">
+          <BrandButton variant="outline" @click="valueModalOpen = false">Cancel</BrandButton>
+          <BrandButton variant="primary-teal" :disabled="!valueValid" @click="saveValue">Save</BrandButton>
+        </DialogFooter>
+      </DialogScrollContent>
+    </Dialog>
+
+    <!-- Add / Edit Testimonial modal -->
+    <Dialog v-model:open="testimonialModalOpen">
+      <DialogScrollContent class="max-w-[520px] p-0 gap-0 overflow-hidden">
+        <DialogHeader class="px-6 py-5 border-b border-[var(--brand-border-hairline)] text-left space-y-1">
+          <DialogTitle class="text-[18px] font-bold text-[var(--brand-text)]">{{ editingTestimonialIndex === null ? 'Add testimonial' : 'Edit testimonial' }}</DialogTitle>
+        </DialogHeader>
+        <div class="px-6 py-5 space-y-4">
+          <div>
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Photo</span>
+            <div class="flex items-center gap-3">
+              <div class="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-full text-[16px] font-bold text-white" :style="!testimonialDraft.photo ? { background: primaryColor } : {}">
+                <img v-if="testimonialDraft.photo" :src="testimonialDraft.photo" alt="" class="absolute inset-0 h-full w-full object-cover">
+                <span v-else>{{ initials(testimonialDraft.name) }}</span>
+              </div>
+              <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3.5 py-2 text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint)] transition-colors">
+                <Upload class="h-[15px] w-[15px]" />
+                {{ testimonialDraft.photo ? 'Change photo' : 'Upload photo' }}
+                <input type="file" accept="image/*" class="sr-only" @change="onTestimonialPhoto">
+              </label>
+              <button v-if="testimonialDraft.photo" type="button" class="text-[13px] font-semibold text-[var(--brand-settings-danger)] hover:underline" @click="testimonialDraft.photo = ''">Remove</button>
+            </div>
+            <p class="mt-1.5 text-[11.5px] text-[var(--brand-text-quiet)]">Optional. A square image works best.</p>
+          </div>
+          <label class="block">
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Employee name <span class="text-[var(--brand-danger)]">*</span></span>
+            <Input v-model="testimonialDraft.name" type="text" placeholder="e.g. Amr Hammad" class="w-full" />
+          </label>
+          <label class="block">
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Job title</span>
+            <Input v-model="testimonialDraft.role" type="text" placeholder="e.g. Senior Engineer" class="w-full" />
+          </label>
+          <label class="block">
+            <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Quote <span class="text-[var(--brand-danger)]">*</span></span>
+            <textarea v-model="testimonialDraft.quote" rows="4" placeholder="What did they say about working here?" class="w-full box-border resize-none rounded-[9px] border-[1.5px] border-[var(--brand-border)] px-3 py-2 text-[14px] text-[var(--brand-text)] leading-[1.6] outline-none focus:border-[var(--brand-teal)] transition-colors" />
+          </label>
+        </div>
+        <DialogFooter class="px-6 py-4 border-t border-[var(--brand-border-hairline)] gap-2 sm:justify-end">
+          <BrandButton variant="outline" @click="testimonialModalOpen = false">Cancel</BrandButton>
+          <BrandButton variant="primary-teal" :disabled="!testimonialValid" @click="saveTestimonial">Save</BrandButton>
+        </DialogFooter>
+      </DialogScrollContent>
+    </Dialog>
   </div>
 </template>
