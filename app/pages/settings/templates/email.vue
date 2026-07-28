@@ -10,7 +10,6 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '~/components/ui/dropdown-menu'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
-import SettingsRenameModal from '~/components/settings/SettingsRenameModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
 import SettingsDuplicatePickerModal from '~/components/settings/SettingsDuplicatePickerModal.vue'
@@ -48,10 +47,14 @@ const CATEGORY_OPTIONS: { value: TemplateCategory, label: string, desc: string, 
 ]
 
 const grouped = computed(() => {
-  const map = new Map<TemplateCategory, EmailTemplate[]>()
+  const map = new Map<string, EmailTemplate[]>()
+  const order: string[] = [...categoryOrder]
   for (const cat of categoryOrder) map.set(cat, [])
-  for (const t of templates.value) map.get(t.category)?.push(t)
-  return categoryOrder.map(c => ({ category: c, items: map.get(c) ?? [] }))
+  for (const t of templates.value) {
+    if (!map.has(t.category)) { map.set(t.category, []); order.push(t.category) }
+    map.get(t.category)!.push(t)
+  }
+  return order.map(c => ({ category: c as TemplateCategory, items: map.get(c) ?? [] }))
 })
 
 const search = ref('')
@@ -113,18 +116,38 @@ function saveTemplate() {
   savedLabel.value = 'Saved just now'
 }
 
-// ─────────────── Rename ───────────────
+// ─────────────── Rename / recategorize ───────────────
 const renameOpen = ref(false)
 const renameDraft = ref('')
+const renameCategory = ref<string>('general')
+const creatingCategory = ref(false)
+const newCategoryName = ref('')
+const customCategories = ref<{ value: string, label: string }[]>([])
+const allCategoryOptions = computed(() => [
+  ...CATEGORY_OPTIONS.map(c => ({ value: c.value as string, label: c.label })),
+  ...customCategories.value,
+])
+function catLabel(cat: string) {
+  return categoryLabels[cat as TemplateCategory] ?? customCategories.value.find(c => c.value === cat)?.label ?? cat
+}
 function openRename() {
   if (!selected.value) return
   renameDraft.value = selected.value.name
+  renameCategory.value = selected.value.category
+  creatingCategory.value = false
+  newCategoryName.value = ''
   renameOpen.value = true
 }
 function confirmRename() {
   if (!selected.value || !renameDraft.value.trim()) return
+  let cat = renameCategory.value
+  if (creatingCategory.value && newCategoryName.value.trim()) {
+    const val = newCategoryName.value.trim()
+    if (!customCategories.value.some(c => c.value === val)) customCategories.value.push({ value: val, label: val })
+    cat = val
+  }
   const idx = templates.value.findIndex(t => t.id === selected.value!.id)
-  templates.value[idx] = { ...templates.value[idx], name: renameDraft.value.trim() }
+  templates.value[idx] = { ...templates.value[idx], name: renameDraft.value.trim(), category: cat as TemplateCategory }
   renameOpen.value = false
 }
 
@@ -241,7 +264,7 @@ const jobsFiltered = computed(() => {
         <template v-else>
           <div v-for="g in filteredGroups" :key="g.category" class="mb-1">
             <div class="px-4 py-1 text-[10.5px] font-bold uppercase tracking-[0.07em] text-[var(--brand-text-quiet)]">
-              {{ categoryLabels[g.category].toUpperCase() }}
+              {{ catLabel(g.category).toUpperCase() }}
             </div>
             <button
               v-for="t in g.items"
@@ -313,13 +336,50 @@ const jobsFiltered = computed(() => {
       </template>
     </div>
 
-    <!-- ─────────────── Rename modal ─────────────── -->
-    <SettingsRenameModal
-      v-model="renameOpen"
-      :draft="renameDraft"
-      @update:draft="renameDraft = $event"
-      @confirm="confirmRename"
-    />
+    <!-- ─────────────── Rename / recategorize modal ─────────────── -->
+    <SettingsFormModal v-model="renameOpen" title="Rename template" width="480px">
+      <div class="space-y-4">
+        <label class="block">
+          <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Template name</span>
+          <input
+            v-model="renameDraft"
+            type="text"
+            class="w-full box-border h-11 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3.5 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-teal)] transition-colors"
+          >
+        </label>
+        <div>
+          <span class="block text-[13px] font-semibold text-[var(--brand-text-secondary)] mb-1.5">Category</span>
+          <template v-if="!creatingCategory">
+            <select
+              v-model="renameCategory"
+              class="w-full box-border h-11 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-teal)] transition-colors"
+            >
+              <option v-for="c in allCategoryOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+            </select>
+            <button
+              type="button"
+              class="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand-teal-secondary)] hover:underline"
+              @click="creatingCategory = true"
+            >
+              <Plus class="w-3.5 h-3.5" />Create new category
+            </button>
+          </template>
+          <div v-else class="flex items-center gap-2">
+            <input
+              v-model="newCategoryName"
+              type="text"
+              placeholder="New category name"
+              class="flex-1 box-border h-11 rounded-[10px] border border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3.5 text-[14px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-teal)] transition-colors"
+            >
+            <button type="button" class="shrink-0 text-[13px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)]" @click="creatingCategory = false; newCategoryName = ''">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <BrandButton variant="ghost" @click="renameOpen = false">Cancel</BrandButton>
+        <BrandButton variant="primary-teal" :disabled="!renameDraft.trim() || (creatingCategory && !newCategoryName.trim())" @click="confirmRename">Save</BrandButton>
+      </template>
+    </SettingsFormModal>
 
     <!-- ─────────────── Step 1: choose blank vs duplicate ─────────────── -->
     <SettingsFormModal :model-value="newStep === 'choose'" title="Create new template" width="520px" @update:model-value="v => !v && newStep === 'choose' && (newStep = 'closed')">

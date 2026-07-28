@@ -22,7 +22,8 @@ import {
   AlignJustify, Undo2, Redo2, Code, Sparkles,
 } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
-import { Mail, Eye, Send, Users, Check, HelpCircle, ListPlus } from 'lucide-vue-next'
+import { Mail, Eye, Send, Users, Check, HelpCircle, ListPlus, ExternalLink, Copy, Repeat, Download } from 'lucide-vue-next'
+import { Dialog, DialogScrollContent } from '~/components/ui/dialog'
 import { BrandButton } from '~/components/brand'
 import EmailSendLaterMenu from '~/components/EmailSendLaterMenu.vue'
 import EmailVisibilityModal from '~/components/EmailVisibilityModal.vue'
@@ -140,20 +141,69 @@ function toggleCode() {
   else { codeView.value = false; nextTick(() => { if (bodyEl.value) bodyEl.value.innerHTML = body.value }) }
 }
 
-// AI Write
+// ─────────────── AI Email Assistant (modal) ───────────────
 const aiOpen = ref(false)
+const helpOpen = ref(false)
 const aiPrompt = ref('')
+const aiSubmitted = ref('')
+const aiResult = ref<{ subject: string, body: string } | null>(null)
+const aiLoading = ref(false)
+const aiCopied = ref(false)
+
+function draftFromPrompt(p: string) {
+  const low = p.toLowerCase()
+  const sender = 'Amr Hammad'
+  if (low.includes('reject') || low.includes('unfortunately')) {
+    return {
+      subject: 'Update on your application',
+      body: `Dear {{ candidate.first }},\n\nThank you for your interest in the role and for the time you invested in the process — we genuinely appreciate it.\n\nAfter careful consideration, we won't be moving forward with your application at this time. We'd warmly encourage you to apply for future openings that match your skills and experience.\n\nBest regards,\n${sender}\nTalent Acquisition Partner`,
+    }
+  }
+  if (low.includes('interview') || low.includes('invite') || low.includes('schedule')) {
+    return {
+      subject: 'Interview invitation',
+      body: `Hi {{ candidate.first }},\n\nWe were impressed by your application and would love to invite you to an interview. Could you share your availability over the next few days?\n\nLooking forward to speaking with you.\n\nBest regards,\n${sender}`,
+    }
+  }
+  if (low.includes('offer')) {
+    return {
+      subject: 'Your offer with us',
+      body: `Hi {{ candidate.first }},\n\nWe're delighted to offer you the position. You'll find the details attached — let us know if you have any questions.\n\nWelcome aboard!\n\nBest regards,\n${sender}`,
+    }
+  }
+  const head = p.charAt(0).toUpperCase() + p.slice(1)
+  return {
+    subject: head.length > 60 ? `${head.slice(0, 57)}…` : head,
+    body: `Hi {{ candidate.first }},\n\n${head}.\n\nBest regards,\n${sender}`,
+  }
+}
+function runAi(prompt: string) {
+  aiSubmitted.value = prompt
+  aiResult.value = null
+  aiLoading.value = true
+  setTimeout(() => { aiResult.value = draftFromPrompt(prompt); aiLoading.value = false }, 600)
+}
 function aiGenerate() {
   const p = aiPrompt.value.trim()
-  const draft = p
-    ? `<p>${p.charAt(0).toUpperCase()}${p.slice(1)}</p><p>Best regards,</p>`
-    : '<p>Thanks for your interest — we\'ll be in touch shortly with next steps.</p>'
-  bodyEl.value?.focus()
-  document.execCommand('insertHTML', false, draft)
-  syncBody()
+  if (!p) return
+  runAi(p)
   aiPrompt.value = ''
+}
+function aiRegenerate() { if (aiSubmitted.value) runAi(aiSubmitted.value) }
+async function aiCopy() {
+  if (!aiResult.value) return
+  try { await navigator.clipboard.writeText(`Subject: ${aiResult.value.subject}\n\n${aiResult.value.body}`) } catch {}
+  aiCopied.value = true
+  setTimeout(() => { aiCopied.value = false }, 1500)
+}
+function insertAiResult() {
+  if (!aiResult.value) return
+  if (!subject.value.trim()) subject.value = aiResult.value.subject
+  const html = aiResult.value.body.split('\n\n').map(par => `<p>${par.replace(/\n/g, '<br>')}</p>`).join('')
+  if (bodyEl.value) { bodyEl.value.focus(); document.execCommand('insertHTML', false, html); syncBody() }
   aiOpen.value = false
 }
+watch(aiOpen, (v) => { if (!v) { aiResult.value = null; aiSubmitted.value = ''; aiPrompt.value = ''; aiLoading.value = false } })
 function insertToken(token: string) {
   bodyEl.value?.focus()
   document.execCommand('insertHTML', false, `${tokenSpan(token)}&nbsp;`)
@@ -182,11 +232,11 @@ function applyTemplate(t: { subject: string, body: string }) {
 // Candidate placeholders
 const candidateOpen = ref(false)
 const CANDIDATE_TOKENS = [
-  { token: 'candidate.first', desc: 'Candidate\'s first name' },
-  { token: 'candidate.last', desc: 'Candidate\'s last name' },
-  { token: 'candidate.full', desc: 'Candidate\'s full name' },
-  { token: 'candidate.full_email', desc: 'Candidate\'s full name and email address' },
-  { token: 'candidate.email', desc: 'Candidate\'s email address' },
+  { token: 'candidate.first', label: 'First name', desc: 'Candidate\'s first name' },
+  { token: 'candidate.last', label: 'Last name', desc: 'Candidate\'s last name' },
+  { token: 'candidate.full', label: 'Full name', desc: 'Candidate\'s full name' },
+  { token: 'candidate.full_email', label: 'Full name + email', desc: 'Candidate\'s full name and email address' },
+  { token: 'candidate.email', label: 'Email address', desc: 'Candidate\'s email address' },
 ]
 function doCandidate(token: string) { insertToken(token); candidateOpen.value = false }
 
@@ -206,40 +256,40 @@ const MORE_GROUPS: Record<MoreGroup, { title: string, tokens: { token: string, d
   hiring: {
     title: 'Hiring manager',
     tokens: [
-      { token: 'hiring_manager.first', desc: 'Hiring manager\'s first name' },
-      { token: 'hiring_manager.last', desc: 'Hiring manager\'s last name' },
-      { token: 'hiring_manager.full', desc: 'Hiring manager\'s full name' },
-      { token: 'hiring_manager.full_email', desc: 'Hiring manager\'s full name and email address' },
+      { token: 'hiring_manager.first', label: 'First name', desc: 'Hiring manager\'s first name' },
+      { token: 'hiring_manager.last', label: 'Last name', desc: 'Hiring manager\'s last name' },
+      { token: 'hiring_manager.full', label: 'Full name', desc: 'Hiring manager\'s full name' },
+      { token: 'hiring_manager.full_email', label: 'Full name + email', desc: 'Hiring manager\'s full name and email address' },
     ],
   },
   recruiter: {
     title: 'Recruiter',
     tokens: [
-      { token: 'recruiter_per_job.first', desc: 'Recruiter\'s first name' },
-      { token: 'recruiter_per_job.last', desc: 'Recruiter\'s last name' },
-      { token: 'recruiter_per_job.full', desc: 'Recruiter\'s full name' },
-      { token: 'recruiter_per_job.full_email', desc: 'Recruiter\'s full name and email address' },
+      { token: 'recruiter_per_job.first', label: 'First name', desc: 'Recruiter\'s first name' },
+      { token: 'recruiter_per_job.last', label: 'Last name', desc: 'Recruiter\'s last name' },
+      { token: 'recruiter_per_job.full', label: 'Full name', desc: 'Recruiter\'s full name' },
+      { token: 'recruiter_per_job.full_email', label: 'Full name + email', desc: 'Recruiter\'s full name and email address' },
     ],
   },
   event: {
     title: 'Event',
     tokens: [
-      { token: 'event.full', desc: 'Event\'s type, date, time, and interviewer(s)' },
-      { token: 'event.name', desc: 'Event\'s name' },
-      { token: 'event.link', desc: 'Link to the event' },
-      { token: 'event.location', desc: 'Event\'s location' },
-      { token: 'event.date', desc: 'Event\'s date and time' },
-      { token: 'event.type', desc: 'Event\'s type' },
-      { token: 'event.interviewers', desc: 'Interviewers assigned to the event' },
+      { token: 'event.full', label: 'Full details', desc: 'Event\'s type, date, time, and interviewer(s)' },
+      { token: 'event.name', label: 'Name', desc: 'Event\'s name' },
+      { token: 'event.link', label: 'Link', desc: 'Link to the event' },
+      { token: 'event.location', label: 'Location', desc: 'Event\'s location' },
+      { token: 'event.date', label: 'Date & time', desc: 'Event\'s date and time' },
+      { token: 'event.type', label: 'Type', desc: 'Event\'s type' },
+      { token: 'event.interviewers', label: 'Interviewers', desc: 'Interviewers assigned to the event' },
     ],
   },
   sender: {
     title: 'Email sender',
     tokens: [
-      { token: 'email_sender.first', desc: 'Amr' },
-      { token: 'email_sender.last', desc: 'Hammad' },
-      { token: 'email_sender.full', desc: 'Amr Hammad' },
-      { token: 'email_sender.full_email', desc: 'Amr Hammad (a.hammad+8989@basharsoft.com)' },
+      { token: 'email_sender.first', label: 'First name', desc: 'Amr' },
+      { token: 'email_sender.last', label: 'Last name', desc: 'Hammad' },
+      { token: 'email_sender.full', label: 'Full name', desc: 'Amr Hammad' },
+      { token: 'email_sender.full_email', label: 'Full name + email', desc: 'Amr Hammad (a.hammad+8989@basharsoft.com)' },
     ],
   },
 }
@@ -401,31 +451,10 @@ function doMore(token: string) { insertToken(token); moreOpen.value = false }
         </PopoverContent>
         </Popover>
 
-        <!-- AI Write -->
-        <Popover v-model:open="aiOpen">
-          <PopoverTrigger as-child>
-            <button type="button" class="flex items-center gap-1.5 bg-[var(--brand-canvas)] border border-[var(--brand-border-light)] rounded-[9px] px-3.5 py-[7px] text-[13px] font-semibold text-[var(--brand-nav-text)] outline-none hover:bg-[var(--brand-surface-hover)] transition-colors">
-              <span class="inline-flex items-center leading-none text-[9.5px] font-bold tracking-[0.04em] text-white bg-[var(--brand-pipeline-purple)] rounded-[4px] px-1 py-[3px]">AI</span>Write
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" class="w-[320px] p-3.5 rounded-[14px]">
-            <div class="flex items-center gap-2 mb-2.5">
-              <Sparkles class="w-4 h-4 text-[var(--brand-pipeline-purple)]" />
-              <span class="text-[14px] font-bold text-[var(--brand-text)]">Write with AI</span>
-            </div>
-            <textarea
-              v-model="aiPrompt"
-              rows="3"
-              placeholder="Describe the email you want to write…"
-              class="w-full box-border resize-none border border-[var(--brand-border)] rounded-[10px] px-3 py-2.5 text-[13.5px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-lime)]"
-            />
-            <div class="flex justify-end mt-2.5">
-              <BrandButton variant="primary-teal" size="sm" @click="aiGenerate">
-                <Sparkles class="w-3.5 h-3.5" stroke-width="1.9" />Generate
-              </BrandButton>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <!-- AI Write — opens the AI Email Assistant modal -->
+        <button type="button" class="flex items-center gap-1.5 bg-[var(--brand-lime)] rounded-[10px] px-3.5 py-[7px] text-[13px] font-bold text-[var(--brand-teal)] outline-none transition hover:brightness-[0.97]" @click="aiOpen = true">
+          <Sparkles class="w-3.5 h-3.5" stroke-width="2.2" />AI Write
+        </button>
       </div>
     </div>
 
@@ -463,12 +492,27 @@ function doMore(token: string) { insertToken(token); moreOpen.value = false }
     <!-- Placeholders bar -->
     <div class="flex items-center gap-2 px-4 py-2.5 border-t border-[var(--brand-border-fade)] flex-wrap">
       <span class="text-[13px] font-medium text-[var(--brand-text-quiet)]">Placeholders</span>
-      <span
-        class="inline-flex text-[var(--brand-text-quiet)] cursor-help hover:text-[var(--brand-text-secondary)] transition-colors"
-        title="Placeholders are replaced with real values (candidate name, job title, company…) when the email is sent."
-      >
-        <HelpCircle class="w-[15px] h-[15px]" stroke-width="1.9" />
-      </span>
+      <Popover :open="helpOpen" @update:open="v => helpOpen = v">
+        <PopoverTrigger as-child>
+          <button
+            type="button"
+            class="inline-flex text-[var(--brand-text-quiet)] cursor-help outline-none transition-colors hover:text-[var(--brand-ocean)]"
+            aria-label="About placeholders"
+            @mouseenter="helpOpen = true"
+            @click="helpOpen = !helpOpen"
+          >
+            <HelpCircle class="w-[15px] h-[15px]" stroke-width="1.9" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" :side-offset="8" class="w-[300px] p-4 rounded-[12px]" @mouseleave="helpOpen = false">
+          <p class="text-[13px] leading-[1.55] text-[var(--brand-text-secondary)]">
+            Placeholders are used to add specific information to your emails without the need for manual input. Use them to increase your email-writing efficiency.
+          </p>
+          <a href="#" class="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand-text)] hover:text-[var(--brand-ocean)]" @click.prevent>
+            Learn more<ExternalLink class="w-3.5 h-3.5" />
+          </a>
+        </PopoverContent>
+      </Popover>
 
       <!-- Candidate -->
       <Popover v-model:open="candidateOpen">
@@ -479,7 +523,7 @@ function doMore(token: string) { insertToken(token); moreOpen.value = false }
         </PopoverTrigger>
         <PopoverContent align="start" class="w-[280px] p-1.5 rounded-[12px]">
           <button v-for="t in CANDIDATE_TOKENS" :key="t.token" type="button" class="w-full flex flex-col items-start gap-0.5 px-2.5 py-2 rounded-lg hover:bg-[var(--brand-surface-hover)] cursor-pointer text-left" @click="doCandidate(t.token)">
-            <span class="text-[13.5px] font-bold text-[var(--brand-teal)]">[ {{ t.token }} ]</span>
+            <span class="text-[13.5px] font-bold text-[var(--brand-text)]">{{ t.label }}</span>
             <span class="text-[12px] text-[var(--brand-text-quiet)]">{{ t.desc }}</span>
           </button>
         </PopoverContent>
@@ -529,7 +573,7 @@ function doMore(token: string) { insertToken(token); moreOpen.value = false }
                 class="w-full flex flex-col items-start gap-0.5 px-4 py-2.5 border-b border-[var(--brand-border-hairline)] last:border-0 hover:bg-[var(--brand-surface-hover)] cursor-pointer text-left"
                 @click="doMore(t.token)"
               >
-                <span class="text-[14px] font-bold text-[var(--brand-teal)]">[ {{ t.token }} ]</span>
+                <span class="text-[14px] font-bold text-[var(--brand-text)]">{{ t.label }}</span>
                 <span class="text-[12.5px] text-[var(--brand-text-quiet)]">{{ t.desc }}</span>
               </button>
             </div>
@@ -575,5 +619,74 @@ function doMore(token: string) { insertToken(token); moreOpen.value = false }
         </div>
       </div>
     </template>
+
+    <!-- ─────────────── AI Email Assistant modal ─────────────── -->
+    <Dialog v-model:open="aiOpen">
+      <DialogScrollContent class="max-w-[720px] p-0 gap-0 overflow-hidden">
+        <div class="px-6 py-5 bg-[var(--brand-canvas)] border-b border-[var(--brand-border-hairline)]">
+          <div class="text-[19px] font-bold text-[var(--brand-text)] tracking-[-0.01em]">AI Email Assistant</div>
+          <div class="mt-0.5 text-[13.5px] text-[var(--brand-text-quiet)]">Let AI help you draft this email in seconds</div>
+        </div>
+
+        <div class="px-6 py-6 max-h-[52vh] overflow-y-auto">
+          <!-- empty state -->
+          <div v-if="!aiResult && !aiLoading" class="flex flex-col items-center text-center py-8">
+            <Sparkles class="w-9 h-9 text-[var(--brand-text)] mb-4" stroke-width="1.8" />
+            <div class="text-[20px] font-bold text-[var(--brand-text)]">Describe the email you want to send…</div>
+          </div>
+
+          <!-- loading -->
+          <div v-else-if="aiLoading" class="flex flex-col items-center text-center py-10 gap-3">
+            <Sparkles class="w-8 h-8 text-[var(--brand-pipeline-purple)] animate-pulse" />
+            <div class="text-[14px] text-[var(--brand-text-quiet)]">Drafting your email…</div>
+          </div>
+
+          <!-- result -->
+          <div v-else>
+            <div class="flex justify-end mb-4">
+              <span class="max-w-[80%] rounded-2xl bg-[var(--brand-surface-badge)] px-4 py-2 text-[13.5px] text-[var(--brand-text)]">{{ aiSubmitted }}</span>
+            </div>
+            <div class="flex gap-2.5">
+              <Sparkles class="w-4 h-4 shrink-0 mt-1 text-[var(--brand-text)]" stroke-width="1.9" />
+              <div class="min-w-0">
+                <div class="text-[15px] font-bold text-[var(--brand-text)] mb-2">Subject: {{ aiResult.subject }}</div>
+                <div class="text-[14px] leading-[1.65] text-[var(--brand-text)] whitespace-pre-line">{{ aiResult.body }}</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 mt-4">
+              <button type="button" class="grid size-9 place-items-center rounded-lg border border-[var(--brand-border)] text-[var(--brand-text-secondary)] outline-none cursor-pointer hover:bg-[var(--brand-surface-hover)]" title="Regenerate" @click="aiRegenerate">
+                <Repeat class="w-4 h-4" />
+              </button>
+              <button type="button" class="grid size-9 place-items-center rounded-lg border border-[var(--brand-border)] text-[var(--brand-text-secondary)] outline-none cursor-pointer hover:bg-[var(--brand-surface-hover)]" title="Copy" @click="aiCopy">
+                <Check v-if="aiCopied" class="w-4 h-4 text-[var(--brand-success)]" />
+                <Copy v-else class="w-4 h-4" />
+              </button>
+              <BrandButton variant="primary-lime" size="md" @click="insertAiResult">
+                <Download class="w-4 h-4" />Insert to email
+              </BrandButton>
+            </div>
+          </div>
+        </div>
+
+        <!-- prompt input -->
+        <div class="px-6 pb-5">
+          <div class="rounded-[14px] border border-[var(--brand-border)] p-3">
+            <textarea
+              v-model="aiPrompt"
+              rows="3"
+              placeholder="Describe what you want the email to say…"
+              class="w-full box-border resize-none border-none bg-transparent text-[14px] text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-faint)]"
+              @keydown.meta.enter="aiGenerate"
+            />
+            <div class="flex justify-end">
+              <BrandButton variant="primary-teal" size="sm" :disabled="!aiPrompt.trim()" @click="aiGenerate">
+                <Sparkles class="w-3.5 h-3.5" stroke-width="1.9" />Generate Email
+              </BrandButton>
+            </div>
+          </div>
+          <div class="mt-3 text-center text-[12.5px] text-[var(--brand-text-quiet)]">AI-generated content may need review before sending.</div>
+        </div>
+      </DialogScrollContent>
+    </Dialog>
   </div>
 </template>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { TableCell, TableHead, TableRow } from '~/components/ui/table'
-import { Check, Copy, ExternalLink, Eye, Pencil, Plus, Share2, Trash2, X } from 'lucide-vue-next'
+import { Check, Copy, ExternalLink, Eye, HelpCircle, Pencil, Plus, Search, Share2, Trash2, X } from 'lucide-vue-next'
 import { usePublicLinks } from '~/composables/usePublicLinks'
-import { BrandButton, BrandStatusBadge } from '~/components/brand'
+import { BrandButton, BrandStatusBadge, BrandAvatarInitials } from '~/components/brand'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import SettingsPageHeader from '~/components/settings/SettingsPageHeader.vue'
 import SettingsTable from '~/components/settings/SettingsTable.vue'
 import SettingsTableSkeleton from '~/components/settings/SettingsTableSkeleton.vue'
@@ -12,10 +13,16 @@ import type { PublicLink } from '~/types'
 definePageMeta({ layout: 'settings' })
 
 const SHOW_INFO_OPTIONS = [
-  { key: 'contact', label: 'Contact information' },
-  { key: 'profile', label: 'Profile fields' },
-  { key: 'cv', label: 'CV or resume' },
-  { key: 'notes', label: 'Notes' },
+  { key: 'contact', label: 'Contact information', hint: '' },
+  { key: 'profile', label: 'Profile fields', hint: '' },
+  { key: 'cv', label: 'CV or resume', hint: '' },
+  { key: 'notes', label: 'Notes', hint: '' },
+  { key: 'evaluations', label: 'All evaluations', hint: '' },
+  { key: 'files', label: 'Files', hint: '' },
+  { key: 'screening', label: 'Screening questions', hint: '' },
+  { key: 'questionnaires', label: 'Questionnaires', hint: '' },
+  { key: 'jobstage', label: 'Job name & stage', hint: 'Shows which job and pipeline stage each candidate is in.' },
+  { key: 'talentpools', label: 'Talent pools', hint: '' },
 ]
 
 const ALLOW_OPTIONS = [
@@ -62,9 +69,29 @@ const modalTab = ref<'edit' | 'share'>('edit')
 const editingId = ref<string | null>(null)
 const isCreating = ref(false)
 const form = reactive({ name: '', expiresOn: '', showInfo: ['contact', 'profile', 'cv'] as string[], allow: ['notes'] as string[] })
-const candidateInput = ref('')
 const candidates = ref<string[]>([])
 const emailInput = ref('')
+
+// Candidate picker (+ button → searchable popover)
+const MOCK_CANDIDATES = [
+  'Kendall McClure', 'Mikel Lang', 'John Smith', 'Zachery Bahringer', 'Wilma Roelendsen',
+  'Serena Uppin', 'Brooke Strosin', 'Kevin Hernandez', 'Amira Fouad', 'Daniel Meyer',
+]
+const candidatePickerOpen = ref(false)
+const candidateSearch = ref('')
+const candidateResults = computed(() => {
+  const q = candidateSearch.value.trim().toLowerCase()
+  if (!q) return []
+  return MOCK_CANDIDATES.filter(n => n.toLowerCase().includes(q) && !candidates.value.includes(n))
+})
+function pickCandidate(name: string) {
+  if (!candidates.value.includes(name)) candidates.value.push(name)
+  candidateSearch.value = ''
+  candidatePickerOpen.value = false
+}
+function cInitials(n: string) {
+  return n.split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()
+}
 
 function resetForm() {
   form.name = ''
@@ -72,7 +99,7 @@ function resetForm() {
   form.showInfo = ['contact', 'profile', 'cv']
   form.allow = ['notes']
   candidates.value = []
-  candidateInput.value = ''
+  candidateSearch.value = ''
   emailInput.value = ''
 }
 
@@ -93,7 +120,7 @@ function openEditModal(link: PublicLink) {
   form.showInfo = [...link.showInfo]
   form.allow = [...link.allow]
   candidates.value = [...link.candidates]
-  candidateInput.value = ''
+  candidateSearch.value = ''
   emailInput.value = ''
   modalOpen.value = true
 }
@@ -105,12 +132,6 @@ function openShareModal(link: PublicLink) {
 
 function openLink(id: string) {
   window.open(shareUrl(id), '_blank')
-}
-
-function addCandidate() {
-  const v = candidateInput.value.trim()
-  if (v && !candidates.value.includes(v)) candidates.value.push(v)
-  candidateInput.value = ''
 }
 
 function removeCandidate(name: string) {
@@ -273,7 +294,7 @@ async function copyLink(id: string) {
     <SettingsFormModal
       v-model="modalOpen"
       :title="isCreating ? 'Share candidates' : `${candidates.length} candidate${candidates.length === 1 ? '' : 's'} shared`"
-      width="600px"
+      width="660px"
     >
       <!-- tabs (only once a link exists — matches ground truth's post-create Edit/Share modal) -->
       <div v-if="!isCreating" class="flex gap-5 border-b border-[var(--brand-border-light)] -mt-2 mb-5">
@@ -299,7 +320,7 @@ async function copyLink(id: string) {
       <template v-if="modalTab === 'edit'">
         <div class="mb-5">
           <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2">Candidates</label>
-          <div v-if="candidates.length" class="flex flex-wrap gap-2 mb-2.5">
+          <div class="flex flex-wrap items-center gap-2">
             <span
               v-for="c in candidates"
               :key="c"
@@ -310,42 +331,73 @@ async function copyLink(id: string) {
                 <X class="w-3 h-3" />
               </button>
             </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <input
-              v-model="candidateInput"
-              type="text"
-              placeholder="Type a candidate name and press Enter"
-              class="flex-1 px-3.5 py-[11px] rounded-[12px] border-[1.5px] border-[var(--brand-border)] text-[13.5px] outline-none bg-[var(--brand-surface-white)] focus:border-[var(--brand-teal)] transition-colors"
-              @keyup.enter="addCandidate"
-            >
-            <BrandButton variant="primary-teal" class="rounded-[12px] py-[11px] h-auto whitespace-nowrap" @click="addCandidate">Add</BrandButton>
+            <Popover v-model:open="candidatePickerOpen">
+              <PopoverTrigger as-child>
+                <button type="button" class="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--brand-border)] text-[var(--brand-text-quiet)] outline-none transition-colors hover:border-[var(--brand-teal)] hover:text-[var(--brand-teal)]" title="Add candidate">
+                  <Plus class="w-4 h-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" class="w-[320px] p-0 rounded-xl overflow-hidden">
+                <div class="p-2 border-b border-[var(--brand-border-hairline)]">
+                  <div class="flex items-center gap-2 h-10 px-3 rounded-lg border border-[var(--brand-border)] bg-[var(--brand-surface-white)] transition-colors focus-within:border-[var(--brand-teal)]">
+                    <Search class="w-4 h-4 shrink-0 text-[var(--brand-text-quiet)]" stroke-width="1.8" />
+                    <input v-model="candidateSearch" type="text" placeholder="Search candidates" class="min-w-0 flex-1 border-none bg-transparent text-[14px] text-[var(--brand-text)] outline-none">
+                  </div>
+                </div>
+                <div class="max-h-[240px] overflow-y-auto py-1">
+                  <template v-if="candidateResults.length">
+                    <button
+                      v-for="n in candidateResults"
+                      :key="n"
+                      type="button"
+                      class="flex h-11 w-full cursor-pointer items-center gap-2.5 px-3 text-left hover:bg-[var(--brand-surface-hover)]"
+                      @click="pickCandidate(n)"
+                    >
+                      <BrandAvatarInitials :initials="cInitials(n)" size="sm" />
+                      <span class="truncate text-[14px] text-[var(--brand-text)]">{{ n }}</span>
+                    </button>
+                  </template>
+                  <div v-else class="px-4 py-8 text-center">
+                    <span class="mx-auto mb-2.5 grid size-11 place-items-center rounded-xl bg-[var(--brand-surface-badge)]">
+                      <Search class="w-5 h-5 text-[var(--brand-text-quiet)]" stroke-width="1.8" />
+                    </span>
+                    <div class="text-[14px] font-bold text-[var(--brand-text)]">Type to search</div>
+                    <div class="mt-0.5 text-[12.5px] text-[var(--brand-text-quiet)]">Find whose profile you'd like to share</div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
         <div class="mb-5">
           <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2.5">Show information</label>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <label
               v-for="opt in SHOW_INFO_OPTIONS"
               :key="opt.key"
-              class="flex items-center gap-2 border border-[var(--brand-border-light)] rounded-[9px] px-3 py-2.5 text-[13px] text-[var(--brand-text)] cursor-pointer"
+              class="flex items-center gap-2 border rounded-[10px] bg-[var(--brand-surface-white)] px-3 py-2.5 text-[13px] cursor-pointer transition-colors"
+              :class="form.showInfo.includes(opt.key) ? 'border-[1.5px] border-[var(--brand-teal)] text-[var(--brand-text)] font-medium' : 'border-[var(--brand-border-light)] text-[var(--brand-text-secondary)] hover:border-[var(--brand-border-mid)]'"
             >
-              <input v-model="form.showInfo" type="checkbox" :value="opt.key" class="w-3.5 h-3.5 accent-[var(--brand-teal)]">
-              {{ opt.label }}
+              <input v-model="form.showInfo" type="checkbox" :value="opt.key" class="w-3.5 h-3.5 shrink-0 accent-[var(--brand-teal)]">
+              <span class="flex min-w-0 items-center gap-1">
+                <span class="truncate">{{ opt.label }}</span>
+                <HelpCircle v-if="opt.hint" class="w-3.5 h-3.5 shrink-0 text-[var(--brand-text-quiet)]" :title="opt.hint" />
+              </span>
             </label>
           </div>
         </div>
 
         <div class="mb-5">
           <label class="block text-[14px] font-bold text-[var(--brand-text)] mb-2.5">Allow people with the link to</label>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <label
               v-for="opt in ALLOW_OPTIONS"
               :key="opt.key"
-              class="flex items-center gap-2 border border-[var(--brand-border-light)] rounded-[9px] px-3 py-2.5 text-[13px] text-[var(--brand-text)] cursor-pointer"
+              class="flex items-center gap-2 border rounded-[10px] bg-[var(--brand-surface-white)] px-3 py-2.5 text-[13px] cursor-pointer transition-colors"
+              :class="form.allow.includes(opt.key) ? 'border-[1.5px] border-[var(--brand-teal)] text-[var(--brand-text)] font-medium' : 'border-[var(--brand-border-light)] text-[var(--brand-text-secondary)] hover:border-[var(--brand-border-mid)]'"
             >
-              <input v-model="form.allow" type="checkbox" :value="opt.key" class="w-3.5 h-3.5 accent-[var(--brand-teal)]">
+              <input v-model="form.allow" type="checkbox" :value="opt.key" class="w-3.5 h-3.5 shrink-0 accent-[var(--brand-teal)]">
               {{ opt.label }}
             </label>
           </div>
@@ -361,7 +413,7 @@ async function copyLink(id: string) {
               v-model="form.name"
               type="text"
               placeholder="e.g. Shortlist for Sarah"
-              class="w-full box-border px-3 py-2.5 rounded-[9px] border border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors"
+              class="w-full box-border px-3 py-2.5 rounded-[9px] border border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-[var(--brand-surface-white)] focus:border-[var(--brand-teal)] transition-colors"
             >
           </div>
           <div>
@@ -369,7 +421,7 @@ async function copyLink(id: string) {
             <input
               v-model="form.expiresOn"
               type="date"
-              class="w-full box-border px-3 py-2.5 rounded-[9px] border border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors"
+              class="w-full box-border px-3 py-2.5 rounded-[9px] border border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-[var(--brand-surface-white)] focus:border-[var(--brand-teal)] transition-colors"
             >
           </div>
         </div>
@@ -379,7 +431,7 @@ async function copyLink(id: string) {
       <template v-else-if="editingId">
         <div class="mb-5">
           <div class="text-[13.5px] font-semibold text-[var(--brand-text)] mb-2">Public link</div>
-          <div class="flex items-center gap-2 border border-[var(--brand-border)] rounded-[10px] px-3.5 py-2.5 bg-[var(--brand-canvas)]">
+          <div class="flex items-center gap-2 border border-[var(--brand-border)] rounded-[10px] px-3.5 py-2.5 bg-[var(--brand-surface-white)]">
             <span class="flex-1 text-[13px] text-[var(--brand-text)] break-all">{{ shareUrl(editingId) }}</span>
             <BrandButton variant="primary-teal" size="sm" class="shrink-0 gap-1.5" @click="copyLink(editingId)">
               <Check v-if="copiedId === editingId" class="w-3.5 h-3.5" />
@@ -395,7 +447,7 @@ async function copyLink(id: string) {
             v-model="emailInput"
             rows="3"
             placeholder="john@example.com, anna@example.com"
-            class="w-full box-border px-3.5 py-2.5 rounded-[10px] border border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-[var(--brand-canvas)] focus:border-[var(--brand-teal)] transition-colors resize-y"
+            class="w-full box-border px-3.5 py-2.5 rounded-[10px] border border-[var(--brand-border)] text-[13px] text-[var(--brand-text)] outline-none bg-[var(--brand-surface-white)] focus:border-[var(--brand-teal)] transition-colors resize-y"
           />
         </div>
       </template>
