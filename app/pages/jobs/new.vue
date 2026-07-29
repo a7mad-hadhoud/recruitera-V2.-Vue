@@ -228,7 +228,7 @@ async function copyJobUrl() {
 
       <!-- Header — sticky, h-20, border-b. Title + short id + timestamp on
            the left; Share / Preview / status / Publish + close on the right. -->
-      <div class="sticky top-0 z-10 h-20 flex items-center gap-3 pl-[var(--page-gutter)] pr-[var(--page-gutter)] border-b border-[var(--brand-border-fade)] bg-white shrink-0">
+      <div class="sticky top-0 z-10 h-20 flex items-center gap-4 pl-[var(--page-gutter)] pr-[var(--page-gutter)] border-b border-[var(--brand-border-fade)] bg-white shrink-0">
         <div class="min-w-0 flex-1 mr-auto">
           <div class="flex items-center gap-2 min-w-0">
             <h1 class="text-[22px] font-extrabold text-[var(--brand-text)] leading-tight truncate min-w-0">{{ jobTitle || 'Untitled job' }}</h1>
@@ -255,7 +255,7 @@ async function copyJobUrl() {
             :side-offset="6"
             class="w-[320px] p-[18px] rounded-[14px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]"
           >
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start justify-between gap-4">
               <div class="min-w-0">
                 <div class="font-bold text-[13px] text-[var(--brand-text)] mb-1.5">Job URL</div>
                 <div class="text-[13px] leading-[1.5] text-[var(--brand-text-quiet)] break-all">{{ jobUrl }}</div>
@@ -271,9 +271,9 @@ async function copyJobUrl() {
               </button>
             </div>
             <div class="h-px bg-[var(--brand-border-fade)] my-4" />
-            <div class="font-bold text-[13px] text-[var(--brand-text)] mb-3">Share Job on Social Media</div>
+            <div class="font-bold text-[13px] text-[var(--brand-text)] mb-4">Share Job on Social Media</div>
             <!-- eslint-disable local/no-hex-colors -- third-party brand marks -->
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2">
               <a href="#" title="Facebook" aria-label="Share on Facebook" class="w-6 h-6 rounded-md inline-flex items-center justify-center" style="background:#1877F2" @click.prevent>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M14 8.5V7c0-.7.5-.9.9-.9H16V3.2l-2.2-.01c-2.5 0-3.1 1.86-3.1 3.06V8.5H9v3h1.7V21h3.3v-9.5h2.3l.35-3H14z" /></svg>
               </a>
@@ -312,7 +312,7 @@ async function copyJobUrl() {
             <DropdownMenuItem
               v-for="opt in STATUS_OPTIONS"
               :key="opt.key"
-              class="flex items-start gap-2.5 px-2.5 py-2 rounded-[9px] cursor-pointer"
+              class="flex items-start gap-2 px-2.5 py-2 rounded-[9px] cursor-pointer"
               @select="publishStatus = opt.key"
             >
               <span class="w-2 h-2 rounded-full mt-1.5 shrink-0" :style="{ background: opt.dot }" />
@@ -349,7 +349,7 @@ async function copyJobUrl() {
             <button
               v-for="n in NAV"
               :key="n.key"
-              class="w-full text-left flex items-center gap-3 px-3.5 h-11 rounded-[9px] text-[14px] font-semibold transition"
+              class="w-full text-left flex items-center gap-4 px-3.5 h-11 rounded-[9px] text-[14px] font-semibold transition"
               :class="activeNav === n.key
                 ? 'bg-[var(--brand-lime-tint)] text-[var(--brand-text)]'
                 : 'text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-text)]'"
@@ -451,7 +451,7 @@ async function copyJobUrl() {
                     class="mt-1.5 text-[11.5px] font-bold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition"
                     @click="form.showSubDept = !form.showSubDept"
                   >+ Add department</button>
-                  <div v-if="form.showSubDept && departmentSubs.length" class="mt-2.5">
+                  <div v-if="form.showSubDept && departmentSubs.length" class="mt-2">
                     <label class="block text-[12px] font-bold text-[var(--brand-text-quiet)] mb-1">Sub-department</label>
                     <div class="relative">
                       <select
@@ -486,7 +486,7 @@ async function copyJobUrl() {
 
                   <!-- Inline add-location mini-form (mirrors the sub-department
                        inline pattern under Department). -->
-                  <div v-if="showAddLocation" class="mt-2.5 rounded-[10px] border border-[var(--brand-border-fade)] bg-[var(--brand-canvas)] p-3">
+                  <div v-if="showAddLocation" class="mt-2 rounded-[10px] border border-[var(--brand-border-fade)] bg-[var(--brand-canvas)] p-3">
                     <input
                       v-model="newLocName"
                       type="text"
@@ -507,7 +507,7 @@ async function copyJobUrl() {
                         class="w-full h-9 px-3 text-[13px] rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
                       >
                     </div>
-                    <div class="flex items-center justify-end gap-2 mt-2.5">
+                    <div class="flex items-center justify-end gap-2 mt-2">
                       <button
                         class="text-[12.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text-secondary)] px-2 h-8"
                         @click="showAddLocation = false; newLocName = ''; newLocCity = ''; newLocCountry = ''"
@@ -566,7 +566,7 @@ async function copyJobUrl() {
                     <DropdownMenuItem
                       v-for="tone in AI_TONES"
                       :key="tone"
-                      class="flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[13.5px] font-semibold text-[var(--brand-text)] cursor-pointer"
+                      class="flex items-center gap-2 px-2.5 py-2 rounded-[8px] text-[13.5px] font-semibold text-[var(--brand-text)] cursor-pointer"
                       @select="generateWithTone(tone)"
                     >
                       <Sparkles class="w-3.5 h-3.5 text-[var(--brand-teal-secondary)]" stroke-width="1.8" />
@@ -636,7 +636,7 @@ async function copyJobUrl() {
             <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Work model</h2>
               <p class="text-[13px] text-[var(--brand-text-quiet)] mb-4">Applicants will see the selected work model on the careers site.</p>
-              <div class="grid grid-cols-3 gap-3">
+              <div class="grid grid-cols-3 gap-4">
                 <button
                   v-for="wm in WORK_MODELS"
                   :key="wm.key"
@@ -663,7 +663,7 @@ async function copyJobUrl() {
             <!-- Employment details -->
             <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Employment details</h2>
-              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-5">Visible to candidates on the careers site and job boards.</p>
+              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-6">Visible to candidates on the careers site and job boards.</p>
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Employment type</label>
@@ -714,8 +714,8 @@ async function copyJobUrl() {
             <!-- Salary -->
             <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Salary</h2>
-              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-5">The salary range will be visible to candidates on the careers site and job boards.</p>
-              <div class="grid grid-cols-[1fr_auto_1fr_1fr_1fr] items-end gap-3">
+              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-6">The salary range will be visible to candidates on the careers site and job boards.</p>
+              <div class="grid grid-cols-[1fr_auto_1fr_1fr_1fr] items-end gap-4">
                 <div>
                   <label class="flex items-center gap-1 text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
                     Min <Info class="w-3 h-3 text-[var(--brand-text-faint)]" stroke-width="1.8" />
@@ -802,7 +802,7 @@ async function copyJobUrl() {
         enter-from-class="opacity-0"
         leave-to-class="opacity-0"
       >
-        <div v-if="savedToast" class="absolute left-1/2 -translate-x-1/2 bottom-6 inline-flex items-center gap-3 bg-[var(--brand-text)] text-white rounded-[10px] px-4 py-2.5 shadow-[0_4px_14px_rgba(0,20,18,0.25)]">
+        <div v-if="savedToast" class="absolute left-1/2 -translate-x-1/2 bottom-6 inline-flex items-center gap-4 bg-[var(--brand-text)] text-white rounded-[10px] px-4 py-2.5 shadow-[0_4px_14px_rgba(0,20,18,0.25)]">
           <span class="w-5 h-5 rounded-full bg-[var(--brand-lime)] text-[var(--brand-teal)] inline-flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
           </span>
