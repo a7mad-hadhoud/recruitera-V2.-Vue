@@ -11,7 +11,7 @@
 <script setup lang="ts">
 import { User, Mail, Phone, UserCircle2, Paperclip, Image as ImageIcon, GripVertical,
          Sparkles, ChevronDown, Search, Pencil, Trash2, Plus, Info, Type, AlignLeft,
-         Check, CheckCheck, Calendar, Hash, CircleDollarSign, Video, FileText, Scale, Eye } from 'lucide-vue-next'
+         Check, CheckCheck, Calendar, Hash, CircleDollarSign, Video, FileText, Scale, Eye, X } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 
@@ -23,6 +23,7 @@ interface CandidateField {
   label: string
   icon: any
   locked?: boolean
+  removed?: boolean
   value: FieldRequirement
 }
 
@@ -39,7 +40,19 @@ const candidateFields = reactive<CandidateField[]>([
 ])
 function setFieldValue(f: CandidateField, v: FieldRequirement) {
   if (f.locked) return
+  if (v === 'remove') { f.removed = true; return }
+  f.removed = false
   f.value = v
+}
+// Removed fields drop out of the list; the "Add new field" picker offers
+// them back (defaulting to Optional when re-added).
+const visibleFields = computed(() => candidateFields.filter(f => !f.removed))
+const removedFields  = computed(() => candidateFields.filter(f => f.removed))
+const fieldPickerOpen = ref(false)
+function restoreField(f: CandidateField) {
+  f.removed = false
+  f.value = 'optional'
+  fieldPickerOpen.value = false
 }
 
 // Screening questions — Q/A list + editor. Fixture today; each row
@@ -54,6 +67,7 @@ interface ScreeningQuestion {
   type: QuestionType
   text: string
   visibility: 'everyone' | 'me'
+  requirement?: 'optional' | 'required'
   knockout?: boolean
   choices?: string[]  // for single/multi choice
 }
@@ -85,10 +99,39 @@ const QUESTION_TYPES: Array<{ key: QuestionType; label: string; icon: any }> = [
   { key: 'infobox',       label: 'Info box',              icon: Info              },
   { key: 'legal',         label: 'Legal',                 icon: Scale             },
 ]
-function addQuestion(type: QuestionType) {
-  const id = `q${questions.length + 1}-${Date.now()}`
-  questions.push({ id, type, text: '', visibility: 'everyone', choices: (type === 'single-choice' || type === 'multi-choice') ? [''] : undefined })
+// Inline question editor — opens under the list for both "Add new" and the
+// row pencil. Draft holds the in-progress values; Save commits to `questions`.
+const editorOpen = ref(false)
+const editorDraft = reactive<{ id: string | null; type: QuestionType; text: string; requirement: 'optional' | 'required'; visibility: 'everyone' | 'me' }>({
+  id: null, type: 'text-single', text: '', requirement: 'optional', visibility: 'everyone',
+})
+const edTypeOpen = ref(false)
+const edReqOpen = ref(false)
+const edVisOpen = ref(false)
+const canSaveQuestion = computed(() => editorDraft.text.trim().length > 0)
+
+function openQuestionEditor(q?: ScreeningQuestion) {
+  editorDraft.id = q?.id ?? null
+  editorDraft.type = q?.type ?? 'text-single'
+  editorDraft.text = q?.text ?? ''
+  editorDraft.requirement = q?.requirement ?? 'optional'
+  editorDraft.visibility = q?.visibility ?? 'everyone'
+  editorOpen.value = true
 }
+function closeQuestionEditor() { editorOpen.value = false }
+function saveQuestion(addAnother = false) {
+  if (!canSaveQuestion.value) return
+  if (editorDraft.id) {
+    const q = questions.find(x => x.id === editorDraft.id)
+    if (q) { q.type = editorDraft.type; q.text = editorDraft.text.trim(); q.requirement = editorDraft.requirement; q.visibility = editorDraft.visibility }
+  } else {
+    questions.push({ id: `q-${Date.now()}`, type: editorDraft.type, text: editorDraft.text.trim(), requirement: editorDraft.requirement, visibility: editorDraft.visibility })
+  }
+  if (addAnother) { editorDraft.id = null; editorDraft.text = '' }
+  else { editorOpen.value = false }
+}
+const edTypeLabel = computed(() => QUESTION_TYPES.find(t => t.key === editorDraft.type)?.label ?? 'Text (single line)')
+const edTypeIcon  = computed(() => QUESTION_TYPES.find(t => t.key === editorDraft.type)?.icon ?? Type)
 
 const templatePickerOpen = ref(false)
 
@@ -99,18 +142,18 @@ const autoEmailOn = ref(true)
 </script>
 
 <template>
-  <div class="max-w-[920px] mx-auto p-6 flex flex-col gap-4">
+  <div class="max-w-[960px] mx-auto pt-8 flex flex-col gap-6">
     <!-- 1) Candidate information ────────────────────────────── -->
-    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] overflow-hidden">
-      <div class="px-5 pt-5 pb-4 border-b border-[var(--brand-border-fade)]">
-        <h2 class="text-[16px] font-bold text-[var(--brand-text)] leading-tight">Candidate information</h2>
-        <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">Candidates will fill out these details on the application form.</p>
-      </div>
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
+      <h2 class="text-[16px] font-bold text-[var(--brand-text)] leading-tight">Candidate information</h2>
+      <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">Candidates will fill out these details on the application form.</p>
 
+      <div class="mt-5 flex flex-col gap-2.5">
       <div
-        v-for="f in candidateFields"
+        v-for="f in visibleFields"
         :key="f.key"
-        class="flex items-center gap-3.5 px-5 py-3 border-b border-[var(--brand-border-fade)] last:border-b-0"
+        class="flex items-center gap-3.5 rounded-[10px] border border-[var(--brand-border-fade)] bg-white px-4 py-3 transition"
+        :class="f.locked ? '' : 'hover:border-[var(--brand-border)]'"
       >
         <GripVertical
           class="w-3.5 h-3.5 text-[var(--brand-border)] shrink-0"
@@ -124,37 +167,68 @@ const autoEmailOn = ref(true)
           v-if="f.locked"
           class="text-[12px] font-semibold text-[var(--brand-text-faint)]"
         >Required · Locked</span>
-        <div v-else role="group" class="inline-flex items-stretch rounded-[10px] overflow-hidden border border-[var(--brand-border-fade)]">
+        <div v-else role="group" class="inline-flex items-center gap-2">
           <button
             type="button"
-            class="px-3.5 h-8 text-[12.5px] font-bold transition"
+            class="px-4 h-9 rounded-full text-[13px] font-bold transition"
             :class="f.value === 'required'
               ? 'bg-[var(--brand-text)] text-white'
-              : 'bg-white text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)]'"
+              : 'bg-white text-[var(--brand-text-secondary)] border-[1.5px] border-[var(--brand-border-fade)] hover:bg-[var(--brand-canvas)]'"
             @click="setFieldValue(f, 'required')"
           >Required</button>
-          <span class="w-px bg-[var(--brand-border-fade)]" />
           <button
             type="button"
-            class="px-3.5 h-8 text-[12.5px] font-bold transition"
+            class="px-4 h-9 rounded-full text-[13px] font-bold transition"
             :class="f.value === 'optional'
               ? 'bg-[var(--brand-text)] text-white'
-              : 'bg-white text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)]'"
+              : 'bg-white text-[var(--brand-text-secondary)] border-[1.5px] border-[var(--brand-border-fade)] hover:bg-[var(--brand-canvas)]'"
             @click="setFieldValue(f, 'optional')"
           >Optional</button>
-          <span class="w-px bg-[var(--brand-border-fade)]" />
           <button
             type="button"
-            class="px-3.5 h-8 text-[12.5px] font-bold transition text-[var(--brand-text-secondary)] hover:bg-[var(--brand-status-closed-bg)] hover:text-[var(--brand-status-closed-text)]"
+            class="px-4 h-9 rounded-full text-[13px] font-bold text-[var(--brand-text-secondary)] border-[1.5px] border-[var(--brand-border-fade)] hover:bg-[var(--brand-status-closed-bg)] hover:text-[var(--brand-status-closed-text)] hover:border-[var(--brand-status-closed-bg)] transition"
             @click="setFieldValue(f, 'remove')"
           >Remove</button>
         </div>
       </div>
+
+      <!-- Add new field — re-adds a previously removed field -->
+      <Popover v-model:open="fieldPickerOpen">
+        <PopoverTrigger as-child>
+          <button
+            type="button"
+            class="w-full inline-flex items-center justify-center gap-2 h-12 rounded-[10px] border-[1.5px] border-dashed border-[var(--brand-border)] text-[13.5px] font-bold text-[var(--brand-text-secondary)] hover:text-[var(--brand-text)] hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)] transition"
+          >
+            <Plus class="w-4 h-4" stroke-width="2.2" />
+            Add new field
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="center"
+          :side-offset="6"
+          class="w-[var(--reka-popover-trigger-width)] p-1 rounded-[12px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]"
+        >
+          <button
+            v-for="f in removedFields"
+            :key="f.key"
+            type="button"
+            class="w-full flex items-center gap-3 px-3 h-10 rounded-[8px] text-[14px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+            @click="restoreField(f)"
+          >
+            <component :is="f.icon" class="w-4 h-4 text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.7" />
+            {{ f.label }}
+          </button>
+          <div v-if="!removedFields.length" class="px-3 py-2.5 text-[13px] text-[var(--brand-text-quiet)] italic text-center">
+            All fields are already added.
+          </div>
+        </PopoverContent>
+      </Popover>
+      </div>
     </section>
 
     <!-- 2) Screening questions ──────────────────────────────── -->
-    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] overflow-hidden">
-      <div class="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-[var(--brand-border-fade)]">
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
+      <div class="flex items-start justify-between gap-3">
         <div>
           <h2 class="text-[16px] font-bold text-[var(--brand-text)] leading-tight">Screening questions</h2>
           <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
@@ -198,10 +272,11 @@ const autoEmailOn = ref(true)
         </div>
       </div>
 
+      <div class="mt-5 flex flex-col gap-2.5">
       <div
         v-for="q in questions"
         :key="q.id"
-        class="flex items-start gap-3.5 px-5 py-3.5 border-b border-[var(--brand-border-fade)] last:border-b-0"
+        class="flex items-start gap-3.5 rounded-[10px] border border-[var(--brand-border-fade)] bg-white px-4 py-3 hover:border-[var(--brand-border)] transition"
       >
         <GripVertical class="w-3.5 h-3.5 text-[var(--brand-border)] shrink-0 cursor-grab mt-0.5" stroke-width="2" />
         <component
@@ -225,7 +300,7 @@ const autoEmailOn = ref(true)
           {{ q.visibility === 'me' ? 'Only me' : 'Everyone' }}
         </span>
         <div class="flex items-center gap-1 shrink-0 self-center">
-          <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="Edit question">
+          <button class="w-7 h-7 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-[var(--brand-canvas)] transition" aria-label="Edit question" @click="openQuestionEditor(q)">
             <Pencil class="w-3.5 h-3.5" stroke-width="1.8" />
           </button>
           <button
@@ -238,28 +313,88 @@ const autoEmailOn = ref(true)
         </div>
       </div>
 
-      <!-- Add new question — type picker popover -->
-      <div class="p-3">
-        <Popover>
-          <PopoverTrigger as-child>
-            <button class="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[9px] border-[1.5px] border-dashed border-[var(--brand-border)] bg-transparent text-[13.5px] font-bold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)] transition">
-              <Plus class="w-3.5 h-3.5" stroke-width="2.2" />
-              Add new
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" :side-offset="6" class="w-[260px] p-1.5">
-            <div class="px-2.5 pt-1.5 pb-1 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--brand-text-quiet)]">Answer type</div>
-            <button
-              v-for="t in QUESTION_TYPES"
-              :key="t.key"
-              class="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint)]/60 transition"
-              @click="addQuestion(t.key)"
+      <!-- Inline question editor (Add new / Edit) -->
+        <div v-if="editorOpen" class="rounded-[10px] border-[1.5px] border-[var(--brand-border)] bg-white overflow-hidden">
+          <!-- header: type dropdown | requirement + close -->
+          <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-[var(--brand-border-fade)] bg-[var(--brand-canvas)]">
+            <Popover v-model:open="edTypeOpen">
+              <PopoverTrigger as-child>
+                <button type="button" class="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] border-[1.5px] border-[var(--brand-border-fade)] bg-white text-[13px] font-bold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition">
+                  <component :is="edTypeIcon" class="w-3.5 h-3.5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+                  {{ edTypeLabel }}
+                  <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" :side-offset="6" class="w-[240px] p-1 max-h-[300px] overflow-y-auto rounded-[12px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]">
+                <button v-for="t in QUESTION_TYPES" :key="t.key" type="button" class="w-full flex items-center gap-2.5 px-2.5 h-9 rounded-md text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition" @click="editorDraft.type = t.key; edTypeOpen = false">
+                  <component :is="t.icon" class="w-4 h-4 text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.7" />
+                  {{ t.label }}
+                </button>
+              </PopoverContent>
+            </Popover>
+
+            <div class="flex items-center gap-2">
+              <Popover v-model:open="edReqOpen">
+                <PopoverTrigger as-child>
+                  <button type="button" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-[9px] border-[1.5px] border-[var(--brand-border-fade)] bg-white text-[13px] font-bold text-[var(--brand-text)] capitalize hover:bg-[var(--brand-canvas)] transition">
+                    {{ editorDraft.requirement }}
+                    <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" :side-offset="6" class="w-[150px] p-1 rounded-[12px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]">
+                  <button type="button" class="w-full text-left px-3 h-9 rounded-md text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]" @click="editorDraft.requirement = 'optional'; edReqOpen = false">Optional</button>
+                  <button type="button" class="w-full text-left px-3 h-9 rounded-md text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]" @click="editorDraft.requirement = 'required'; edReqOpen = false">Required</button>
+                </PopoverContent>
+              </Popover>
+              <button type="button" class="w-8 h-8 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:bg-white transition" aria-label="Close" @click="closeQuestionEditor">
+                <X class="w-4 h-4" stroke-width="2" />
+              </button>
+            </div>
+          </div>
+
+          <!-- body -->
+          <div class="px-5 py-4">
+            <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Question <span class="text-[var(--brand-status-closed-text)]">*</span></label>
+            <input
+              v-model="editorDraft.text"
+              type="text"
+              placeholder="Type your question…"
+              class="w-full h-11 px-3.5 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
             >
-              <component :is="t.icon" class="w-4 h-4 text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.7" />
-              {{ t.label }}
-            </button>
-          </PopoverContent>
-        </Popover>
+            <div class="mt-3">
+              <Popover v-model:open="edVisOpen">
+                <PopoverTrigger as-child>
+                  <button type="button" class="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] bg-[var(--brand-canvas)] text-[13px] font-bold text-[var(--brand-text-secondary)] hover:text-[var(--brand-text)] transition">
+                    <Eye class="w-3.5 h-3.5" stroke-width="1.8" />
+                    {{ editorDraft.visibility === 'me' ? 'Only me' : 'Visible to everyone' }}
+                    <ChevronDown class="w-3 h-3 text-[var(--brand-text-quiet)]" stroke-width="2" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" :side-offset="6" class="w-[200px] p-1 rounded-[12px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]">
+                  <button type="button" class="w-full text-left px-3 h-9 rounded-md text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]" @click="editorDraft.visibility = 'everyone'; edVisOpen = false">Visible to everyone</button>
+                  <button type="button" class="w-full text-left px-3 h-9 rounded-md text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)]" @click="editorDraft.visibility = 'me'; edVisOpen = false">Only me</button>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <!-- footer -->
+          <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-[var(--brand-border-fade)] bg-[var(--brand-canvas)]">
+            <button type="button" class="px-4 h-9 rounded-[9px] text-[13px] font-bold text-[var(--brand-text-secondary)] hover:bg-white transition" @click="closeQuestionEditor">Cancel</button>
+            <button type="button" class="px-4 h-9 rounded-[9px] text-[13px] font-bold text-[var(--brand-text)] hover:bg-white disabled:opacity-40 disabled:pointer-events-none transition" :disabled="!canSaveQuestion" @click="saveQuestion(true)">Save and add another</button>
+            <button type="button" class="px-5 h-9 rounded-[9px] text-[13px] font-bold bg-[var(--brand-text)] text-white disabled:opacity-40 disabled:pointer-events-none transition" :disabled="!canSaveQuestion" @click="saveQuestion(false)">Save</button>
+          </div>
+        </div>
+
+        <button
+          v-else
+          type="button"
+          class="w-full inline-flex items-center justify-center gap-2 h-12 rounded-[10px] border-[1.5px] border-dashed border-[var(--brand-border)] bg-transparent text-[13.5px] font-bold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:border-[var(--brand-teal)] hover:bg-[var(--brand-lime-tint)] transition"
+          @click="openQuestionEditor()"
+        >
+          <Plus class="w-3.5 h-3.5" stroke-width="2.2" />
+          Add new
+        </button>
       </div>
     </section>
 
@@ -283,10 +418,6 @@ const autoEmailOn = ref(true)
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-[14px] font-bold text-[var(--brand-text)]">Send an auto-confirmation email</span>
-            <span class="inline-flex items-center gap-1 text-[10.5px] font-bold rounded px-1.5 py-0.5 bg-[var(--brand-status-closed-bg)] text-[var(--brand-status-closed-text)]">
-              <Info class="w-3 h-3" stroke-width="2" />
-              PAID PLANS ONLY
-            </span>
           </div>
           <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
             Candidates receive a confirmation email after applying.
@@ -301,14 +432,6 @@ const autoEmailOn = ref(true)
         </button>
       </div>
 
-      <!-- Trial upgrade banner -->
-      <div class="mt-4 flex items-center gap-3 p-3.5 rounded-[9px] border border-[color-mix(in_srgb,orange_25%,white)] bg-[color-mix(in_srgb,orange_10%,white)]">
-        <Info class="w-4 h-4 shrink-0 text-[color-mix(in_srgb,orange_60%,black)]" stroke-width="2" />
-        <span class="flex-1 text-[13px] text-[color-mix(in_srgb,orange_60%,black)]">
-          This feature is not available on trial. Upgrade your plan to send auto-confirmation emails.
-        </span>
-        <a class="text-[13px] font-bold underline text-[var(--brand-text)]" href="#">Upgrade</a>
-      </div>
 
       <!-- Email preview -->
       <div class="mt-4 rounded-[10px] border border-[var(--brand-border-fade)] overflow-hidden">

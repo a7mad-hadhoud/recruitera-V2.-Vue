@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
          Trash2, Briefcase, Wrench, Sparkles, ArrowRight,
-         Building2, ClipboardList, Users, Layers, Share, Send, ChevronUp, Copy, Check } from 'lucide-vue-next'
+         Building2, ClipboardList, Users, Layers, LayoutGrid, Share, Send, ChevronUp, Copy, Check, Flag } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -56,8 +56,8 @@ const NAV: Array<{ key: string; label: string; icon: any }> = [
   { key: 'details',  label: 'Job details',    icon: Pencil       },
   { key: 'app',      label: 'Application',    icon: ClipboardList },
   { key: 'team',     label: 'Team',           icon: Users        },
-  { key: 'workflow', label: 'Workflow',       icon: Layers       },
-  { key: 'social',   label: 'Social Sharing', icon: Share        },
+  { key: 'workflow', label: 'Workflow',       icon: LayoutGrid   },
+  { key: 'social',   label: 'Social Sharing', icon: Share2       },
   { key: 'cross',    label: 'Cross Posting',  icon: Send         },
 ]
 const activeNav = ref<string>('details')
@@ -89,7 +89,21 @@ const form = reactive({
   salaryMax: '',
   salaryPeriod: collar.value === 'blue' ? 'Daily' : 'Monthly',
   currency: '',
+  availablePositions: '' as string,
+  limitOpenings: false,
+  openingsLimit: '' as string,
+  priority: '' as string,
 })
+
+// Priority (internal use) — colored flags mirror the reference dropdown.
+const PRIORITIES = [
+  { value: 'Low',    color: 'text-gray-400'   },
+  { value: 'Normal', color: 'text-blue-600'   },
+  { value: 'High',   color: 'text-orange-500' },
+  { value: 'Urgent', color: 'text-red-600'    },
+]
+const priorityOpen = ref(false)
+const selectedPriority = computed(() => PRIORITIES.find(p => p.value === form.priority) ?? null)
 
 // Departments / locations from settings composables so job editor stays
 // in lockstep with what /settings/departments and /settings/locations show.
@@ -224,7 +238,7 @@ async function copyJobUrl() {
     <!-- Modal sheet — dimmed backdrop behind; the sheet drops from a thin
          top gap that lets the app peek through and curves its top corners.
          Header sticky inside; sidebar + content each own their scroll. -->
-    <div class="absolute inset-x-0 bottom-0 top-0 md:top-[52px] flex flex-col rounded-none md:rounded-t-[18px] bg-[var(--brand-canvas)] shadow-[0_-10px_44px_rgba(0,20,18,0.20)] overflow-hidden">
+    <div class="absolute inset-x-0 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[85%] bottom-0 top-0 md:top-[28px] flex flex-col rounded-none md:rounded-t-[18px] bg-[var(--brand-canvas)] shadow-[0_-10px_44px_rgba(0,20,18,0.20)] overflow-hidden">
 
       <!-- Header — sticky, h-20, border-b. Title + short id + timestamp on
            the left; Share / Preview / status / Publish + close on the right. -->
@@ -344,18 +358,18 @@ async function copyJobUrl() {
       <!-- Body: sidenav + content -->
       <div class="flex-1 min-h-0 flex overflow-hidden">
         <!-- Sidenav -->
-        <aside class="w-64 shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col overflow-y-auto">
-          <nav class="flex-1 p-3">
+        <aside class="w-[272px] shrink-0 border-r border-[var(--brand-border-fade)] bg-white flex flex-col overflow-y-auto">
+          <nav class="flex-1 p-3 flex flex-col gap-1">
             <button
               v-for="n in NAV"
               :key="n.key"
-              class="w-full text-left flex items-center gap-4 px-3.5 h-11 rounded-[9px] text-[14px] font-semibold transition"
+              class="w-full text-left flex items-center gap-3 px-3.5 h-12 rounded-[10px] text-[15px] font-bold transition"
               :class="activeNav === n.key
                 ? 'bg-[var(--brand-lime-tint)] text-[var(--brand-text)]'
                 : 'text-[var(--brand-text-secondary)] hover:bg-[var(--brand-canvas)] hover:text-[var(--brand-text)]'"
               @click="activeNav = n.key"
             >
-              <component :is="n.icon" class="w-4 h-4 shrink-0" stroke-width="1.8" />
+              <component :is="n.icon" class="w-5 h-5 shrink-0" stroke-width="1.8" />
               {{ n.label }}
             </button>
           </nav>
@@ -370,11 +384,14 @@ async function copyJobUrl() {
         <!-- Content — own scroll, canvas bg, 96px scroll-padding so anchored
              jumps clear the sticky header. -->
         <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--brand-canvas)]" style="scroll-padding-top: 96px;">
-          <div v-if="activeNav === 'details'" class="max-w-3xl mx-auto pt-8 flex flex-col gap-4">
+          <div v-if="activeNav === 'details'" class="max-w-[960px] mx-auto pt-8 flex flex-col gap-6">
             <!-- Basic info -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
-              <div class="flex items-start justify-between mb-1">
-                <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Basic info</h2>
+            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Basic info</h2>
+                  <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Define basic information about the job.</p>
+                </div>
                 <button
                   class="inline-flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
                   @click="fieldsModalOpen = true"
@@ -541,10 +558,98 @@ async function copyJobUrl() {
                   </button>
                 </div>
               </div>
+
+              <!-- Row 4 — For internal use: Priority -->
+              <div class="mt-6 pt-6 border-t border-[var(--brand-border-fade)]">
+                <div class="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--brand-text-quiet)] mb-4">For internal use</div>
+                <div class="grid grid-cols-2 gap-4 items-start">
+                  <div>
+                    <label for="jd-available-positions" class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Number of available positions</label>
+                    <input
+                      id="jd-available-positions"
+                      v-model="form.availablePositions"
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 1"
+                      class="w-full h-11 px-3.5 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
+                    >
+                  </div>
+                  <div>
+                  <label class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Priority</label>
+                  <Popover v-model:open="priorityOpen">
+                    <PopoverTrigger as-child>
+                      <button
+                        type="button"
+                        class="relative w-full h-11 pl-3.5 pr-9 flex items-center gap-2 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-left focus:border-[var(--brand-teal)] focus:outline-none transition"
+                        :class="priorityOpen ? 'border-[var(--brand-teal)]' : ''"
+                      >
+                        <template v-if="selectedPriority">
+                          <Flag class="w-4 h-4 shrink-0" :class="selectedPriority.color" fill="currentColor" stroke-width="1.5" />
+                          <span class="text-[var(--brand-text)]">{{ selectedPriority.value }}</span>
+                        </template>
+                        <span v-else class="text-[var(--brand-text-quiet)]">Select</span>
+                        <ChevronDown class="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[var(--brand-text-quiet)] pointer-events-none" stroke-width="2" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      :side-offset="6"
+                      class="w-[var(--reka-popover-trigger-width)] p-1 rounded-[12px] border border-[var(--brand-border-light)] shadow-[0_12px_34px_rgba(0,20,18,0.16)]"
+                    >
+                      <button
+                        v-for="p in PRIORITIES"
+                        :key="p.value"
+                        type="button"
+                        class="w-full flex items-center gap-3 px-3 h-10 rounded-[8px] text-[14px] font-medium text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"
+                        @click="form.priority = p.value; priorityOpen = false"
+                      >
+                        <Flag class="w-4 h-4 shrink-0" :class="p.color" fill="currentColor" stroke-width="1.5" />
+                        {{ p.value }}
+                      </button>
+                    </PopoverContent>
+                  </Popover>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Limit the number of job openings -->
+            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
+              <div class="flex items-start gap-3">
+                <button
+                  type="button"
+                  role="switch"
+                  :aria-checked="form.limitOpenings"
+                  class="relative w-11 h-6 rounded-full shrink-0 mt-0.5 transition-colors"
+                  :class="form.limitOpenings ? 'bg-[var(--brand-teal)]' : 'bg-[var(--brand-border)]'"
+                  @click="form.limitOpenings = !form.limitOpenings"
+                >
+                  <span
+                    class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
+                    :class="form.limitOpenings ? 'translate-x-5' : ''"
+                  />
+                </button>
+                <div class="min-w-0">
+                  <div class="text-[14px] font-bold text-[var(--brand-text)]">Limit the number of job openings</div>
+                  <p class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Reaching the limit for job openings will block further hires.</p>
+                </div>
+              </div>
+
+              <div v-if="form.limitOpenings" class="mt-4 max-w-[280px]">
+                <label for="jd-openings-limit" class="block text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">Openings limit</label>
+                <input
+                  id="jd-openings-limit"
+                  v-model="form.openingsLimit"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 5"
+                  class="w-full h-11 px-3.5 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none transition"
+                >
+              </div>
             </section>
 
             <!-- About the role -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
+            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
               <div class="flex items-start justify-between mb-1">
                 <div>
                   <h2 class="text-[16px] font-bold text-[var(--brand-text)]">About the role</h2>
@@ -633,7 +738,7 @@ async function copyJobUrl() {
             </section>
 
             <!-- Work model -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
+            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Work model</h2>
               <p class="text-[13px] text-[var(--brand-text-quiet)] mb-4">Applicants will see the selected work model on the careers site.</p>
               <div class="grid grid-cols-3 gap-4">
@@ -661,7 +766,7 @@ async function copyJobUrl() {
             </section>
 
             <!-- Employment details -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
+            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Employment details</h2>
               <p class="text-[13px] text-[var(--brand-text-quiet)] mb-6">Visible to candidates on the careers site and job boards.</p>
               <div class="grid grid-cols-2 gap-4">
@@ -703,7 +808,15 @@ async function copyJobUrl() {
                   <div class="relative">
                     <select v-model="form.requiredExperience" class="w-full h-11 pl-3.5 pr-9 text-[14px] rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white focus:border-[var(--brand-teal)] focus:outline-none appearance-none transition">
                       <option value="">Select</option>
-                      <option>0–1 years</option><option>1–3 years</option><option>3–5 years</option><option>5+ years</option>
+                      <option>Student (High school)</option>
+                      <option>Student (College)</option>
+                      <option>Entry level</option>
+                      <option>Mid level</option>
+                      <option>Experienced</option>
+                      <option>Manager</option>
+                      <option>Senior manager / Supervisor</option>
+                      <option>Executive</option>
+                      <option>Senior executive</option>
                     </select>
                     <ChevronDown class="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[var(--brand-text-quiet)] pointer-events-none" stroke-width="2" />
                   </div>
@@ -712,9 +825,9 @@ async function copyJobUrl() {
             </section>
 
             <!-- Salary -->
-            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
+            <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
               <h2 class="text-[16px] font-bold text-[var(--brand-text)] mb-1">Salary</h2>
-              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-6">The salary range will be visible to candidates on the careers site and job boards.</p>
+              <p class="text-[13px] text-[var(--brand-text-quiet)] mb-6">The salary range will not be visible to candidates on the careers site and job boards.</p>
               <div class="grid grid-cols-[1fr_auto_1fr_1fr_1fr] items-end gap-4">
                 <div>
                   <label class="flex items-center gap-1 text-[13px] font-bold text-[var(--brand-text-secondary)] mb-1.5">
@@ -762,14 +875,14 @@ async function copyJobUrl() {
 
           <JobEditorCrossPostingTab v-else-if="activeNav === 'cross'" />
 
-          <div v-else class="max-w-3xl mx-auto pt-8 px-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
+          <div v-else class="max-w-[960px] mx-auto pt-8 px-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
           </div>
 
           <!-- Shared step nav — same [← Prev] [Next →] pair under every
                tab body, driven by the sidenav order. Bottom pad gives the
                last element ~128px clearance from the viewport edge. -->
-          <div class="max-w-3xl mx-auto mt-8 pb-32 flex items-center justify-between gap-2">
+          <div class="max-w-[960px] mx-auto mt-8 pb-32 flex items-center justify-between gap-2">
             <button
               v-if="prevNav"
               class="inline-flex items-center gap-2 px-5 h-10 rounded-[9px] border border-[var(--brand-border)] bg-white text-[13.5px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition"

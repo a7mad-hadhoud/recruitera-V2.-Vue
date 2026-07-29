@@ -51,9 +51,9 @@ function removeStage(s: string) {
 }
 
 function onSave() {
-  if (!canSave.value || !props.member) return
+  if (!canSave.value) return
   emit('save', {
-    memberId: props.member.id,
+    memberId: props.member?.id ?? '',
     role: role.value,
     customizeStages: customizeStages.value,
     stages: customizeStages.value ? stages.value : [],
@@ -66,15 +66,15 @@ function onSave() {
   <Dialog v-model:open="open">
     <DialogContent
       :show-close-button="false"
-      class="p-0 border-0 rounded-[20px] max-w-[520px] w-[92vw] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden"
+      class="p-0 gap-0 border-0 rounded-[20px] max-w-[520px] w-[92vw] shadow-[0_24px_64px_rgba(0,20,18,0.22)] bg-white overflow-hidden"
     >
       <!-- Header — member identity + close -->
       <div class="flex items-start gap-3 px-7 pt-6 pb-5">
         <div class="flex-1 min-w-0">
           <DialogTitle class="text-[22px] font-bold text-[var(--brand-text)] leading-tight truncate">
-            {{ member?.name ?? 'Team member' }}
+            {{ member?.name ?? 'Add Member To Job' }}
           </DialogTitle>
-          <p class="text-[14px] text-[var(--brand-text-quiet)] mt-1 truncate">{{ member?.email }}</p>
+          <p v-if="member?.email" class="text-[14px] text-[var(--brand-text-quiet)] mt-1 truncate">{{ member.email }}</p>
         </div>
         <button
           type="button"

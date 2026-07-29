@@ -180,9 +180,9 @@ function onSaveAutomation(actions: { key: ActionKey; config: string }[]) {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto pt-8 px-6 flex flex-col gap-6">
+  <div class="max-w-[960px] mx-auto pt-8 flex flex-col gap-6">
     <!-- ── Card: Screening and matching candidates (AI) ───────── -->
-    <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
       <div class="flex items-center justify-between gap-4">
         <div class="min-w-0">
           <div class="flex items-center gap-2">
@@ -204,7 +204,7 @@ function onSaveAutomation(actions: { key: ActionKey; config: string }[]) {
     </section>
 
     <!-- ── Card: Pipeline ─────────────────────────────────────── -->
-    <section class="rounded-[14px] bg-white border border-[var(--brand-border-fade)] p-6">
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
       <!-- Header — title + template selector -->
       <div class="flex items-start justify-between gap-4 mb-6">
         <div>

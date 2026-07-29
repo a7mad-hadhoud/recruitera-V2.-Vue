@@ -61,9 +61,9 @@ function onPickImage(e: Event) {
 </script>
 
 <template>
-  <div class="max-w-[920px] mx-auto p-6 flex flex-col gap-4">
+  <div class="max-w-[960px] mx-auto pt-8 flex flex-col gap-6">
     <!-- SEO ─────────────────────────────────────────────────── -->
-    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
       <h2 class="text-[17px] font-bold text-[var(--brand-text)]">SEO</h2>
       <p class="text-[13.5px] text-[var(--brand-text-quiet)] mt-1 mb-5">
         Create a meta title and description for the job page to get more visitors.
@@ -110,7 +110,7 @@ function onPickImage(e: Event) {
     </section>
 
     <!-- Social media image ─────────────────────────────────── -->
-    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-6">
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
       <div class="flex items-start justify-between gap-3 mb-4">
         <div>
           <h2 class="text-[17px] font-bold text-[var(--brand-text)]">Social media image</h2>

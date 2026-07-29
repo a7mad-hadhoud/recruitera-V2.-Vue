@@ -16,7 +16,7 @@
   only — existing scores are preserved.
 -->
 <script setup lang="ts">
-import { FileText, X, Plus, Trash2, Check, AlertTriangle } from 'lucide-vue-next'
+import { FileText, X, Plus, Trash2, Check, AlertTriangle, ChevronDown } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BrandButton, BrandLimeCheckbox } from '~/components/brand'
 
@@ -70,6 +70,19 @@ function defaultGroups(): CriteriaGroup[] {
 
 const groups = ref<CriteriaGroup[]>(defaultGroups())
 
+// Collapsible sections — only the first section is expanded by default so
+// the modal opens compact; clicking a header toggles that section.
+const expanded = ref<Set<string>>(new Set())
+function seedExpanded() { expanded.value = new Set(groups.value[0] ? [groups.value[0].id] : []) }
+seedExpanded()
+function isExpanded(id: string) { return expanded.value.has(id) }
+function toggleGroup(id: string) {
+  const next = new Set(expanded.value)
+  if (next.has(id)) next.delete(id); else next.add(id)
+  expanded.value = next
+}
+watch(open, (v) => { if (v) seedExpanded() })
+
 const weightTotal = computed(() => groups.value.reduce((s, g) => s + (Number(g.weight) || 0), 0))
 const weightValid = computed(() => weightTotal.value === 100)
 
@@ -82,7 +95,7 @@ function removeCriterion(group: CriteriaGroup, id: string) {
 function deleteAll(group: CriteriaGroup) {
   group.criteria = []
 }
-function resetDefaults() { groups.value = defaultGroups() }
+function resetDefaults() { groups.value = defaultGroups(); seedExpanded() }
 function onSave() {
   emit('save', groups.value)
   open.value = false
@@ -136,10 +149,23 @@ function onSave() {
             :key="group.id"
             class="rounded-[14px] border border-[var(--brand-border-fade)] bg-white p-5"
           >
-            <!-- Group header — row 1: title + section weight -->
-            <div class="flex items-center gap-3 mb-3">
-              <span class="flex-1 min-w-0 text-[15px] font-bold text-[var(--brand-text)] truncate">{{ group.title }}</span>
-              <label class="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-[var(--brand-text-secondary)]">
+            <!-- Group header — row 1: title (toggles) + section weight -->
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                class="flex-1 min-w-0 flex items-center gap-2 text-left"
+                :aria-expanded="isExpanded(group.id)"
+                @click="toggleGroup(group.id)"
+              >
+                <ChevronDown
+                  class="w-4 h-4 shrink-0 text-[var(--brand-text-quiet)] transition-transform"
+                  :class="isExpanded(group.id) ? 'rotate-180' : ''"
+                  stroke-width="2"
+                />
+                <span class="min-w-0 text-[15px] font-bold text-[var(--brand-text)] truncate">{{ group.title }}</span>
+                <span v-if="!isExpanded(group.id)" class="shrink-0 text-[12px] font-semibold text-[var(--brand-text-quiet)]">· {{ group.criteria.length }} criteria</span>
+              </button>
+              <label class="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-[var(--brand-text-secondary)]" @click.stop>
                 Weight
                 <span class="inline-flex items-center rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white overflow-hidden focus-within:border-[var(--brand-teal)] transition">
                   <input
@@ -156,6 +182,7 @@ function onSave() {
               </label>
             </div>
 
+            <div v-if="isExpanded(group.id)" class="mt-4">
             <!-- Group header — row 2: column labels, aligned to the row columns -->
             <div class="flex items-center gap-4 pb-2.5 border-b border-[var(--brand-border-fade)]">
               <span class="flex-1 min-w-0" />
@@ -221,6 +248,7 @@ function onSave() {
                 <Trash2 class="w-3.5 h-3.5" stroke-width="1.8" />
                 Delete all criteria
               </button>
+            </div>
             </div>
           </section>
         </div>
