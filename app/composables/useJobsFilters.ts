@@ -84,10 +84,9 @@ let seq = 0
 const nextId = () => `f${++seq}`
 
 export function useJobsFilters() {
-  // Default row matches the reference: Status is any of Draft/Published/Internal
-  const rows = ref<JobFilterRow[]>([
-    { id: nextId(), field: 'status', op: 'is-any-of', values: ['draft', 'published', 'internal'] },
-  ])
+  // Start with NO filters — the list shows every job by default (no "Filters 1"
+  // badge). Users add filters explicitly via "＋ Add filter".
+  const rows = ref<JobFilterRow[]>([])
 
   function addRow() {
     rows.value = [...rows.value, { id: nextId(), field: 'status', op: 'is-any-of', values: [] }]
