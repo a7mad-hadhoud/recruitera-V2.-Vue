@@ -4,10 +4,12 @@ import { useLocalStorage } from '@vueuse/core'
 // Order here is the DEFAULT display order — user can drag to reorder.
 export const JOB_COLUMN_KEYS = [
   'title',
+  'dept',
   'status',
   'cands',
   'hired',
-  'dept',
+  'created',
+  'assigned',
   'location',
   'location-address',
   'workmodel',
@@ -28,7 +30,9 @@ export const JOB_COLUMN_LABELS: Record<JobColumnKey, string> = {
   'title':               'Title',
   'status':              'Status',
   'cands':               'Candidates',
-  'hired':               'Hires',
+  'hired':               'Hired',
+  'created':             'Creation date',
+  'assigned':            'Assigned to',
   'dept':                'Department',
   'location':            'Location',
   'location-address':    'Location address',
@@ -45,16 +49,18 @@ export const JOB_COLUMN_LABELS: Record<JobColumnKey, string> = {
   'followers':           'Followers',
 }
 
-// Columns visible on first visit — matches the reference's checked state.
+// Columns visible on first visit — a cleaner, Bubble-like default set
+// (title, department, status, candidates, hired, creation date, assigned to).
+// Location / work model / tags stay available via the Columns picker.
 const DEFAULT_VISIBLE: JobColumnKey[] = [
-  'title', 'status', 'cands', 'hired', 'dept', 'location', 'workmodel', 'tags', 'manage',
+  'title', 'dept', 'status', 'cands', 'hired', 'created', 'assigned', 'manage',
 ]
 
 // `title` and `status` are always on — the picker disables them.
 export const LOCKED_COLUMNS: readonly JobColumnKey[] = ['title', 'status']
 
-const VISIBLE_KEY = 'recruitera:jobs:visible-columns'
-const ORDER_KEY   = 'recruitera:jobs:column-order'
+const VISIBLE_KEY = 'recruitera:jobs:visible-columns:v2'
+const ORDER_KEY   = 'recruitera:jobs:column-order:v2'
 const AUTOFIT_KEY = 'recruitera:jobs:autofit-disabled'
 
 export function useJobsColumns() {

@@ -5,8 +5,10 @@ import { type JobColumnKey } from './useJobsColumns'
 const DEFAULT_WIDTHS: Record<JobColumnKey, number> = {
   'title':               260,
   'status':              170,
-  'cands':               140,
+  'cands':               130,
   'hired':               90,
+  'created':             150,
+  'assigned':            160,
   'dept':                160,
   'location':            160,
   'location-address':    220,

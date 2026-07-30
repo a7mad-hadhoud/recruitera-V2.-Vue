@@ -2,6 +2,13 @@ export type JobStatus = 'published' | 'internal' | 'closed' | 'archived' | 'draf
 export type CollarType = 'white' | 'blue'
 export type WorkModel = 'on-site' | 'remote' | 'hybrid'
 
+export interface JobAssignee {
+  name: string
+  initials: string
+  bg: string
+  color: string
+}
+
 export interface Job {
   id: string
   title: string
@@ -13,4 +20,6 @@ export interface Job {
   candidateCount: number
   newCandidates: number
   hires: number
+  createdAt: string
+  assignees: JobAssignee[]
 }
