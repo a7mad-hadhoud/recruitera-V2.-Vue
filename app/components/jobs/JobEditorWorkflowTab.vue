@@ -10,11 +10,10 @@
   stage rows, inline edit/add and automation panels match Settings 1:1.
 -->
 <script setup lang="ts">
-import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListChecks } from 'lucide-vue-next'
-import { BrandButton, BrandStatusBadge } from '~/components/brand'
+import { Info, Zap, Pencil, ChevronDown, ChevronUp, GripVertical, Plus, X, ListChecks, Check, AlertTriangle, Trash2 } from 'lucide-vue-next'
+import { BrandButton, BrandStatusBadge, BrandLimeCheckbox } from '~/components/brand'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu'
 import PipelineStageEditForm from '~/components/settings/pipeline/PipelineStageEditForm.vue'
-import JobIdealCandidateModal from '~/components/jobs/JobIdealCandidateModal.vue'
 import JobStageAutomationModal from '~/components/jobs/JobStageAutomationModal.vue'
 import JobAutomationBuilderModal from '~/components/jobs/JobAutomationBuilderModal.vue'
 import { usePipelineTemplates } from '~/composables/useTemplates'
@@ -137,8 +136,53 @@ function removeAutomation(section: Section, stageId: string, autoId: string) {
   })
 }
 
-// ── AI screening — "Ideal candidate profile" criteria modal ──
-const idealModalOpen = ref(false)
+// ── AI screening — Ideal candidate profile, edited INLINE (Option C):
+// each section carries its own Score % + expandable criteria. No modal.
+interface IcpCriterion { id: string; text: string; fullyMet: boolean; partiallyMet: boolean; disqualify: boolean }
+interface IcpSection { key: string; title: string; weight: number; criteria: IcpCriterion[] }
+let icpCid = 0
+const icpNid = () => `ic${++icpCid}`
+const mkCrit = (text: string, level: 'full' | 'partial', dq = false): IcpCriterion =>
+  ({ id: icpNid(), text, fullyMet: level === 'full', partiallyMet: level === 'partial', disqualify: dq })
+const icpSections = ref<IcpSection[]>([
+  { key: 'skills', title: 'Skills', weight: 15, criteria: [
+    mkCrit('Core technical skills required to perform the job', 'full'),
+    mkCrit('Proficiency in required tools, software, or platforms', 'full'),
+    mkCrit('Language proficiency (if required for the role)', 'full'),
+  ] },
+  { key: 'keywords', title: 'Keywords', weight: 25, criteria: [
+    mkCrit('Key role-specific terms present in CV or application', 'full'),
+    mkCrit('Industry-specific terminology that signals domain knowledge', 'partial'),
+    mkCrit('Job title keywords aligned with seniority level', 'full'),
+  ] },
+  { key: 'achievements', title: 'Achievements', weight: 25, criteria: [
+    mkCrit('Quantifiable results or impact demonstrated in past roles', 'partial'),
+    mkCrit('Evidence of exceeding targets or above-average performance', 'partial'),
+    mkCrit('Awards, recognitions, or notable projects relevant to the role', 'partial'),
+  ] },
+  { key: 'work', title: 'Work Experience', weight: 20, criteria: [
+    mkCrit("Minimum years of relevant experience in the role's field", 'full'),
+    mkCrit('Experience in the same or closely related industry', 'full'),
+    mkCrit('Prior experience in a similar role or job title', 'full', true),
+  ] },
+  { key: 'education', title: 'Education', weight: 10, criteria: [
+    mkCrit('Minimum educational qualification (degree, diploma, or equivalent)', 'full'),
+    mkCrit('Relevant field of study or major', 'partial'),
+    mkCrit('Professional certifications or licenses required for the role', 'full'),
+  ] },
+  { key: 'relevance', title: 'Relevance to Job Description', weight: 5, criteria: [
+    mkCrit('Overall alignment between candidate background and requirements', 'full'),
+    mkCrit("Alignment with the role's seniority level and scope", 'full'),
+    mkCrit('Location or work model compatibility', 'partial'),
+  ] },
+])
+const icpTotal = computed(() => icpSections.value.reduce((s, g) => s + (Number(g.weight) || 0), 0))
+const icpValid = computed(() => icpTotal.value === 100)
+const icpOpenKey = ref<string | null>(null)
+const icpToggle = (k: string) => (icpOpenKey.value = icpOpenKey.value === k ? null : k)
+function icpAddCriterion(s: IcpSection) { s.criteria.push(mkCrit('', 'full')); icpOpenKey.value = s.key }
+function icpDelCriterion(s: IcpSection, id: string) { s.criteria = s.criteria.filter(c => c.id !== id) }
+function icpDeleteAll(s: IcpSection) { s.criteria = [] }
 
 // ── Stage automation — chooser → "Add automation" builder ──
 type ActionKey = 'notify' | 'talent-pool' | 'task'
@@ -181,28 +225,6 @@ function onSaveAutomation(actions: { key: ActionKey; config: string }[]) {
 
 <template>
   <div class="max-w-[960px] mx-auto pt-8 flex flex-col gap-6">
-    <!-- ── Card: Screening and matching candidates (AI) ───────── -->
-    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
-      <div class="flex items-center justify-between gap-4">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <h2 class="text-lg font-semibold text-[var(--brand-text)]">Screening and matching candidates</h2>
-            <span class="inline-flex items-center h-[18px] px-1.5 rounded-md text-[11px] font-bold tracking-[0.02em] text-[var(--brand-pipeline-purple)] bg-[color-mix(in_srgb,var(--brand-pipeline-purple)_14%,white)]">AI</span>
-          </div>
-          <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
-            Our AI will screen candidates’ applications to see if they match your criteria. They won’t see this.
-          </p>
-        </div>
-        <button
-          type="button"
-          class="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-white text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-canvas)] transition shrink-0"
-          @click="idealModalOpen = true"
-        >
-          Set criteria
-        </button>
-      </div>
-    </section>
-
     <!-- ── Card: Pipeline ─────────────────────────────────────── -->
     <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
       <!-- Header — title + template selector -->
@@ -338,8 +360,73 @@ function onSaveAutomation(actions: { key: ActionKey; config: string }[]) {
       </template>
     </section>
 
+    <!-- ── Card: Screening and matching candidates (AI) — inline editor ── -->
+    <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
+      <div class="flex items-start justify-between gap-4 mb-5">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-[var(--brand-text)]">Screening and matching candidates</h2>
+            <span class="inline-flex items-center h-[18px] px-1.5 rounded-md text-[11px] font-bold tracking-[0.02em] text-[var(--brand-pipeline-purple)] bg-[color-mix(in_srgb,var(--brand-pipeline-purple)_14%,white)]">AI</span>
+          </div>
+          <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1">
+            Our AI screens applicants against these scores and criteria to see if they match. They won’t see this.
+          </p>
+        </div>
+        <span
+          class="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[12px] font-bold"
+          :class="icpValid ? 'text-[var(--brand-status-approved-text)] bg-[var(--brand-status-approved-bg)]' : 'text-[var(--brand-status-closed-text)] bg-[var(--brand-status-closed-bg)]'"
+          title="Section scores should total 100%"
+        >
+          <component :is="icpValid ? Check : AlertTriangle" class="w-3.5 h-3.5" stroke-width="2.2" />
+          Total {{ icpTotal }}%
+        </span>
+      </div>
+
+      <!-- Sections — each carries its own Score % + expandable criteria -->
+      <div class="flex flex-col gap-2.5">
+        <section v-for="s in icpSections" :key="s.key" class="rounded-[12px] border border-[var(--brand-border-fade)] bg-white overflow-hidden">
+          <div class="w-full flex items-center gap-3 px-4 h-14 hover:bg-[var(--brand-canvas)] transition">
+            <button type="button" class="flex-1 min-w-0 flex items-center gap-3 text-left" @click="icpToggle(s.key)">
+              <ChevronDown class="w-4 h-4 shrink-0 text-[var(--brand-text-quiet)] transition-transform" :class="icpOpenKey === s.key ? 'rotate-180' : ''" stroke-width="2" />
+              <span class="text-[14.5px] font-bold text-[var(--brand-text)]">{{ s.title }}</span>
+              <span class="text-[12px] font-semibold text-[var(--brand-text-quiet)]">· {{ s.criteria.length }} criteria</span>
+            </button>
+            <label class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--brand-text-secondary)] shrink-0" @click.stop>
+              Score
+              <span class="inline-flex items-center rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white overflow-hidden focus-within:border-[var(--brand-teal)] transition">
+                <input v-model.number="s.weight" type="number" min="0" max="100" :aria-label="`Score for ${s.title}`" class="w-[52px] h-8 px-2 text-center text-[13.5px] font-bold tabular-nums bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                <span class="px-1.5 text-[12px] text-[var(--brand-text-quiet)] border-l border-[var(--brand-border-fade)] self-stretch inline-flex items-center">%</span>
+              </span>
+            </label>
+          </div>
+
+          <div v-if="icpOpenKey === s.key" class="px-4 pb-4">
+            <div class="flex items-center gap-4 pb-2 border-b border-[var(--brand-border-fade)]">
+              <span class="flex-1" />
+              <span class="w-[68px] text-center text-[11px] font-semibold text-[var(--brand-text-secondary)]">Fully met</span>
+              <span class="w-[68px] text-center text-[11px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Partially met</span>
+              <span class="w-[80px] text-center text-[11px] font-semibold text-[var(--brand-text-secondary)] leading-tight">Disqualify if missing</span>
+              <span class="w-6" />
+            </div>
+            <div v-for="c in s.criteria" :key="c.id" class="flex items-center gap-4 py-3 border-b border-[var(--brand-border-fade)] last:border-b-0">
+              <input v-model="c.text" placeholder="Describe the criterion…" class="flex-1 min-w-0 text-[13.5px] text-[var(--brand-text-secondary)] bg-transparent focus:outline-none focus:text-[var(--brand-text)]">
+              <div class="w-[68px] flex justify-center"><BrandLimeCheckbox v-model="c.fullyMet" /></div>
+              <div class="w-[68px] flex justify-center"><BrandLimeCheckbox v-model="c.partiallyMet" /></div>
+              <div class="w-[80px] flex justify-center"><BrandLimeCheckbox v-model="c.disqualify" /></div>
+              <button type="button" class="w-6 h-6 shrink-0 rounded-md inline-flex items-center justify-center text-[var(--brand-text-quiet)] hover:text-[var(--brand-status-closed-text)] hover:bg-[var(--brand-canvas)] transition" @click="icpDelCriterion(s, c.id)"><X class="w-3.5 h-3.5" stroke-width="2" /></button>
+            </div>
+            <div v-if="!s.criteria.length" class="py-4 text-[13px] text-[var(--brand-text-quiet)] italic">No criteria yet.</div>
+            <div class="flex items-center gap-4 pt-3">
+              <button type="button" class="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[var(--brand-teal-secondary)] hover:text-[var(--brand-teal)] transition" @click="icpAddCriterion(s)"><Plus class="w-4 h-4" stroke-width="2.2" />Add criterion</button>
+              <span class="w-px h-4 bg-[var(--brand-border-fade)]" />
+              <button type="button" class="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--brand-text-quiet)] hover:text-[var(--brand-status-closed-text)] transition" @click="icpDeleteAll(s)"><Trash2 class="w-3.5 h-3.5" stroke-width="1.8" />Delete all</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <!-- Ideal candidate profile (AI criteria) modal -->
-    <JobIdealCandidateModal v-model:open="idealModalOpen" />
 
     <!-- Stage automation — step 1: chooser -->
     <JobStageAutomationModal
