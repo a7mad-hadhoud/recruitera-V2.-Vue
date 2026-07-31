@@ -4,7 +4,7 @@
   panel on the right, brand primitives for every button/pill/badge.
 -->
 <script setup lang="ts">
-import { Plus, Rows3, LayoutGrid, Bookmark, MoreHorizontal, Pencil, Megaphone, Copy, Archive, MessageSquare, Folder, Trash2, UserPlus, ChevronDown, Globe, Users, Lock, Check } from 'lucide-vue-next'
+import { Plus, Rows3, LayoutGrid, Bookmark, MoreHorizontal, Pencil, Megaphone, Copy, Archive, MessageSquare, Folder, Trash2, UserPlus, ChevronDown, ChevronLeft, ChevronRight, Globe, Users, Lock, Check } from 'lucide-vue-next'
 import { refDebounced, useLocalStorage } from '@vueuse/core'
 import { BrandPageTitle, BrandSearchBar, BrandButton, BrandDataTable, BrandStatusBadge, BrandAvatarInitials } from '~/components/brand'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
@@ -264,7 +264,7 @@ const nvVisOpen = ref(false)
   <div class="flex flex-col h-full overflow-hidden bg-[var(--brand-canvas)]">
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white rounded-tl-[22px] border-t border-l border-[var(--brand-border)]">
       <!-- Page header bar: title + slots + Add job. White bg + bottom line. -->
-      <div class="flex items-center gap-3 px-6 py-4 bg-white border-b border-[var(--brand-border-fade)]">
+      <div class="flex items-center gap-2 px-6 py-4 bg-white">
         <h1 class="text-[20px] font-bold text-[var(--brand-text)] tracking-tight flex-1 min-w-0 truncate">
           Jobs
         </h1>
@@ -386,8 +386,13 @@ const nvVisOpen = ref(false)
         </Popover>
       </div>
 
-      <!-- Collar tabs + search + Filters/Columns + view-mode toggle -->
-      <div class="flex items-center gap-3 px-6 pt-3 pb-3">
+      <!-- Full-width search (Candidates-style) -->
+      <div class="px-6 pt-4 pb-2">
+        <BrandSearchBar v-model="searchInput" size="lg" placeholder="Search jobs by title, department, or location…" />
+      </div>
+
+      <!-- Toolbar — collar (left) · count + pagination + Filters/Columns/view (right) -->
+      <div class="flex items-center gap-2 px-6 pb-4">
         <div class="inline-flex bg-[var(--brand-canvas)] rounded-[10px] p-1 gap-1">
           <button
             v-for="t in collarTabs"
@@ -404,9 +409,15 @@ const nvVisOpen = ref(false)
 
         <div class="flex-1" />
 
-        <div class="w-[280px]">
-          <BrandSearchBar v-model="searchInput" placeholder="Search jobs..." />
+        <span v-if="filteredJobs.length" class="text-[13px] tabular-nums text-[var(--brand-text-muted)] whitespace-nowrap">{{ pageStart }} – {{ pageEnd }} of {{ filteredJobs.length }} jobs</span>
+        <div class="flex items-center h-9 rounded-[9px] border border-[var(--brand-border)] overflow-hidden">
+          <button class="h-9 w-9 flex items-center justify-center text-[var(--brand-text-subtle)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--brand-lime-tint-hover)] transition" :disabled="jobsPage <= 1" aria-label="Previous page" @click="onJobsPage(jobsPage - 1)"><ChevronLeft class="w-4 h-4" /></button>
+          <div class="w-px self-stretch bg-[var(--brand-border)]" />
+          <button class="h-9 w-9 flex items-center justify-center text-[var(--brand-text-subtle)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--brand-lime-tint-hover)] transition" :disabled="jobsPage >= totalJobPages" aria-label="Next page" @click="onJobsPage(jobsPage + 1)"><ChevronRight class="w-4 h-4" /></button>
         </div>
+
+        <span class="w-px h-6 bg-[var(--brand-border-fade)] mx-1" />
+
         <JobsFiltersPanel
           :rows="filterRows"
           :result-count="filteredJobs.length"
@@ -439,15 +450,6 @@ const nvVisOpen = ref(false)
           >
             <LayoutGrid class="w-4 h-4" stroke-width="1.8" />
           </button>
-        </div>
-      </div>
-
-      <!-- Sample data banner (matches Candidates pattern) -->
-      <div class="px-6 pb-3">
-        <div class="flex items-center gap-2 px-4 py-3 rounded-[10px] bg-[var(--brand-lime-tint)] text-[13px] text-[var(--brand-text-secondary)]">
-          <span class="w-4 h-4 rounded-full bg-[var(--brand-teal)] text-white text-[10px] font-bold flex items-center justify-center shrink-0">i</span>
-          Your company account is filled with sample candidates, talent pools, and jobs. When you're ready to start hiring, you can
-          <button class="font-semibold underline">remove the sample data</button>.
         </div>
       </div>
 
@@ -625,6 +627,16 @@ const nvVisOpen = ref(false)
         <div v-if="!filteredJobs.length" class="py-16 text-center text-[13.5px] text-[var(--brand-text-quiet)]">
           No jobs match this view.
         </div>
+
+        <!-- Per-page + prev/next — scrolls with the table (Candidates pattern) -->
+        <CandidatesPerPage
+          v-if="filteredJobs.length"
+          :per-page="jobsPerPage"
+          :current-page="jobsPage"
+          :total-pages="totalJobPages"
+          @change="onJobsPerPage"
+          @page-change="onJobsPage"
+        />
       </div>
 
       <!-- Card view — one <JobCard /> per row. Extracted so a "recent jobs"
@@ -640,14 +652,9 @@ const nvVisOpen = ref(false)
         <div v-if="!filteredJobs.length" class="py-16 text-center text-[13.5px] text-[var(--brand-text-quiet)]">
           No jobs match this view.
         </div>
-      </div>
 
-      <!-- Pagination footer — count + per-page + prev/next (Candidates pattern) -->
-      <div v-if="filteredJobs.length" class="flex items-center justify-between gap-3 px-6 py-2.5 border-t border-[var(--brand-border-fade)] bg-white shrink-0">
-        <span class="text-[13px] tabular-nums text-[var(--brand-text-muted)]">
-          {{ pageStart.toLocaleString() }} – {{ pageEnd.toLocaleString() }} of {{ filteredJobs.length.toLocaleString() }} jobs
-        </span>
         <CandidatesPerPage
+          v-if="filteredJobs.length"
           :per-page="jobsPerPage"
           :current-page="jobsPage"
           :total-pages="totalJobPages"
