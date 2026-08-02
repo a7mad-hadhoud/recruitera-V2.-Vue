@@ -26,6 +26,7 @@ const groups: Group[] = [
   ]},
   { key: 'workflow', label: 'Workflow', icon: Workflow, children: [
     { label: 'Requisition approvals', to: '/settings/workflow/approvals' },
+    { label: 'Employee hub', to: '/settings/workflow/employee-hub' },
     { label: 'Hiring rules', to: '/settings/workflow/hiring-rules' },
     { label: 'Disqualify reasons', to: '/settings/workflow/disqualify' },
     { label: 'Tags & sources', to: '/settings/workflow/tags-sources' },
