@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { X, Share2, Eye, MoreHorizontal, ChevronDown, Plus, Info, Pencil,
          Trash2, Briefcase, Wrench, Sparkles, ArrowRight,
-         Building2, ClipboardList, Users, Layers, LayoutGrid, Share, Send, ChevronUp, Copy, Check, Flag } from 'lucide-vue-next'
+         Building2, ClipboardList, Users, Layers, LayoutGrid, Share, Send, ChevronUp, Copy, Check, Flag, Gift } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -39,6 +39,7 @@ import JobEditorApplicationTab from '~/components/jobs/JobEditorApplicationTab.v
 import JobEditorTeamTab from '~/components/jobs/JobEditorTeamTab.vue'
 import JobEditorSocialSharingTab from '~/components/jobs/JobEditorSocialSharingTab.vue'
 import JobEditorCrossPostingTab from '~/components/jobs/JobEditorCrossPostingTab.vue'
+import JobEditorReferralsTab from '~/components/jobs/JobEditorReferralsTab.vue'
 import JobEditorRichTextField from '~/components/jobs/JobEditorRichTextField.vue'
 import JobEditorWorkflowTab from '~/components/jobs/JobEditorWorkflowTab.vue'
 import JobDetailsFieldsModal from '~/components/jobs/JobDetailsFieldsModal.vue'
@@ -59,6 +60,7 @@ const NAV: Array<{ key: string; label: string; icon: any }> = [
   { key: 'workflow', label: 'Workflow',       icon: LayoutGrid   },
   { key: 'social',   label: 'Social Sharing', icon: Share2       },
   { key: 'cross',    label: 'Cross Posting',  icon: Send         },
+  { key: 'referrals', label: 'Referrals',     icon: Gift         },
 ]
 const activeNav = ref<string>('details')
 
@@ -874,6 +876,8 @@ async function copyJobUrl() {
           <JobEditorSocialSharingTab v-else-if="activeNav === 'social'" :job-title="jobTitle" />
 
           <JobEditorCrossPostingTab v-else-if="activeNav === 'cross'" />
+
+          <JobEditorReferralsTab v-else-if="activeNav === 'referrals'" />
 
           <div v-else class="max-w-[960px] mx-auto pt-8 px-16 text-center text-[14px] text-[var(--brand-text-quiet)]">
             {{ NAV.find(n => n.key === activeNav)?.label }} — coming soon
