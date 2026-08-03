@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Archive, MoreHorizontal, Pencil, Pin, Plus, RotateCcw, Trash2, Users } from 'lucide-vue-next'
+import { Archive, MoreVertical, Pencil, Pin, Plus, RotateCcw, Trash2, Users } from 'lucide-vue-next'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -45,9 +45,10 @@ function initialsOf(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
+/** "Apr 12" — the prototype drops the year, every pool is from the current cycle. */
 function formatDate(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric',
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric',
   })
 }
 
@@ -245,11 +246,15 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
 
     <!-- Toolbar -->
     <div class="flex items-center gap-2.5 flex-wrap">
-      <BrandSearchBar
-        v-model="search"
-        placeholder="Search talent pools by name…"
-        class="flex-1 min-w-[220px]"
-      />
+      <!-- BrandSearchBar forwards `class` to the inner input, so the flex sizing has to
+           live on a wrapper or the input's w-full pushes the filters onto a second row. -->
+      <div class="flex-1 min-w-[220px] max-w-[540px]">
+        <BrandSearchBar
+          v-model="search"
+          placeholder="Search talent pools by name…"
+          class="bg-[var(--brand-surface-white)] border-[var(--brand-border)] rounded-[11px]"
+        />
+      </div>
       <Select v-model="category">
         <SelectTrigger class="w-[170px]"><SelectValue placeholder="All categories" /></SelectTrigger>
         <SelectContent>
@@ -302,7 +307,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
               </span>
               <span class="min-w-0">
                 <span class="flex items-center font-bold text-[var(--brand-text)]">
-                  <Pin v-if="p.pinned" class="w-[13px] h-[13px] mr-1.5 shrink-0 text-[var(--brand-pin)]" fill="currentColor" :stroke-width="0" />
+                  <Pin v-if="p.pinned" class="w-[13px] h-[13px] mr-1.5 shrink-0 text-[var(--brand-pin)]" :stroke-width="2" />
                   <span class="w-[7px] h-[7px] mr-[7px] rounded-full shrink-0 bg-[var(--brand-success)]" />
                   {{ p.name }}
                   <span
@@ -349,7 +354,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <BrandButton variant="ghost" size="icon" :aria-label="`Actions for ${p.name}`">
-                  <MoreHorizontal class="w-4 h-4" />
+                  <MoreVertical class="w-4 h-4" />
                 </BrandButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
