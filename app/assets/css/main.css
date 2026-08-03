@@ -107,6 +107,15 @@
   --brand-category-event-text: #7040a6;
   --brand-pin: #c9930a;                           /* pinned-row pin icon */
 
+  /* Candidate stage pills. New and Interview reuse the category pairs above and
+     Offer reuses --brand-success-bg; only these three are additional. */
+  --brand-stage-applied-bg: #fbf5d5;
+  --brand-stage-applied-text: #7a6416;
+  --brand-stage-screened-bg: #e3f1fb;
+  --brand-stage-screened-text: #1d6fa5;
+  --brand-stage-positive-bg: #eafbf1;             /* reference check / offer */
+  --brand-stage-positive-text: #1f8a4c;
+
   /* Settings module — modal / dropdown / toast (ground truth: Recruitera Settings Standalone.html) */
   --brand-settings-danger: #c0392b;               /* delete/remove text + icon */
   --brand-settings-danger-hover-bg: #fff0ee;      /* delete row hover in dropdowns */

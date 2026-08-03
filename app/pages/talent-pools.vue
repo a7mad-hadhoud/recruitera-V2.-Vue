@@ -10,6 +10,7 @@ import {
 } from '~/components/brand'
 import { POOL_CATEGORY, poolCategoryDetail } from '~/components/talent-pools/poolCategory'
 import PoolConfirmDialog from '~/components/talent-pools/PoolConfirmDialog.vue'
+import PoolDetail from '~/components/talent-pools/PoolDetail.vue'
 import PoolDeleteDialog from '~/components/talent-pools/PoolDeleteDialog.vue'
 import PoolFormDialog from '~/components/talent-pools/PoolFormDialog.vue'
 import type { DeleteDestination } from '~/components/talent-pools/PoolDeleteDialog.vue'
@@ -50,6 +51,20 @@ function formatDate(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric',
   })
+}
+
+// ─────────────── List <-> detail ───────────────
+const activePoolId = ref<string | null>(null)
+const activePool = computed(() => pools.value.find(p => p.id === activePoolId.value) ?? null)
+const activePoolCandidates = computed(() =>
+  candidates.value.filter(c => c.poolId === activePoolId.value),
+)
+
+function deleteCandidates(ids: string[]) {
+  const pool = activePool.value
+  candidates.value = candidates.value.filter(c => !ids.includes(c.id))
+  if (pool) pool.total = Math.max(0, pool.total - ids.length)
+  toast.success(`${ids.length} candidate${ids.length === 1 ? '' : 's'} deleted.`)
 }
 
 // ─────────────── Filters ───────────────
@@ -200,11 +215,31 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
 
   pools.value = pools.value.filter(x => x.id !== p.id)
   deleteTarget.value = null
+  // Deleting the pool you are standing in has to drop you back to the list.
+  if (activePoolId.value === p.id) activePoolId.value = null
 }
 </script>
 
 <template>
-  <div class="p-6 flex flex-col gap-3 h-full min-h-0">
+  <div class="h-full min-h-0">
+    <PoolDetail
+      v-if="activePool"
+    :pool="activePool"
+    :candidates="activePoolCandidates"
+    @back="activePoolId = null"
+    @edit="openEdit(activePool)"
+    @archive="requestArchive(activePool)"
+    @restore="requestRestore(activePool)"
+    @remove="requestDelete(activePool)"
+    @open-form="() => {}"
+    @add-candidate="() => {}"
+    @open-candidate="() => {}"
+    @move-to-pool="() => {}"
+    @move-to-job="() => {}"
+    @delete-candidates="deleteCandidates"
+  />
+
+  <div v-else class="p-6 flex flex-col gap-3 h-full min-h-0">
     <!-- Header -->
     <div class="flex items-start justify-between gap-4">
       <div>
@@ -295,6 +330,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
           v-for="p in visiblePools"
           :key="p.id"
           class="cursor-pointer border-b border-[var(--brand-border-hairline)] last:border-b-0 hover:bg-[var(--brand-canvas)] [&>td]:px-[18px] [&>td]:py-3 [&>td]:align-middle [&>td]:text-[13.5px]"
+          @click="activePoolId = p.id"
         >
           <!-- Name: category icon tile + pin + status dot + name + badges, description beneath -->
           <TableCell>
@@ -350,7 +386,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
               />
             </span>
           </TableCell>
-          <TableCell class="text-right">
+          <TableCell class="text-right" @click.stop>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <BrandButton variant="ghost" size="icon" :aria-label="`Actions for ${p.name}`">
@@ -385,32 +421,33 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
         ? 'Try adjusting your search or filters, or create a new talent pool.'
         : 'Create a talent pool to start grouping candidates for future roles.'"
     />
+  </div>
 
-    <!-- Dialogs -->
-    <PoolFormDialog v-model="formOpen" :pool="editingPool" @save="savePool" />
+  <!-- Dialogs live outside both views so they stay mounted across list <-> detail -->
+  <PoolFormDialog v-model="formOpen" :pool="editingPool" @save="savePool" />
 
-    <PoolConfirmDialog
-      v-model="archiveOpen"
-      tone="warning"
-      :icon="Archive"
-      title="Archive this Talent Pool?"
-      confirm-label="Archive Pool"
-      @confirm="confirmArchive"
-    >
-      Are you sure you want to archive <strong>{{ archiveTarget?.name }}</strong>? It will move to the
-      Archived tab and be excluded from active workflows. You can retrieve it anytime.
-    </PoolConfirmDialog>
+  <PoolConfirmDialog
+    v-model="archiveOpen"
+    tone="warning"
+    :icon="Archive"
+    title="Archive this Talent Pool?"
+    confirm-label="Archive Pool"
+    @confirm="confirmArchive"
+  >
+    Are you sure you want to archive <strong>{{ archiveTarget?.name }}</strong>? It will move to the
+    Archived tab and be excluded from active workflows. You can retrieve it anytime.
+  </PoolConfirmDialog>
 
-    <PoolConfirmDialog
-      v-model="restoreOpen"
-      tone="success"
-      :icon="RotateCcw"
-      title="Restore this Talent Pool?"
-      confirm-label="Restore Pool"
-      @confirm="confirmRestore"
-    >
-      This will move <strong>{{ restoreTarget?.name }}</strong> back to the Active tab with all data intact.
-    </PoolConfirmDialog>
+  <PoolConfirmDialog
+    v-model="restoreOpen"
+    tone="success"
+    :icon="RotateCcw"
+    title="Restore this Talent Pool?"
+    confirm-label="Restore Pool"
+    @confirm="confirmRestore"
+  >
+    This will move <strong>{{ restoreTarget?.name }}</strong> back to the Active tab with all data intact.
+  </PoolConfirmDialog>
 
     <PoolDeleteDialog
       v-model="deleteOpen"
