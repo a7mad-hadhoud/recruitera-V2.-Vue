@@ -92,6 +92,12 @@ export default defineNuxtConfig({
   },
 
   app: {
-    pageTransition: { name: 'page', mode: 'out-in' },
+    // pageTransition was { name: 'page', mode: 'out-in' }, which silently broke every
+    // in-app route change: the URL updated but the page component never swapped, so
+    // clicking a candidate, a job or a pool left you looking at the previous screen.
+    // Reproduced on a clean dev server, and disabling it is what fixes it — supplying
+    // the missing .page-enter/.page-leave styles does not. Re-enable only with a
+    // verified working transition.
+    pageTransition: false,
   },
 })
