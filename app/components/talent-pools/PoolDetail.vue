@@ -13,7 +13,7 @@ import {
 } from 'lucide-vue-next'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import { BrandButton, BrandDataTable, BrandEmptyState, BrandLimeCheckbox, BrandSearchBar } from '~/components/brand'
+import { BrandAvatarInitials, BrandButton, BrandDataTable, BrandEmptyState, BrandLimeCheckbox, BrandSearchBar } from '~/components/brand'
 import { POOL_CATEGORY, STAGE_TONE, poolCategoryDetail, poolNeedsJobTitle, scoreTone } from './poolCategory'
 import type { PoolCandidate, TalentPool } from '~/types'
 
@@ -237,9 +237,12 @@ const PILL_CLASS = 'inline-flex items-center rounded-[6px] px-2.5 py-[3px] text-
           <TableCell>
             <button
               type="button"
-              class="font-bold text-[var(--brand-text)] outline-none hover:underline"
+              class="flex items-center gap-2.5 text-left font-bold text-[var(--brand-text)] outline-none hover:underline"
               @click="emit('openCandidate', c)"
-            >{{ c.name }}</button>
+            >
+              <BrandAvatarInitials :initials="c.initials" size="sm" :bg="c.avatarColor" />
+              {{ c.name }}
+            </button>
           </TableCell>
 
           <template v-if="isSystem">

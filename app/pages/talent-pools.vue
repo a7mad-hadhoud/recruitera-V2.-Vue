@@ -60,6 +60,14 @@ const activePoolCandidates = computed(() =>
   candidates.value.filter(c => c.poolId === activePoolId.value),
 )
 
+/**
+ * Pool rows carry the real candidate id, so this lands on the profile the
+ * Candidates module already owns rather than a second, pool-only viewer.
+ */
+function openCandidateProfile(c: PoolCandidate) {
+  return navigateTo(`/candidates/${c.id}`)
+}
+
 function deleteCandidates(ids: string[]) {
   const pool = activePool.value
   candidates.value = candidates.value.filter(c => !ids.includes(c.id))
@@ -233,7 +241,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     @remove="requestDelete(activePool)"
     @open-form="() => {}"
     @add-candidate="() => {}"
-    @open-candidate="() => {}"
+    @open-candidate="openCandidateProfile"
     @move-to-pool="() => {}"
     @move-to-job="() => {}"
     @delete-candidates="deleteCandidates"

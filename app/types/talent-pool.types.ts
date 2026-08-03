@@ -31,17 +31,23 @@ export interface TalentPool {
   formStatus?: TalentPoolFormStatus
 }
 
+/**
+ * A candidate as seen inside a pool. `id` is the real candidate id, so a row
+ * links straight to /candidates/{id} — pools and the Candidates module describe
+ * the same people, never parallel copies.
+ */
 export interface PoolCandidate {
   id: string
   poolId: string
   name: string
+  initials: string
+  avatarColor: string
   stage: PoolCandidateStage
-  /** Free text — 'Referral', 'Career Site', 'LinkedIn', 'Event Form', 'General Application'. */
+  /** Where they came from — mirrors the candidate's first source. */
   appliedVia: string
+  /** Null for spontaneous applicants, who applied without a specific role. */
   jobTitle: string | null
   email: string
-  phone: string | null
-  location: string
   /** 0–100, or null when the candidate has not been scored. */
   aiScore: number | null
   evalScore: number | null
