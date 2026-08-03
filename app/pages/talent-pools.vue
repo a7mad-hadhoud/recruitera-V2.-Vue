@@ -2,13 +2,13 @@
 import { computed, ref, watch } from 'vue'
 import { Archive, MoreHorizontal, Pencil, Pin, Plus, RotateCcw, Trash2, Users } from 'lucide-vue-next'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
-import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import {
-  BrandAvatarInitials, BrandButton, BrandCountBadge, BrandDataTable,
-  BrandEmptyState, BrandPageTitle, BrandSearchBar, BrandStatusBadge,
+  BrandAvatarInitials, BrandButton, BrandDataTable,
+  BrandEmptyState, BrandPageTitle, BrandSearchBar,
 } from '~/components/brand'
+import { POOL_CATEGORY, poolCategoryDetail } from '~/components/talent-pools/poolCategory'
 import PoolConfirmDialog from '~/components/talent-pools/PoolConfirmDialog.vue'
 import PoolDeleteDialog from '~/components/talent-pools/PoolDeleteDialog.vue'
 import PoolFormDialog from '~/components/talent-pools/PoolFormDialog.vue'
@@ -67,7 +67,12 @@ const visiblePools = computed(() => {
     .filter(p => !category.value || p.category === category.value)
     .filter(p => !assignee.value || p.members.includes(assignee.value))
     .filter(p => !q || p.name.toLowerCase().includes(q))
-    .sort((a, b) => Number(b.pinned) - Number(a.pinned))
+    // System pool first, then pinned, then newest — matches the prototype's ordering.
+    .sort((a, b) =>
+      Number(!!b.system) - Number(!!a.system)
+      || Number(b.pinned) - Number(a.pinned)
+      || b.created.localeCompare(a.created),
+    )
 })
 
 const hasFilters = computed(() => !!(search.value || category.value || assignee.value))
@@ -78,16 +83,15 @@ function resetFilters() {
   assignee.value = ''
 }
 
-const CATEGORY_LABELS: Record<TalentPool['category'], string> = {
-  general: 'General',
-  department: 'Department',
-  event: 'Event',
-}
+// Table header cells: 18px gutters and the muted 12.5px label the prototype uses,
+// rather than the shadcn defaults.
+const HEAD_CLASS = 'px-[18px] py-3 h-auto text-[12.5px] font-semibold text-[var(--brand-text-secondary)]'
 
-function categoryLabel(p: TalentPool) {
-  if (p.category === 'department' && p.department) return p.department
-  if (p.category === 'event' && p.event) return p.event
-  return CATEGORY_LABELS[p.category]
+function formStatusBadge(p: TalentPool) {
+  if (p.category !== 'event' || !p.formStatus) return null
+  return p.formStatus === 'live'
+    ? { label: 'Form Live', bg: 'var(--brand-success-bg)', text: 'var(--brand-success)' }
+    : { label: 'Form Draft', bg: 'var(--brand-category-general-bg)', text: 'var(--brand-category-general-text)' }
 }
 
 // ─────────────── Create / edit ───────────────
@@ -214,17 +218,30 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
       </BrandButton>
     </div>
 
-    <!-- Tabs -->
-    <Tabs v-model="tab">
-      <TabsList class="border-b border-[var(--brand-border-light)]">
-        <TabsTrigger value="active" class="gap-2">
-          Active Talent Pools <BrandCountBadge :count="activeCount" />
-        </TabsTrigger>
-        <TabsTrigger value="archived" class="gap-2">
-          Archived Talent Pools <BrandCountBadge :count="archivedCount" />
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+    <!-- Tabs — underline style, matching the rest of the product -->
+    <div class="flex gap-0 border-b border-[var(--brand-border-light)]">
+      <button
+        v-for="t in ([
+          { value: 'active', label: 'Active Talent Pools', count: activeCount },
+          { value: 'archived', label: 'Archived Talent Pools', count: archivedCount },
+        ] as const)"
+        :key="t.value"
+        type="button"
+        class="flex items-center gap-[7px] border-0 border-b-[2.5px] pr-[22px] py-[7px] text-[13.5px] outline-none -mb-[1px] transition-colors whitespace-nowrap"
+        :class="tab === t.value
+          ? 'border-[var(--brand-teal)] text-[var(--brand-text)] font-bold'
+          : 'border-transparent text-[var(--brand-text-quiet)] font-semibold hover:text-[var(--brand-text)]'"
+        @click="tab = t.value"
+      >
+        {{ t.label }}
+        <span
+          class="rounded-full px-[7px] py-px text-[11.5px] font-bold"
+          :class="tab === t.value
+            ? 'bg-[var(--brand-lime-active-bg)] text-[var(--brand-olive)]'
+            : 'bg-[var(--brand-badge-settings-bg)] text-[var(--brand-text-muted)]'"
+        >{{ t.count }}</span>
+      </button>
+    </div>
 
     <!-- Toolbar -->
     <div class="flex items-center gap-2.5 flex-wrap">
@@ -255,44 +272,78 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     <!-- Table -->
     <BrandDataTable v-if="visiblePools.length">
       <template #header>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Talent Pool Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead class="text-center">Total Talents</TableHead>
-            <TableHead>Creation Date</TableHead>
-            <TableHead>Team Members</TableHead>
-            <TableHead class="w-[44px]" />
+        <TableHeader class="sticky top-0 z-10 bg-[var(--brand-canvas)]">
+          <TableRow class="hover:bg-transparent border-b border-[var(--brand-border-light)]">
+            <TableHead :class="HEAD_CLASS">Talent Pool Name</TableHead>
+            <TableHead :class="HEAD_CLASS">Category</TableHead>
+            <TableHead :class="[HEAD_CLASS, 'text-center']">Total Talents</TableHead>
+            <TableHead :class="HEAD_CLASS">Creation Date</TableHead>
+            <TableHead :class="HEAD_CLASS">Team Members</TableHead>
+            <TableHead :class="[HEAD_CLASS, 'w-[44px]']" />
           </TableRow>
         </TableHeader>
       </template>
       <TableBody>
-        <TableRow v-for="p in visiblePools" :key="p.id">
+        <TableRow
+          v-for="p in visiblePools"
+          :key="p.id"
+          class="cursor-pointer border-b border-[var(--brand-border-hairline)] last:border-b-0 hover:bg-[var(--brand-canvas)] [&>td]:px-[18px] [&>td]:py-3 [&>td]:align-middle [&>td]:text-[13.5px]"
+        >
+          <!-- Name: category icon tile + pin + status dot + name + badges, description beneath -->
           <TableCell>
-            <span class="flex items-center gap-1.5">
-              <Pin v-if="p.pinned" class="w-3 h-3 shrink-0 text-[var(--brand-text-quiet)]" fill="currentColor" :stroke-width="0" />
-              <span class="font-semibold text-[var(--brand-text)]">{{ p.name }}</span>
-              <BrandStatusBadge v-if="p.system" label="System" tone="neutral" />
-              <BrandStatusBadge v-if="p.formStatus" :label="p.formStatus === 'live' ? 'Form live' : 'Form draft'" :tone="p.formStatus === 'live' ? 'live' : 'expired'" variant="dot" />
+            <span class="flex items-center gap-3">
+              <span
+                class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center shrink-0"
+                :style="{ background: POOL_CATEGORY[p.category].bg, color: POOL_CATEGORY[p.category].text }"
+              >
+                <component :is="POOL_CATEGORY[p.category].icon" class="w-4 h-4" :stroke-width="1.7" />
+              </span>
+              <span class="min-w-0">
+                <span class="flex items-center font-bold text-[var(--brand-text)]">
+                  <Pin v-if="p.pinned" class="w-[13px] h-[13px] mr-1.5 shrink-0 text-[var(--brand-pin)]" fill="currentColor" :stroke-width="0" />
+                  <span class="w-[7px] h-[7px] mr-[7px] rounded-full shrink-0 bg-[var(--brand-success)]" />
+                  {{ p.name }}
+                  <span
+                    v-if="p.system"
+                    class="ml-2 rounded-[5px] px-1.5 py-0.5 text-[10px] font-bold"
+                    :style="{ background: 'var(--brand-category-general-bg)', color: 'var(--brand-category-general-text)' }"
+                  >System</span>
+                  <span
+                    v-if="formStatusBadge(p)"
+                    class="ml-2 rounded-[5px] px-1.5 py-0.5 text-[10px] font-bold"
+                    :style="{ background: formStatusBadge(p)!.bg, color: formStatusBadge(p)!.text }"
+                  >{{ formStatusBadge(p)!.label }}</span>
+                </span>
+                <span class="block mt-0.5 max-w-[420px] truncate text-[12.5px] text-[var(--brand-text-quiet)]">{{ p.description }}</span>
+              </span>
             </span>
-            <span class="block mt-0.5 text-[12.5px] text-[var(--brand-text-quiet)] line-clamp-1">{{ p.description }}</span>
           </TableCell>
-          <TableCell>{{ categoryLabel(p) }}</TableCell>
-          <TableCell class="text-center tabular-nums">{{ p.total }}</TableCell>
-          <TableCell>{{ formatDate(p.created) }}</TableCell>
+
+          <!-- Category: coloured pill + the department / event it belongs to -->
           <TableCell>
-            <span class="flex items-center -space-x-1.5">
+            <span
+              class="inline-flex items-center rounded-[6px] px-2.5 py-[3px] text-[11.5px] font-bold"
+              :style="{ background: POOL_CATEGORY[p.category].bg, color: POOL_CATEGORY[p.category].text }"
+            >{{ POOL_CATEGORY[p.category].label }}</span>
+            <span class="block mt-1 text-[12px] text-[var(--brand-text-quiet)]">{{ poolCategoryDetail(p) }}</span>
+          </TableCell>
+
+          <TableCell class="text-center font-bold tabular-nums">{{ p.total }}</TableCell>
+          <TableCell class="text-[var(--brand-text-muted)]">{{ formatDate(p.created) }}</TableCell>
+          <TableCell>
+            <span class="flex items-center">
               <BrandAvatarInitials
-                v-for="id in p.members"
+                v-for="(id, i) in p.members"
                 :key="id"
                 :initials="initialsOf(memberById(id)?.name ?? '?')"
                 size="sm"
                 :bg="memberById(id)?.avatarBg"
                 :color="memberById(id)?.avatarText"
+                :class="['ring-2 ring-[var(--brand-surface-white)]', i > 0 ? '-ml-2' : '']"
               />
             </span>
           </TableCell>
-          <TableCell>
+          <TableCell class="text-right">
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <BrandButton variant="ghost" size="icon" :aria-label="`Actions for ${p.name}`">

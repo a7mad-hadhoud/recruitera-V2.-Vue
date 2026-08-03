@@ -97,6 +97,16 @@
   --brand-badge-settings-bg: #eef1ea;             /* settings table count badge (jobs, etc) */
   --brand-badge-settings-text: #3a5c2e;
 
+  /* Talent-pool category identity — the 34px icon tile and the category pill share
+     one colour per category (ground truth: Recruitera Talent Pools.html) */
+  --brand-category-general-bg: #e9edf7;
+  --brand-category-general-text: #3a5a9e;
+  --brand-category-department-bg: #eaf1e4;
+  --brand-category-department-text: #3a5c2e;
+  --brand-category-event-bg: #f2ecfb;
+  --brand-category-event-text: #7040a6;
+  --brand-pin: #c9930a;                           /* pinned-row pin icon */
+
   /* Settings module — modal / dropdown / toast (ground truth: Recruitera Settings Standalone.html) */
   --brand-settings-danger: #c0392b;               /* delete/remove text + icon */
   --brand-settings-danger-hover-bg: #fff0ee;      /* delete row hover in dropdowns */
