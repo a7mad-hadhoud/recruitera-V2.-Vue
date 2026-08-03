@@ -13,6 +13,7 @@ import PoolAddCandidateDialog from '~/components/talent-pools/PoolAddCandidateDi
 import type { AddCandidateMode } from '~/components/talent-pools/PoolAddCandidateDialog.vue'
 import PoolConfirmDialog from '~/components/talent-pools/PoolConfirmDialog.vue'
 import PoolDetail from '~/components/talent-pools/PoolDetail.vue'
+import PoolFormBuilderDialog from '~/components/talent-pools/PoolFormBuilderDialog.vue'
 import PoolMoveDialog from '~/components/talent-pools/PoolMoveDialog.vue'
 import type { MoveOption, MoveTarget } from '~/components/talent-pools/PoolMoveDialog.vue'
 import { useJobs } from '~/composables/useJobs'
@@ -21,7 +22,7 @@ import PoolFormDialog from '~/components/talent-pools/PoolFormDialog.vue'
 import type { DeleteDestination } from '~/components/talent-pools/PoolDeleteDialog.vue'
 import { useTalentPools } from '~/composables/useTalentPools'
 import { useTeamMembers } from '~/composables/useTeam'
-import type { PoolCandidate, TalentPool } from '~/types'
+import type { PoolCandidate, PoolFormConfig, TalentPool } from '~/types'
 
 definePageMeta({ layout: 'default' })
 
@@ -84,6 +85,18 @@ const activePoolCandidates = computed(() =>
  */
 function openCandidateProfile(c: PoolCandidate) {
   return navigateTo({ path: `/candidates/${c.id}`, query: { from: route.fullPath } })
+}
+
+// ─────────────── Application form (event pools) ───────────────
+const formBuilderOpen = ref(false)
+
+function publishPoolForm(config: PoolFormConfig) {
+  const pool = activePool.value
+  if (!pool) return
+  pool.form = config
+  pool.formStatus = 'live'
+  formBuilderOpen.value = false
+  toast.success(`Application form published for ${pool.name}.`)
 }
 
 // ─────────────── Move candidates ───────────────
@@ -352,7 +365,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     @archive="requestArchive(activePool)"
     @restore="requestRestore(activePool)"
     @remove="requestDelete(activePool)"
-    @open-form="() => {}"
+    @open-form="formBuilderOpen = true"
     @add-candidate="m => (addMode = m)"
     @open-candidate="openCandidateProfile"
     @move-to-pool="ids => requestMove('pool', ids)"
@@ -577,6 +590,13 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
       :pool-name="activePool?.name ?? ''"
       @add="addManualCandidate"
       @import="importCandidates"
+    />
+
+    <PoolFormBuilderDialog
+      v-if="activePool"
+      v-model="formBuilderOpen"
+      :pool="activePool"
+      @publish="publishPoolForm"
     />
 
     <PoolMoveDialog

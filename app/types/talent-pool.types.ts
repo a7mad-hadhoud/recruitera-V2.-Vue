@@ -6,6 +6,26 @@ export type TalentPoolFormStatus = 'live' | 'draft'
 export type PoolCandidateStage
   = 'New' | 'Applied' | 'Screened' | 'Interview' | 'Offer' | 'Reference check'
 
+export type PoolFormQuestionType
+  = 'Short Text' | 'Long Text' | 'Single Select' | 'Multi Select' | 'Yes / No' | 'Number'
+
+export interface PoolFormQuestion {
+  id: string
+  label: string
+  type: PoolFormQuestionType
+  required: boolean
+}
+
+/**
+ * The public application form an event pool can publish. Full Name and Email are
+ * always on it and cannot be removed; phone and résumé are opt-in, and anything
+ * else is a custom question.
+ */
+export interface PoolFormConfig {
+  optional: { phone: boolean; resume: boolean }
+  questions: PoolFormQuestion[]
+}
+
 export interface TalentPool {
   id: string
   name: string
@@ -29,6 +49,7 @@ export interface TalentPool {
   /** Pinned pools sort above the rest within their tab. */
   pinned: boolean
   formStatus?: TalentPoolFormStatus
+  form?: PoolFormConfig
 }
 
 /**
