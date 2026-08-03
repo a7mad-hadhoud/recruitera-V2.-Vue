@@ -270,7 +270,9 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     </div>
 
     <!-- Table -->
-    <BrandDataTable v-if="visiblePools.length">
+    <!-- BrandDataTable ships the border, radius and shadow but no surface; the pools
+         table reads as a white card over the canvas, same as the prototype. -->
+    <BrandDataTable v-if="visiblePools.length" class="bg-[var(--brand-surface-white)]">
       <template #header>
         <TableHeader class="sticky top-0 z-10 bg-[var(--brand-canvas)]">
           <TableRow class="hover:bg-transparent border-b border-[var(--brand-border-light)]">
