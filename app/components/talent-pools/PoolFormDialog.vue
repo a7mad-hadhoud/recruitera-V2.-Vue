@@ -108,7 +108,8 @@ function save() {
   })
 }
 
-const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] px-3.5 py-2.5 text-[13.5px] text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-quiet)] focus:border-[var(--brand-teal)]'
+// Mirrors the prototype's .s-input: 14px text, 1.5px border, 11px radius.
+const FIELD_CLASS = 'w-full rounded-[11px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-[13px] py-2.5 text-[14px] text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-quiet)] focus:border-[var(--brand-teal)]'
 </script>
 
 <template>
@@ -118,12 +119,12 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
     scrollable
     @update:model-value="v => emit('update:modelValue', v)"
   >
-    <p class="text-[13px] text-[var(--brand-text-quiet)] -mt-4 mb-6">
+    <p class="text-[13px] text-[var(--brand-text-quiet)] -mt-4 mb-5">
       Organize candidates by department or capture them at an event.
     </p>
 
     <!-- Name -->
-    <div class="mb-5">
+    <div class="mb-4">
       <label for="pool-name" class="block text-[13.5px] font-bold text-[var(--brand-text)] mb-2">
         Talent Pool Name <span class="text-[var(--brand-settings-danger)]">*</span>
       </label>
@@ -134,10 +135,12 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
     </div>
 
     <!-- Category -->
-    <div class="mb-5">
+    <div class="mb-4">
       <span class="block text-[13.5px] font-bold text-[var(--brand-text)] mb-2">
         Category <span class="text-[var(--brand-settings-danger)]">*</span>
       </span>
+      <!-- Both options split the dialog width, as in the prototype — not two small
+           chips floated to the left. -->
       <div class="flex gap-2.5">
         <button
           v-for="opt in ([
@@ -146,7 +149,7 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
           ] as const)"
           :key="opt.value"
           type="button"
-          class="inline-flex items-center gap-2 rounded-[10px] border px-3.5 py-2.5 text-[13.5px] font-semibold transition-colors"
+          class="flex-1 inline-flex items-center justify-center gap-[7px] rounded-[11px] border-[1.5px] px-3.5 py-[11px] text-[13.5px] font-bold transition-colors"
           :class="form.category === opt.value
             ? 'border-[var(--brand-lime)]/55 bg-[var(--brand-lime-active-bg)] text-[var(--brand-olive)]'
             : 'border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] text-[var(--brand-text-muted)] hover:bg-[var(--brand-lime-tint-hover)]'"
@@ -162,12 +165,12 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
     </div>
 
     <!-- Department (conditional) -->
-    <div v-if="form.category === 'department'" class="mb-5">
+    <div v-if="form.category === 'department'" class="mb-4">
       <span class="block text-[13.5px] font-bold text-[var(--brand-text)] mb-2">
         Department <span class="text-[var(--brand-settings-danger)]">*</span>
       </span>
       <Select v-model="form.department">
-        <SelectTrigger class="w-full h-auto py-2.5 text-[13.5px]">
+        <SelectTrigger class="w-full h-auto rounded-[11px] border-[1.5px] border-[var(--brand-border)] px-[13px] py-2.5 text-[14px]">
           <SelectValue placeholder="Select a department…" />
         </SelectTrigger>
         <SelectContent>
@@ -180,7 +183,7 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
     </div>
 
     <!-- Event (conditional) -->
-    <div v-if="form.category === 'event'" class="mb-5">
+    <div v-if="form.category === 'event'" class="mb-4">
       <label for="pool-event" class="block text-[13.5px] font-bold text-[var(--brand-text)] mb-2">
         Event Name <span class="text-[var(--brand-settings-danger)]">*</span>
       </label>
@@ -191,7 +194,7 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
     </div>
 
     <!-- Description -->
-    <div class="mb-5">
+    <div class="mb-4">
       <label for="pool-desc" class="block text-[13.5px] font-bold text-[var(--brand-text)] mb-2">
         Description <span class="font-medium text-[13px] text-[var(--brand-text-quiet)]">(optional)</span>
       </label>
@@ -207,7 +210,7 @@ const FIELD_CLASS = 'w-full rounded-[10px] border border-[var(--brand-border-lig
         <PopoverTrigger as-child>
           <button
             type="button"
-            class="w-full flex items-center gap-2 rounded-[10px] border border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] px-3 py-2 text-left outline-none focus:border-[var(--brand-teal)]"
+            class="w-full min-h-[46px] flex items-center gap-2 rounded-[11px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-3 py-[7px] text-left outline-none focus:border-[var(--brand-teal)]"
           >
             <span v-if="selectedMembers.length" class="flex flex-wrap gap-1.5 flex-1">
               <span

@@ -9,6 +9,8 @@ import {
   BrandEmptyState, BrandPageTitle, BrandSearchBar,
 } from '~/components/brand'
 import { POOL_CATEGORY, poolCategoryDetail } from '~/components/talent-pools/poolCategory'
+import PoolAddCandidateDialog from '~/components/talent-pools/PoolAddCandidateDialog.vue'
+import type { AddCandidateMode } from '~/components/talent-pools/PoolAddCandidateDialog.vue'
 import PoolConfirmDialog from '~/components/talent-pools/PoolConfirmDialog.vue'
 import PoolDetail from '~/components/talent-pools/PoolDetail.vue'
 import PoolDeleteDialog from '~/components/talent-pools/PoolDeleteDialog.vue'
@@ -79,6 +81,43 @@ const activePoolCandidates = computed(() =>
  */
 function openCandidateProfile(c: PoolCandidate) {
   return navigateTo({ path: `/candidates/${c.id}`, query: { from: route.fullPath } })
+}
+
+// ─────────────── Add candidates ───────────────
+const addMode = ref<AddCandidateMode | null>(null)
+const addOpen = computed({
+  get: () => addMode.value !== null,
+  set: v => !v && (addMode.value = null),
+})
+
+function addManualCandidate(payload: { name: string; email: string; phone: string | null }) {
+  const pool = activePool.value
+  if (!pool) return
+  const initials = payload.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  candidates.value.unshift({
+    id: `c-${Date.now()}`,
+    poolId: pool.id,
+    name: payload.name,
+    initials,
+    avatarColor: 'var(--brand-avatar-3)',
+    stage: 'New',
+    appliedVia: 'Added manually',
+    jobTitle: null,
+    email: payload.email,
+    aiScore: null,
+    evalScore: null,
+    tags: [],
+    date: new Date().toISOString().slice(0, 10),
+  })
+  pool.total += 1
+  addMode.value = null
+  toast.success(`${payload.name} added to ${pool.name}.`)
+}
+
+function importCandidates({ fileNames }: { mode: AddCandidateMode; fileNames: string[] }) {
+  addMode.value = null
+  // No parser behind the mocks yet — acknowledge the upload without inventing rows.
+  toast.success(`${fileNames.length} file${fileNames.length === 1 ? '' : 's'} queued for import.`)
 }
 
 function deleteCandidates(ids: string[]) {
@@ -253,7 +292,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     @restore="requestRestore(activePool)"
     @remove="requestDelete(activePool)"
     @open-form="() => {}"
-    @add-candidate="() => {}"
+    @add-candidate="m => (addMode = m)"
     @open-candidate="openCandidateProfile"
     @move-to-pool="() => {}"
     @move-to-job="() => {}"
@@ -469,6 +508,15 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
   >
     This will move <strong>{{ restoreTarget?.name }}</strong> back to the Active tab with all data intact.
   </PoolConfirmDialog>
+
+    <PoolAddCandidateDialog
+      v-if="addMode"
+      v-model="addOpen"
+      :mode="addMode"
+      :pool-name="activePool?.name ?? ''"
+      @add="addManualCandidate"
+      @import="importCandidates"
+    />
 
     <PoolDeleteDialog
       v-model="deleteOpen"

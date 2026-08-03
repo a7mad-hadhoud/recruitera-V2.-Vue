@@ -6,15 +6,18 @@
   no stage, scores or tags, since nothing has triaged those candidates yet.
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import {
-  ArrowRight, Briefcase, ChevronRight, Filter, ListFilter, MoreVertical,
-  Pencil, Plus, Trash2, Users,
+  ArrowRight, Briefcase, ChevronRight, Download, FileText, Files, Filter,
+  ListFilter, MoreVertical, Pencil, Plus, RotateCcw, Trash2, UserPlus, Users,
 } from 'lucide-vue-next'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { BrandAvatarInitials, BrandButton, BrandDataTable, BrandEmptyState, BrandLimeCheckbox, BrandSearchBar } from '~/components/brand'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { POOL_CATEGORY, STAGE_TONE, poolCategoryDetail, poolNeedsJobTitle, scoreTone } from './poolCategory'
+import type { AddCandidateMode } from './PoolAddCandidateDialog.vue'
 import type { PoolCandidate, TalentPool } from '~/types'
 
 const props = defineProps<{
@@ -29,7 +32,7 @@ const emit = defineEmits<{
   restore: []
   remove: []
   openForm: []
-  addCandidate: []
+  addCandidate: [mode: AddCandidateMode]
   openCandidate: [c: PoolCandidate]
   moveToPool: [ids: string[]]
   moveToJob: [ids: string[]]
@@ -48,11 +51,48 @@ const isSystem = computed(() => !!props.pool.system)
 const showJobTitle = computed(() => poolNeedsJobTitle(props.pool))
 const category = computed(() => POOL_CATEGORY[props.pool.category])
 
+// Filter panel. The prototype filters on location too, but the candidate records
+// this pool is built from carry no location, so Applied Via takes that slot.
+const filters = reactive({ dateFrom: '', dateTo: '', jobTitle: '', appliedVia: '', tag: '' })
+
+const activeFilterCount = computed(() =>
+  Object.values(filters).filter(Boolean).length,
+)
+
+function resetFilters() {
+  filters.dateFrom = ''
+  filters.dateTo = ''
+  filters.jobTitle = ''
+  filters.appliedVia = ''
+  filters.tag = ''
+}
+
+/** Distinct, sorted values for one filter dropdown, drawn from this pool only. */
+function distinct(pick: (c: PoolCandidate) => string | string[] | null) {
+  const seen = new Set<string>()
+  for (const c of props.candidates) {
+    const v = pick(c)
+    if (Array.isArray(v)) v.forEach(x => x && seen.add(x))
+    else if (v) seen.add(v)
+  }
+  return [...seen].sort()
+}
+
+const jobTitleOptions = computed(() => distinct(c => c.jobTitle))
+const appliedViaOptions = computed(() => distinct(c => c.appliedVia))
+const tagOptions = computed(() => distinct(c => c.tags))
+
 const visible = computed(() => {
   const q = search.value.trim().toLowerCase()
-  const rows = props.candidates.filter(c =>
-    !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q),
-  )
+  const rows = props.candidates.filter((c) => {
+    if (q && !c.name.toLowerCase().includes(q) && !c.email.toLowerCase().includes(q)) return false
+    if (filters.dateFrom && c.date < filters.dateFrom) return false
+    if (filters.dateTo && c.date > filters.dateTo) return false
+    if (filters.jobTitle && c.jobTitle !== filters.jobTitle) return false
+    if (filters.appliedVia && c.appliedVia !== filters.appliedVia) return false
+    if (filters.tag && !c.tags.includes(filters.tag)) return false
+    return true
+  })
   return [...rows].sort((a, b) => {
     const av = sortCol.value === 'name' ? a.name.toLowerCase() : a.date
     const bv = sortCol.value === 'name' ? b.name.toLowerCase() : b.date
@@ -83,6 +123,8 @@ function formatDate(iso: string) {
 
 const HEAD_CLASS = 'px-[18px] py-3 h-auto text-[12.5px] font-semibold text-[var(--brand-text-secondary)]'
 const PILL_CLASS = 'inline-flex items-center rounded-[6px] px-2.5 py-[3px] text-[12px] font-bold'
+const FILTER_LABEL = 'block mb-1.5 text-[12px] font-bold text-[var(--brand-text)]'
+const FILTER_FIELD = 'w-full rounded-[9px] border-[1.5px] border-[var(--brand-border)] bg-[var(--brand-surface-white)] px-2 py-1.5 text-[12.5px] text-[var(--brand-text)] outline-none focus:border-[var(--brand-teal)]'
 </script>
 
 <template>
@@ -157,14 +199,72 @@ const PILL_CLASS = 'inline-flex items-center rounded-[6px] px-2.5 py-[3px] text-
       <span class="text-[13px] text-[var(--brand-text-muted)] whitespace-nowrap">
         {{ candidates.length }} candidate{{ candidates.length === 1 ? '' : 's' }}
       </span>
-      <BrandButton variant="outline" size="md" disabled>
-        <Filter class="w-3.5 h-3.5" />
-        Filters
-      </BrandButton>
-      <BrandButton v-if="!isSystem" variant="primary-teal" size="md" @click="emit('addCandidate')">
-        <Plus class="w-3.5 h-3.5" :stroke-width="2.2" />
-        Add Candidate
-      </BrandButton>
+      <Popover>
+        <PopoverTrigger as-child>
+          <BrandButton variant="outline" size="md">
+            <Filter class="w-3.5 h-3.5" />
+            Filters
+            <span
+              v-if="activeFilterCount"
+              class="ml-0.5 rounded-full bg-[var(--brand-olive)] px-1.5 py-px text-[10.5px] font-bold text-[var(--brand-surface-white)]"
+            >{{ activeFilterCount }}</span>
+          </BrandButton>
+        </PopoverTrigger>
+        <PopoverContent class="w-[280px] p-4" align="end">
+          <p class="mb-3 text-[14px] font-extrabold text-[var(--brand-text)]">Filters</p>
+
+          <span :class="FILTER_LABEL">Date of Application</span>
+          <div class="mb-3.5 flex gap-2">
+            <input v-model="filters.dateFrom" type="date" :class="FILTER_FIELD">
+            <input v-model="filters.dateTo" type="date" :class="FILTER_FIELD">
+          </div>
+
+          <template
+v-for="f in ([
+            { key: 'jobTitle', label: 'Job Titles', placeholder: 'Any job title', options: jobTitleOptions },
+            { key: 'appliedVia', label: 'Applied Via', placeholder: 'Any source', options: appliedViaOptions },
+            { key: 'tag', label: 'Tags', placeholder: 'Any tag', options: tagOptions },
+          ] as const)" :key="f.key">
+            <span :class="FILTER_LABEL">{{ f.label }}</span>
+            <Select v-model="filters[f.key]">
+              <SelectTrigger class="mb-3.5 w-full h-auto py-2 text-[13px]">
+                <SelectValue :placeholder="f.placeholder" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="o in f.options" :key="o" :value="o">{{ o }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </template>
+
+          <BrandButton variant="outline" size="sm" class="w-full justify-center" @click="resetFilters">
+            <RotateCcw class="w-3.5 h-3.5" />
+            Reset Filters
+          </BrandButton>
+        </PopoverContent>
+      </Popover>
+
+      <DropdownMenu v-if="!isSystem">
+        <DropdownMenuTrigger as-child>
+          <BrandButton variant="primary-teal" size="md">
+            <Plus class="w-3.5 h-3.5" :stroke-width="2.2" />
+            Add Candidate
+          </BrandButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem @click="emit('addCandidate', 'manual')">
+            <UserPlus class="w-4 h-4" /> Add Manually
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="emit('addCandidate', 'cv')">
+            <FileText class="w-4 h-4" /> CV Upload
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="emit('addCandidate', 'cv-multi')">
+            <Files class="w-4 h-4" /> Multiple CV Upload
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="emit('addCandidate', 'csv')">
+            <Download class="w-4 h-4" /> Import CSV File
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
 
     <!-- Bulk bar -->
