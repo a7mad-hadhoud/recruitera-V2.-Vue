@@ -127,6 +127,14 @@
   --brand-status-closed-text: #b02a2a;
   --brand-success: #3aab52;                       /* candidate profile: evaluation score good / sent checkmark */
   --brand-warning: #e8a33d;                        /* candidate profile: evaluation score mid */
+  /* Tinted companions to the two above — confirm-dialog icon tiles (restore / archive).
+     Danger already had --brand-settings-danger-hover-bg; these complete the set. */
+  --brand-success-bg: #e3f6ea;
+  --brand-warning-bg: #fdf3d8;
+  /* BrandToast, success variant. The error variant reuses --brand-settings-toast-bg
+     (same #b91c1c the settings blocking-delete toast already ships). */
+  --brand-toast-success-bg: #0f2e1c;
+  --brand-toast-success-text: #c7f7d8;
   --brand-track: #eceee7;                          /* candidate profile: gauge/progress-bar track */
   --brand-whatsapp: #25D366;                       /* WhatsApp brand green — chat header icon, send button */
   --brand-whatsapp-bubble: #dcf6df;                /* WhatsApp tab: outbound message bubble bg */
