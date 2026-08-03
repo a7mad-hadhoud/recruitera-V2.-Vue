@@ -13,6 +13,9 @@ import PoolAddCandidateDialog from '~/components/talent-pools/PoolAddCandidateDi
 import type { AddCandidateMode } from '~/components/talent-pools/PoolAddCandidateDialog.vue'
 import PoolConfirmDialog from '~/components/talent-pools/PoolConfirmDialog.vue'
 import PoolDetail from '~/components/talent-pools/PoolDetail.vue'
+import PoolMoveDialog from '~/components/talent-pools/PoolMoveDialog.vue'
+import type { MoveOption, MoveTarget } from '~/components/talent-pools/PoolMoveDialog.vue'
+import { useJobs } from '~/composables/useJobs'
 import PoolDeleteDialog from '~/components/talent-pools/PoolDeleteDialog.vue'
 import PoolFormDialog from '~/components/talent-pools/PoolFormDialog.vue'
 import type { DeleteDestination } from '~/components/talent-pools/PoolDeleteDialog.vue'
@@ -81,6 +84,64 @@ const activePoolCandidates = computed(() =>
  */
 function openCandidateProfile(c: PoolCandidate) {
   return navigateTo({ path: `/candidates/${c.id}`, query: { from: route.fullPath } })
+}
+
+// ─────────────── Move candidates ───────────────
+const { jobs } = useJobs()
+const moveTarget = ref<MoveTarget | null>(null)
+const moveIds = ref<string[]>([])
+
+const moveOpen = computed({
+  get: () => moveTarget.value !== null,
+  set: v => !v && (moveTarget.value = null),
+})
+
+const moveNames = computed(() =>
+  moveIds.value
+    .map(id => candidates.value.find(c => c.id === id && c.poolId === activePoolId.value)?.name)
+    .filter((n): n is string => !!n),
+)
+
+const moveDestinations = computed<MoveOption[]>(() => {
+  if (moveTarget.value === 'job') {
+    return jobs.value
+      .filter(j => j.status === 'published' || j.status === 'internal')
+      .map(j => ({ value: j.id, label: j.title, hint: j.department }))
+  }
+  return pools.value
+    .filter(p => !p.archived && p.id !== activePoolId.value)
+    .map(p => ({ value: p.id, label: p.name }))
+})
+
+function requestMove(target: MoveTarget, ids: string[]) {
+  moveIds.value = ids
+  moveTarget.value = target
+}
+
+function confirmMove(destination: string) {
+  const ids = moveIds.value
+  const from = activePool.value
+  const movingTo = moveTarget.value
+  // Read the count before mutating — moveNames is derived from the rows we are
+  // about to move out of this pool.
+  const count = moveNames.value.length || ids.length
+
+  if (movingTo === 'pool') {
+    const to = pools.value.find(p => p.id === destination)
+    for (const c of candidates.value) if (ids.includes(c.id) && c.poolId === from?.id) c.poolId = destination
+    if (from) from.total = Math.max(0, from.total - ids.length)
+    if (to) to.total += ids.length
+    toast.success(`${count} candidate(s) moved to ${to?.name ?? 'the destination'}.`)
+  }
+  else {
+    // Pipelines are not modelled behind the mocks yet, so the candidate stays in
+    // the pool and we only confirm the hand-off.
+    const job = jobs.value.find(j => j.id === destination)
+    toast.success(`${ids.length} candidate(s) sent to ${job?.title ?? 'the job'}.`)
+  }
+
+  moveTarget.value = null
+  moveIds.value = []
 }
 
 // ─────────────── Add candidates ───────────────
@@ -294,8 +355,8 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     @open-form="() => {}"
     @add-candidate="m => (addMode = m)"
     @open-candidate="openCandidateProfile"
-    @move-to-pool="() => {}"
-    @move-to-job="() => {}"
+    @move-to-pool="ids => requestMove('pool', ids)"
+    @move-to-job="ids => requestMove('job', ids)"
     @delete-candidates="deleteCandidates"
   />
 
@@ -516,6 +577,15 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
       :pool-name="activePool?.name ?? ''"
       @add="addManualCandidate"
       @import="importCandidates"
+    />
+
+    <PoolMoveDialog
+      v-if="moveTarget"
+      v-model="moveOpen"
+      :target="moveTarget"
+      :names="moveNames"
+      :destinations="moveDestinations"
+      @confirm="confirmMove"
     />
 
     <PoolDeleteDialog
