@@ -54,7 +54,20 @@ function formatDate(iso: string) {
 }
 
 // ─────────────── List <-> detail ───────────────
+// The open pool lives in the URL (?pool=p2) rather than in local state, so it can
+// be linked to, survives the back button, and gives the candidate profile an exact
+// place to return to when it closes.
+const route = useRoute()
 const activePoolId = ref<string | null>(null)
+
+watch(() => route.query.pool, (v) => {
+  activePoolId.value = typeof v === 'string' && v ? v : null
+}, { immediate: true })
+
+function openPool(id: string | null) {
+  return navigateTo({ path: '/talent-pools', query: id ? { pool: id } : {} })
+}
+
 const activePool = computed(() => pools.value.find(p => p.id === activePoolId.value) ?? null)
 const activePoolCandidates = computed(() =>
   candidates.value.filter(c => c.poolId === activePoolId.value),
@@ -65,7 +78,7 @@ const activePoolCandidates = computed(() =>
  * Candidates module already owns rather than a second, pool-only viewer.
  */
 function openCandidateProfile(c: PoolCandidate) {
-  return navigateTo(`/candidates/${c.id}`)
+  return navigateTo({ path: `/candidates/${c.id}`, query: { from: route.fullPath } })
 }
 
 function deleteCandidates(ids: string[]) {
@@ -224,7 +237,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
   pools.value = pools.value.filter(x => x.id !== p.id)
   deleteTarget.value = null
   // Deleting the pool you are standing in has to drop you back to the list.
-  if (activePoolId.value === p.id) activePoolId.value = null
+  if (activePoolId.value === p.id) openPool(null)
 }
 </script>
 
@@ -234,7 +247,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
       v-if="activePool"
     :pool="activePool"
     :candidates="activePoolCandidates"
-    @back="activePoolId = null"
+    @back="openPool(null)"
     @edit="openEdit(activePool)"
     @archive="requestArchive(activePool)"
     @restore="requestRestore(activePool)"
@@ -338,7 +351,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
           v-for="p in visiblePools"
           :key="p.id"
           class="cursor-pointer border-b border-[var(--brand-border-hairline)] last:border-b-0 hover:bg-[var(--brand-canvas)] [&>td]:px-[18px] [&>td]:py-3 [&>td]:align-middle [&>td]:text-[13.5px]"
-          @click="activePoolId = p.id"
+          @click="openPool(p.id)"
         >
           <!-- Name: category icon tile + pin + status dot + name + badges, description beneath -->
           <TableCell>
