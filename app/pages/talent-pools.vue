@@ -433,7 +433,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
         </SelectContent>
       </Select>
       <Select v-model="assignee">
-        <SelectTrigger class="w-[170px]"><SelectValue placeholder="Assigned to" /></SelectTrigger>
+        <SelectTrigger class="w-[170px]"><SelectValue placeholder="Created by" /></SelectTrigger>
         <SelectContent>
           <SelectItem v-for="m in team" :key="m.id" :value="m.id">{{ m.name }}</SelectItem>
         </SelectContent>
