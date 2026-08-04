@@ -1,6 +1,14 @@
 # Talent Pools — migration spec & component map
 
-**Status:** approved 2026-08-03 — decisions in §5.1, §4(b) and §5.3 are settled; §5.2 still open
+**Status:** delivered 2026-08-04 — every decision in §4(b), §5.1, §5.2 and §5.3 is settled and built.
+
+Two things landed that this spec did not anticipate. Pools are built on the real sample candidates
+in `candidates.handlers.ts` rather than an invented cast, so a pool row links straight to the
+profile the Candidates module already owns — the three pool names those candidate records referenced
+(`Engineering (Sample)`, `Rising stars (Sample)`, `Next recruitment - Q3 (Sample)`) exist now with
+the membership those profiles claim. And `pageTransition` in `nuxt.config.ts` had to be disabled: it
+silently broke every client-side route change app-wide, which is why opening a candidate from a pool
+did nothing until it was found.
 **Source of truth:** `Recruitera Talent Pools.html` (2,211 lines, standalone prototype, final iterated version)
 **Target:** `app/pages/talent-pools.vue` (currently an 11-line "Coming soon" stub)
 **Base branch:** `talent-pools-migration`, cut from `upstream/main`
@@ -221,10 +229,15 @@ in **Settings → Career Site** has been switched on. Because the standalone pag
 the prototype bridges the flag through `localStorage` (`recruitera_ga_enabled`,
 `recruitera_ga_pool_created`, `recruitera_ga_candidates`).
 
-Inside Nuxt this hack disappears — it becomes ordinary shared state through the MSW layer. But the
-behaviour needs confirming: should the General Application pool still be conditional on the Career
-Site setting, or always present? `app/pages/settings/career-site.vue` is a stub on `main`, so there
-is nothing to wire to yet.
+Inside Nuxt this hack disappears — it becomes ordinary shared state through the MSW layer.
+
+**Decided:** the pool ships **always present**, flagged `system: true` so it cannot be renamed,
+archived or deleted. Gating it on the Career Site setting was rejected for now because
+`app/pages/settings/career-site.vue` is still a stub — wiring the gate today would mean the pool
+never appears at all. Add the gate when that page is built.
+
+It holds the three sample candidates with no job assignment, and their rows show no job title:
+these are people who applied without a specific role, which is the whole point of the pool.
 
 ### 5.3 Scope split
 
