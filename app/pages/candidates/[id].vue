@@ -36,8 +36,20 @@ const id = computed(() => String(route.params.id))
 
 const { data: profile, isLoading } = useCandidateProfile(id)
 
+/**
+ * Where closing the overlay lands. Callers outside the Candidates module pass
+ * ?from= — a talent pool sends its own URL — so you return to the screen you
+ * opened the profile from instead of being dropped on the candidates list.
+ * Only same-origin paths are honoured; anything else falls back.
+ */
+const returnTo = computed(() => {
+  const from = route.query.from
+  const path = typeof from === 'string' ? from : ''
+  return path.startsWith('/') && !path.startsWith('//') ? path : '/candidates'
+})
+
 function close() {
-  router.push('/candidates')
+  router.push(returnTo.value)
 }
 
 // Prev/next-candidate rail — walks the same order the candidates table
@@ -84,7 +96,11 @@ function startSidebarResize(e: PointerEvent) {
 
 function goToCandidate(targetId: string | null) {
   if (!targetId) return
-  router.push(`/candidates/${targetId}`)
+  // Carry ?from= across prev/next so the return path survives browsing the rail.
+  router.push({
+    path: `/candidates/${targetId}`,
+    query: typeof route.query.from === 'string' ? { from: route.query.from } : {},
+  })
 }
 
 const TABS = ['Overview', 'Emails', 'WhatsApp', 'Events', 'Evaluation', 'Files', 'Activity'] as const
