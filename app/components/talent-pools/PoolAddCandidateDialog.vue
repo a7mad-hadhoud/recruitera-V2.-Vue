@@ -1,7 +1,6 @@
 <!--
-  Adding candidates to a pool. One dialog, four modes, matching the prototype's
-  Add Candidate menu: type someone in by hand, drop one CV, drop several, or
-  import a CSV. Only `manual` collects fields; the rest are file drops.
+  Adding candidates to a pool. One dialog, three modes: type someone in by hand,
+  drop a CV, or import a CSV. Only `manual` collects fields; the rest are file drops.
 -->
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
@@ -9,7 +8,7 @@ import { Download, FileText, UploadCloud } from 'lucide-vue-next'
 import { BrandButton } from '~/components/brand'
 import SettingsFormModal from '~/components/settings/SettingsFormModal.vue'
 
-export type AddCandidateMode = 'manual' | 'cv' | 'cv-multi' | 'csv'
+export type AddCandidateMode = 'manual' | 'cv' | 'csv'
 
 const props = defineProps<{
   modelValue: boolean
@@ -26,14 +25,12 @@ const emit = defineEmits<{
 const TITLES: Record<AddCandidateMode, string> = {
   'manual': 'Add Candidate Manually',
   'cv': 'Upload CV',
-  'cv-multi': 'Upload Multiple CVs',
   'csv': 'Import CSV File',
 }
 
 const HINTS: Record<AddCandidateMode, string> = {
   'manual': '',
   'cv': 'PDF or Word, up to 10 MB.',
-  'cv-multi': 'PDF or Word. Each file becomes one candidate.',
   'csv': 'One row per candidate. Download the template to see the expected columns.',
 }
 
@@ -139,14 +136,11 @@ const LABEL_CLASS = 'block text-[13.5px] font-bold text-[var(--brand-text)] mb-2
           class="w-7 h-7 text-[var(--brand-text-quiet)]"
           :stroke-width="1.5"
         />
-        <span class="text-[13.5px] font-bold text-[var(--brand-text)]">
-          {{ mode === 'cv-multi' ? 'Choose files' : 'Choose a file' }}
-        </span>
+        <span class="text-[13.5px] font-bold text-[var(--brand-text)]">Choose a file</span>
         <span class="text-[12.5px] text-[var(--brand-text-quiet)]">or drag and drop it here</span>
         <input
           type="file"
           class="sr-only"
-          :multiple="mode === 'cv-multi'"
           :accept="mode === 'csv' ? '.csv' : '.pdf,.doc,.docx'"
           @change="onFiles"
         >
@@ -158,7 +152,7 @@ const LABEL_CLASS = 'block text-[13.5px] font-bold text-[var(--brand-text)] mb-2
         </li>
       </ul>
       <p v-else-if="submitted" class="mt-2 text-[12.5px] text-[var(--brand-settings-danger)]">
-        Choose at least one file.
+        Choose a file.
       </p>
 
       <BrandButton v-if="mode === 'csv'" variant="ghost" size="sm" class="mt-3" @click="downloadTemplate">
