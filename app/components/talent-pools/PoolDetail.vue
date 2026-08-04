@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import {
-  ArrowRight, Briefcase, ChevronRight, Download, Eye, FileText, Files, Filter,
+  ArrowRight, Briefcase, ChevronRight, Download, Eye, FileText, Filter,
   ListFilter, MoreVertical, Pencil, Plus, RotateCcw, Trash2, UserPlus, Users, X,
 } from 'lucide-vue-next'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
@@ -235,9 +235,6 @@ const FILTER_FIELD = 'w-full rounded-[9px] border-[1.5px] border-[var(--brand-bo
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="emit('addCandidate', 'cv')">
                   <FileText class="w-4 h-4" /> CV Upload
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="emit('addCandidate', 'cv-multi')">
-                  <Files class="w-4 h-4" /> Multiple CV Upload
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="emit('addCandidate', 'csv')">
                   <Download class="w-4 h-4" /> Import CSV File
