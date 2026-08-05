@@ -12,6 +12,7 @@ import {
 } from '~/composables/useCandidateColumns'
 import { useCandidateSort } from '~/composables/useCandidateSort'
 import { useCandidateColumnWidths } from '~/composables/useCandidateColumnWidths'
+import { candidateKeywords } from '~/utils/candidateSearch'
 import type { Candidate, JobStatus } from '~/types'
 
 const props = defineProps<{ candidates: Candidate[]; isFetching?: boolean }>()
@@ -216,15 +217,16 @@ onBeforeUnmount(onResizeEnd)
               <span class="text-[13px] text-[var(--brand-text-muted)] whitespace-nowrap">{{ c.dateCreated }}</span>
             </template>
 
-            <!-- Source (pills) -->
+            <!-- Keywords (continuous searchable terms, synonym-expanded) -->
             <template v-else-if="col === 'source'">
-              <div v-if="c.sources.length" class="flex flex-wrap gap-1">
-                <Badge
-                  v-for="s in c.sources"
-                  :key="s"
-                  variant="secondary"
-                  class="bg-[var(--brand-lime-tint)] text-[var(--brand-text-secondary)] border-0 text-[11px] font-medium"
-                >{{ s }}</Badge>
+              <div
+                v-if="candidateKeywords(c).length"
+                class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] leading-snug text-[var(--brand-text-secondary)]"
+              >
+                <template v-for="(k, i) in candidateKeywords(c)" :key="k">
+                  <span v-if="i > 0" class="text-[var(--brand-text-quiet)] select-none">·</span>
+                  <span>{{ k }}</span>
+                </template>
               </div>
               <span v-else class="text-[13px] text-[var(--brand-text-quiet)]">—</span>
             </template>
