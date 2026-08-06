@@ -10,6 +10,8 @@ const site = useCareerSite()
 const { t } = useCareerSiteI18n()
 const { jobs: allJobs } = useJobs()
 const publishedJobs = computed(() => allJobs.value.filter(j => j.status === 'published'))
+const portal = useEmployeePortalStore()
+onMounted(() => portal.restore())
 </script>
 
 <template>

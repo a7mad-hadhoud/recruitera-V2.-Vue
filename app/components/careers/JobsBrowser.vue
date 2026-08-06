@@ -74,6 +74,14 @@ function daysAgo(iso: string) {
         </select>
       </div>
       <div>
+        <label class="mb-1 block text-[12px] font-semibold text-[var(--brand-preview-text-label)]">{{ t('filter_job_type') }}</label>
+        <select v-model="jobType" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
+          <option value="">{{ t('filter_job_type') }}</option>
+          <option value="white">{{ t('filter_job_type_white') }}</option>
+          <option value="blue">{{ t('filter_job_type_blue') }}</option>
+        </select>
+      </div>
+      <div>
         <label class="mb-1 block text-[12px] font-semibold text-[var(--brand-preview-text-label)]">{{ t('filter_category') }}</label>
         <select v-model="category" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
           <option value="">{{ t('filter_choose_category') }}</option>
@@ -92,14 +100,6 @@ function daysAgo(iso: string) {
         <select v-model="careerLevel" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
           <option value="">{{ t('filter_choose_level') }}</option>
           <option v-for="lv in CAREER_SITE_CAREER_LEVELS" :key="lv" :value="lv">{{ lv }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="mb-1 block text-[12px] font-semibold text-[var(--brand-preview-text-label)]">{{ t('filter_job_type') }}</label>
-        <select v-model="jobType" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
-          <option value="">{{ t('filter_job_type') }}</option>
-          <option value="white">{{ t('filter_job_type_white') }}</option>
-          <option value="blue">{{ t('filter_job_type_blue') }}</option>
         </select>
       </div>
       <button
@@ -190,6 +190,11 @@ function daysAgo(iso: string) {
           <option value="">{{ t('filter_choose_location') }}</option>
           <option v-for="loc in locationsData?.data ?? []" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
         </select>
+        <select v-model="jobType" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
+          <option value="">{{ t('filter_job_type') }}</option>
+          <option value="white">{{ t('filter_job_type_white') }}</option>
+          <option value="blue">{{ t('filter_job_type_blue') }}</option>
+        </select>
         <select v-model="category" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
           <option value="">{{ t('filter_choose_category') }}</option>
           <option v-for="c in CAREER_SITE_CATEGORIES" :key="c" :value="c">{{ c }}</option>
@@ -201,11 +206,6 @@ function daysAgo(iso: string) {
         <select v-model="careerLevel" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
           <option value="">{{ t('filter_choose_level') }}</option>
           <option v-for="lv in CAREER_SITE_CAREER_LEVELS" :key="lv" :value="lv">{{ lv }}</option>
-        </select>
-        <select v-model="jobType" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-2.5 py-2 text-[13px]">
-          <option value="">{{ t('filter_job_type') }}</option>
-          <option value="white">{{ t('filter_job_type_white') }}</option>
-          <option value="blue">{{ t('filter_job_type_blue') }}</option>
         </select>
         <button type="button" class="mt-2 rounded-xl px-4 py-2.5 text-[13.5px] font-bold text-white" :style="{ background: site.primaryColor }" @click="mobileFiltersOpen = false">Apply filters</button>
         <button type="button" class="text-[12.5px] font-semibold underline" :style="{ color: site.primaryColor }" @click="clearFilters">Clear filters</button>

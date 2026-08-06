@@ -21,6 +21,7 @@ import {
   Smartphone,
   Trash2,
   Upload,
+  X,
   Youtube,
 } from 'lucide-vue-next'
 import { onBeforeRouteLeave } from 'vue-router'
@@ -29,6 +30,7 @@ import { Switch } from '~/components/ui/switch'
 import { Input } from '~/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
+import SettingsConfirmDialog from '~/components/settings/SettingsConfirmDialog.vue'
 import { CAREER_SITE_VALUE_ICONS } from '~/composables/useCareerSite'
 import type { CareerSiteTestimonial, CareerSiteValue } from '~/composables/useCareerSite'
 
@@ -54,6 +56,11 @@ function onCoverChange(e: Event) {
   const reader = new FileReader()
   reader.onload = () => { coverUrl.value = String(reader.result) }
   reader.readAsDataURL(file)
+}
+const removeCoverConfirmOpen = ref(false)
+function confirmRemoveCover() {
+  coverUrl.value = ''
+  removeCoverConfirmOpen.value = false
 }
 
 // ─────────────── Accordions ───────────────
@@ -242,7 +249,7 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload))
 
 // ─────────────── Preview device (mobile-first) ───────────────
-const previewMode = ref<'desktop' | 'mobile'>('mobile')
+const previewMode = ref<'desktop' | 'mobile'>('desktop')
 
 // ─────────────── Jobs — same published jobs the public site shows ───────────────
 // Pulls from the real Jobs module (useJobs) rather than an invented list, so this
@@ -351,17 +358,28 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
               </div>
               <div class="flex-1 space-y-1.5">
                 <div class="text-[12px] font-semibold text-[var(--brand-text-secondary)]">Cover image <span class="text-[var(--brand-text-faint)] font-normal">(4:1)</span></div>
-                <label class="group relative flex h-16 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-[var(--brand-border)] bg-[var(--brand-canvas)] transition-colors hover:border-[var(--brand-teal)]/60">
-                  <img v-if="coverUrl" :src="coverUrl" alt="" class="absolute inset-0 h-full w-full object-cover">
-                  <template v-else>
-                    <Upload class="w-[15px] h-[15px] text-[var(--brand-icon-muted)]" />
-                    <span class="text-[13px] text-[var(--brand-text-muted)]">Upload cover</span>
-                  </template>
-                  <div class="absolute inset-0 grid place-items-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Upload class="w-[16px] h-[16px] text-white" />
-                  </div>
-                  <input type="file" accept="image/png,image/jpeg" class="sr-only" @change="onCoverChange">
-                </label>
+                <div class="relative">
+                  <label class="group relative flex h-16 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-[var(--brand-border)] bg-[var(--brand-canvas)] transition-colors hover:border-[var(--brand-teal)]/60">
+                    <img v-if="coverUrl" :src="coverUrl" alt="" class="absolute inset-0 h-full w-full object-cover">
+                    <template v-else>
+                      <Upload class="w-[15px] h-[15px] text-[var(--brand-icon-muted)]" />
+                      <span class="text-[13px] text-[var(--brand-text-muted)]">Upload cover</span>
+                    </template>
+                    <div class="absolute inset-0 grid place-items-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Upload class="w-[16px] h-[16px] text-white" />
+                    </div>
+                    <input type="file" accept="image/png,image/jpeg" class="sr-only" @change="onCoverChange">
+                  </label>
+                  <button
+                    v-if="coverUrl"
+                    type="button"
+                    class="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-white text-[var(--brand-settings-danger)] shadow-[0_1px_4px_rgba(0,20,18,0.25)] hover:bg-[var(--brand-settings-danger-hover-bg)]"
+                    aria-label="Remove cover image"
+                    @click="removeCoverConfirmOpen = true"
+                  >
+                    <X class="w-3 h-3" :stroke-width="2.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -837,5 +855,13 @@ const testimonialsGridClass = computed(() => (previewMode.value === 'desktop' ? 
         </DialogFooter>
       </DialogScrollContent>
     </Dialog>
+
+    <SettingsConfirmDialog
+      v-model:open="removeCoverConfirmOpen"
+      title="Remove cover image?"
+      description="The career site hero will fall back to your brand colors until you upload a new one."
+      confirm-label="Remove"
+      @confirm="confirmRemoveCover"
+    />
   </div>
 </template>

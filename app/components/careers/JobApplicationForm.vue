@@ -6,6 +6,7 @@
 // same mechanism General Application uses.
 import { Check, Sparkles, Upload } from 'lucide-vue-next'
 import { findOrCreateCandidate } from '~/mocks/handlers/candidates.handlers'
+import { PHONE_COUNTRIES } from '~/composables/useCareerSitePhoneCodes'
 import type { Job } from '~/types'
 
 const props = defineProps<{ job: Job, internal?: boolean }>()
@@ -18,6 +19,7 @@ const portal = useEmployeePortalStore()
 const fullName = ref('')
 const gender = ref('')
 const email = ref(props.internal && portal.email ? portal.email : '')
+const phoneDial = ref(PHONE_COUNTRIES[0]!.dial)
 const phone = ref('')
 const resumeName = ref('')
 const profilePicName = ref('')
@@ -100,7 +102,12 @@ function submit() {
         </label>
         <label class="block">
           <span class="mb-1.5 block text-[13px] font-semibold text-[var(--brand-preview-text-label)]">Phone Number</span>
-          <input v-model="phone" type="tel" placeholder="Write Phone Number" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-3 py-2.5 text-[14px] outline-none">
+          <div class="flex items-center rounded-[9px] border border-[var(--brand-preview-border)] focus-within:border-current">
+            <select v-model="phoneDial" class="shrink-0 rounded-l-[9px] border-r border-[var(--brand-preview-border)] bg-[var(--brand-preview-surface-section)] py-2.5 pl-2.5 pr-1 text-[13px] outline-none">
+              <option v-for="c in PHONE_COUNTRIES" :key="c.dial + c.name" :value="c.dial">{{ c.flag }} {{ c.dial }}</option>
+            </select>
+            <input v-model="phone" type="tel" placeholder="Write Phone Number" class="min-w-0 flex-1 rounded-r-[9px] border-none px-3 py-2.5 text-[14px] outline-none">
+          </div>
         </label>
       </div>
 

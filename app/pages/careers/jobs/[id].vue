@@ -91,10 +91,10 @@ async function copyReferralLink() {
               </div>
             </div>
 
-            <div class="flex shrink-0 flex-col gap-2 sm:w-[260px]">
-              <button type="button" class="w-full rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white" :style="{ background: site.ctaColor }" @click="activeTab = 'application'">{{ t('job_apply') }}</button>
+            <div class="flex shrink-0 flex-col gap-2 sm:w-[220px]">
+              <button type="button" class="w-full rounded-xl border-[1.5px] border-transparent px-4 py-2.5 text-[13px] font-bold text-white" :style="{ background: site.ctaColor }" @click="activeTab = 'application'">{{ t('job_apply') }}</button>
               <div v-if="portal.isVerified" class="flex w-full items-center gap-2">
-                <button type="button" class="flex-1 rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="activeTab = 'refer'">{{ t('job_refer_someone') }}</button>
+                <button type="button" class="flex-1 rounded-xl border-[1.5px] px-4 py-2.5 text-[13px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="activeTab = 'refer'">{{ t('job_refer_someone') }}</button>
                 <div class="group relative shrink-0">
                   <button type="button" class="grid size-9 place-items-center rounded-xl border-[1.5px]" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" :aria-label="t('job_copy_referral_link')" @click="copyReferralLink">
                     <Check v-if="linkCopied" :size="14" /><Copy v-else :size="14" />
