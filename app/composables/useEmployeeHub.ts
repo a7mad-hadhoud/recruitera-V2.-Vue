@@ -17,6 +17,21 @@ const state = reactive<EmployeeHubState>({
   domains: ['icareer.ai'],
 })
 
+// Same reasoning as useCareerSite.ts — the "For Employees" modal is on the
+// public site, opened in its own tab, so domain config must survive across
+// tabs via localStorage rather than only living in one tab's memory.
+const STORAGE_KEY = 'recruitera:employee_hub_config'
+if (import.meta.client) {
+  const raw = window.localStorage.getItem(STORAGE_KEY)
+  if (raw) {
+    try { Object.assign(state, JSON.parse(raw)) }
+    catch { /* corrupt/old shape — keep defaults */ }
+  }
+  watch(state, () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }, { deep: true })
+}
+
 export function useEmployeeHub() {
   function addDomain(raw: string) {
     const d = raw.trim().toLowerCase().replace(/^@/, '').replace(/^https?:\/\//, '').replace(/\/.*$/, '')

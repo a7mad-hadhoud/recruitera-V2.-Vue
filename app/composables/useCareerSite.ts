@@ -70,6 +70,23 @@ const state = reactive<CareerSiteState>({
   subdomain: 'icareer',
 })
 
+// localStorage (not just an in-memory singleton) because "Visit site" opens
+// the public /careers/* pages in a new tab — a separate JS runtime that
+// shares nothing in memory with the Settings tab. Without this, "the live
+// site reflects branding immediately" would only ever be true within a
+// single tab, never across the new-tab flow the Settings page itself uses.
+const STORAGE_KEY = 'recruitera:career_site_config'
+if (import.meta.client) {
+  const raw = window.localStorage.getItem(STORAGE_KEY)
+  if (raw) {
+    try { Object.assign(state, JSON.parse(raw)) }
+    catch { /* corrupt/old shape — keep defaults */ }
+  }
+  watch(state, () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }, { deep: true })
+}
+
 export function useCareerSite() {
   return state
 }

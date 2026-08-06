@@ -123,7 +123,7 @@ async function copyReferralLink() {
       <CareerSiteFooter />
     </div>
 
-    <JobApplicationModal v-if="job" v-model:open="applyOpen" :job="job" />
+    <JobApplicationModal v-if="job" v-model:open="applyOpen" :job="job" :internal="portal.isVerified" />
     <ReferSomeoneModal v-if="job" v-model:open="referOpen" :job="job" />
   </CareerSiteGate>
 </template>

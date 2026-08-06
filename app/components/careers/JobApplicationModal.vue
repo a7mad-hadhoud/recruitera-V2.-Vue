@@ -1,9 +1,12 @@
 <script setup lang="ts">
 // Shared by public Apply and Internal Application (PRD: "no new form, same
-// form schema" for internal applicants — only the resulting tag differs).
-// No real Candidates/pipeline write here — see docs/superpowers/specs/
-// 2026-08-06-career-site-public-design.md for why that's out of scope.
+// form schema" for internal applicants — only the resulting tag/source
+// differs). Both write a real candidate via findOrCreateCandidate — same
+// mechanism General Application uses — so "recorded in the ATS" (PRD AC)
+// and "Internal tag on candidate" are genuinely demonstrable, not just a
+// success toast. No pipeline-stage/knockout logic beyond that.
 import { Upload, X } from 'lucide-vue-next'
+import { findOrCreateCandidate } from '~/mocks/handlers/candidates.handlers'
 import type { Job } from '~/types'
 
 const props = defineProps<{ job: Job, open: boolean, internal?: boolean }>()
@@ -44,6 +47,13 @@ function submit() {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())
   errors.email = !email.value.trim() ? t('field_required') : !emailOk ? t('field_invalid_email') : undefined
   if (errors.fullName || errors.email) return
+  findOrCreateCandidate({
+    name: fullName.value,
+    source: props.internal ? 'Internal Application' : 'Careers site',
+    tags: props.internal ? ['Internal'] : [],
+    jobTitle: props.job.title,
+    jobStatus: props.job.status,
+  })
   submitted.value = true
 }
 </script>

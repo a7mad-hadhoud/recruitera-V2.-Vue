@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Archive, MoreVertical, Pencil, Pin, Plus, RotateCcw, Trash2, Users } from 'lucide-vue-next'
+import { Archive, Link2, MoreVertical, Pencil, Pin, Plus, RotateCcw, Trash2, Users } from 'lucide-vue-next'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -308,6 +308,18 @@ function requestDelete(p: TalentPool) {
   deleteTarget.value = p
 }
 
+// General Application's public form — shareable outside the Career Site itself.
+async function copyFormLink() {
+  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/careers/apply/general`
+  try {
+    await navigator.clipboard.writeText(url)
+    toast.success('Form link copied successfully.')
+  }
+  catch {
+    toast.error('Unable to copy link.')
+  }
+}
+
 function confirmArchive() {
   const p = archiveTarget.value
   if (!p) return
@@ -366,6 +378,7 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
     @restore="requestRestore(activePool)"
     @remove="requestDelete(activePool)"
     @open-form="formBuilderOpen = true"
+    @form-link="copyFormLink"
     @add-candidate="m => (addMode = m)"
     @open-candidate="openCandidateProfile"
     @move-to-pool="ids => requestMove('pool', ids)"
@@ -528,6 +541,9 @@ function confirmDelete({ mode, destination }: { mode: 'all' | 'move'; destinatio
                 </BrandButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem v-if="p.id === 'p1'" @click="copyFormLink">
+                  <Link2 class="w-4 h-4" /> Form Link
+                </DropdownMenuItem>
                 <DropdownMenuItem :disabled="p.system" @click="openEdit(p)">
                   <Pencil class="w-4 h-4" /> Edit
                 </DropdownMenuItem>
