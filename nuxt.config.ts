@@ -92,6 +92,9 @@ export default defineNuxtConfig({
   },
 
   app: {
-    pageTransition: { name: 'page', mode: 'out-in' },
+    // Must stay false — see "Known landmines" in the root CLAUDE.md. A named
+    // transition here silently breaks every client-side route change:
+    // the URL updates but the page component never swaps.
+    pageTransition: false,
   },
 })
