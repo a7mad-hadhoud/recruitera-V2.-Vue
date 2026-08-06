@@ -5,7 +5,7 @@ import CareerSiteHeader from '~/components/careers/CareerSiteHeader.vue'
 import CareerSiteFooter from '~/components/careers/CareerSiteFooter.vue'
 import CareerSiteJobCard from '~/components/careers/CareerSiteJobCard.vue'
 import GeneralApplicationCta from '~/components/careers/GeneralApplicationCta.vue'
-import JobApplicationModal from '~/components/careers/JobApplicationModal.vue'
+import JobApplicationForm from '~/components/careers/JobApplicationForm.vue'
 import ReferSomeoneModal from '~/components/careers/ReferSomeoneModal.vue'
 
 definePageMeta({ layout: false })
@@ -36,7 +36,7 @@ function daysAgo(iso: string) {
   return d === 0 ? 'Today' : d === 1 ? '1d ago' : `${d}d ago`
 }
 
-const applyOpen = ref(false)
+const activeTab = ref<'overview' | 'application'>('overview')
 const referOpen = ref(false)
 const { referralLink } = useReferrals()
 const linkCopied = ref(false)
@@ -92,33 +92,60 @@ async function copyReferralLink() {
               </div>
             </div>
 
-            <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-              <button type="button" class="rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white" :style="{ background: site.ctaColor }" @click="applyOpen = true">{{ t('job_apply') }}</button>
-              <template v-if="portal.isVerified">
+            <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+              <button type="button" class="w-full rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white sm:w-auto" :style="{ background: site.ctaColor }" @click="activeTab = 'application'">{{ t('job_apply') }}</button>
+              <div v-if="portal.isVerified" class="flex items-center gap-2">
                 <button type="button" class="rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="referOpen = true">{{ t('job_refer_someone') }}</button>
-                <button type="button" class="inline-flex items-center gap-1.5 rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="copyReferralLink">
-                  <Check v-if="linkCopied" :size="14" /><Copy v-else :size="14" />{{ linkCopied ? 'Copied!' : t('job_copy_referral_link') }}
-                </button>
-              </template>
+                <div class="group relative">
+                  <button type="button" class="grid size-9 place-items-center rounded-xl border-[1.5px]" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" :aria-label="t('job_copy_referral_link')" @click="copyReferralLink">
+                    <Check v-if="linkCopied" :size="14" /><Copy v-else :size="14" />
+                  </button>
+                  <span class="pointer-events-none absolute right-0 top-full z-10 mt-1.5 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100" :style="{ background: site.headerColor }">
+                    {{ linkCopied ? 'Copied!' : t('job_copy_referral_link') }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <section class="mb-6">
-            <h2 class="mb-2 text-[16px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('job_description') }}</h2>
-            <p class="text-[14px] leading-[1.7] text-[var(--brand-preview-text-body)]">{{ job.description }}</p>
-          </section>
-          <section v-if="job.responsibilities?.length" class="mb-6">
-            <h2 class="mb-2 text-[16px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('job_responsibilities') }}</h2>
-            <ul class="list-disc space-y-1.5 pl-5 text-[14px] leading-[1.6] text-[var(--brand-preview-text-body)]">
-              <li v-for="(r, i) in job.responsibilities" :key="i">{{ r }}</li>
-            </ul>
-          </section>
-          <section v-if="job.requirements?.length" class="mb-6">
-            <h2 class="mb-2 text-[16px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('job_requirements') }}</h2>
-            <ul class="list-disc space-y-1.5 pl-5 text-[14px] leading-[1.6] text-[var(--brand-preview-text-body)]">
-              <li v-for="(r, i) in job.requirements" :key="i">{{ r }}</li>
-            </ul>
-          </section>
+          <!-- Tabs -->
+          <div class="mb-6 flex gap-6 border-b border-[var(--brand-preview-border-card)]">
+            <button
+              type="button"
+              class="-mb-px border-b-2 px-1 pb-3 text-[13.5px] font-semibold transition-colors"
+              :class="activeTab === 'overview' ? '' : 'border-transparent text-[var(--brand-preview-text-muted)]'"
+              :style="activeTab === 'overview' ? { borderColor: site.primaryColor, color: site.primaryColor } : {}"
+              @click="activeTab = 'overview'"
+            >Overview</button>
+            <button
+              type="button"
+              class="-mb-px border-b-2 px-1 pb-3 text-[13.5px] font-semibold transition-colors"
+              :class="activeTab === 'application' ? '' : 'border-transparent text-[var(--brand-preview-text-muted)]'"
+              :style="activeTab === 'application' ? { borderColor: site.primaryColor, color: site.primaryColor } : {}"
+              @click="activeTab = 'application'"
+            >Application</button>
+          </div>
+
+          <template v-if="activeTab === 'overview'">
+            <section class="mb-6">
+              <h2 class="mb-2 text-[16px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('job_description') }}</h2>
+              <p class="text-[14px] leading-[1.7] text-[var(--brand-preview-text-body)]">{{ job.description }}</p>
+            </section>
+            <section v-if="job.responsibilities?.length" class="mb-6">
+              <h2 class="mb-2 text-[16px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('job_responsibilities') }}</h2>
+              <ul class="list-disc space-y-1.5 pl-5 text-[14px] leading-[1.6] text-[var(--brand-preview-text-body)]">
+                <li v-for="(r, i) in job.responsibilities" :key="i">{{ r }}</li>
+              </ul>
+            </section>
+            <section v-if="job.requirements?.length" class="mb-6">
+              <h2 class="mb-2 text-[16px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('job_requirements') }}</h2>
+              <ul class="list-disc space-y-1.5 pl-5 text-[14px] leading-[1.6] text-[var(--brand-preview-text-body)]">
+                <li v-for="(r, i) in job.requirements" :key="i">{{ r }}</li>
+              </ul>
+            </section>
+          </template>
+
+          <JobApplicationForm v-else :job="job" :internal="portal.isVerified" />
         </div>
       </template>
 
@@ -127,7 +154,6 @@ async function copyReferralLink() {
       <CareerSiteFooter />
     </div>
 
-    <JobApplicationModal v-if="job" v-model:open="applyOpen" :job="job" :internal="portal.isVerified" />
     <ReferSomeoneModal v-if="job" v-model:open="referOpen" :job="job" />
   </CareerSiteGate>
 </template>

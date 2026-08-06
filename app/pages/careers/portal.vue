@@ -52,6 +52,7 @@ const STATUS_TONE: Record<string, string> = {
 
           <section id="referrals">
             <h2 class="mb-4 text-[18px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('nav_my_referrals') }}</h2>
+            <p v-if="myReferrals.some(r => r.isDemo)" class="mb-2.5 text-[12px] italic text-[var(--brand-preview-text-muted)]">Rows marked "(Demo)" are illustrative — they show what this list looks like once referrals exist.</p>
             <div v-if="myReferrals.length" class="overflow-hidden rounded-2xl border border-[var(--brand-preview-border-card)]">
               <table class="w-full text-left text-[13px]">
                 <thead class="bg-[var(--brand-preview-surface-section)] text-[12px] text-[var(--brand-preview-text-label)]">
