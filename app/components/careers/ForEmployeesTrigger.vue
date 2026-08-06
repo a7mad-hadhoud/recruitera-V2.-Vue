@@ -36,7 +36,7 @@ function demoLogin() {
   const email = localPart.value.trim() ? `${localPart.value.trim()}@${domain.value}` : `employee@${domain.value || 'company.com'}`
   portal.verify(email)
   open.value = false
-  navigateTo('/careers/portal')
+  navigateTo('/careers')
 }
 </script>
 

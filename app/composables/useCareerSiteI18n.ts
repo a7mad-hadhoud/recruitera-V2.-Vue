@@ -35,7 +35,6 @@ const DICT = {
   filter_choose_level: { en: 'Choose Career Level', ar: 'اختر المستوى الوظيفي' },
   filter_choose_location: { en: 'Choose Location', ar: 'اختر الموقع' },
   filter_search_placeholder: { en: 'Search for Job Title', ar: 'ابحث عن مسمى وظيفي' },
-  filter_find: { en: 'Find', ar: 'بحث' },
   filter_found_jobs: { en: 'Found {n} Jobs', ar: 'تم العثور على {n} وظيفة' },
   filter_no_results: { en: 'No jobs found matching your filters.', ar: 'لا توجد وظائف مطابقة لعوامل التصفية.' },
 
@@ -47,6 +46,7 @@ const DICT = {
   employment_internship: { en: 'Internship', ar: 'تدريب' },
 
   job_apply: { en: 'Apply', ar: 'قدّم الآن' },
+  job_view_details: { en: 'View Details', ar: 'عرض التفاصيل' },
   job_refer_someone: { en: 'Refer Someone', ar: 'رشّح شخصًا' },
   job_copy_referral_link: { en: 'Copy my referral link', ar: 'انسخ رابط الترشيح الخاص بي' },
   job_closed_title: { en: 'This position is no longer available.', ar: 'هذه الوظيفة لم تعد متاحة.' },

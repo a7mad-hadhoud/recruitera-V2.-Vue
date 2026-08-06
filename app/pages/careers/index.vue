@@ -54,7 +54,7 @@ function initials(name: string) {
       <section class="mx-auto max-w-[1200px] px-6 py-12">
         <div class="mb-1 flex items-baseline justify-between">
           <h2 class="text-[24px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ t('section_opportunities') }}</h2>
-          <NuxtLink to="/careers/opportunities" class="text-[13px] font-semibold no-underline" :style="{ color: site.primaryColor }">{{ t('section_view_all') }} →</NuxtLink>
+          <NuxtLink to="/careers/opportunities" class="shrink-0 rounded-lg border-[1.5px] px-3.5 py-1.5 text-[13px] font-bold no-underline" :style="{ borderColor: site.primaryColor, color: site.primaryColor }">{{ t('section_view_all') }} →</NuxtLink>
         </div>
         <p class="mb-4 text-[13px] text-[var(--brand-preview-text-muted)]">{{ t('section_found_positions', { n: featuredJobs.length }) }}</p>
 

@@ -21,12 +21,8 @@ const employmentType = ref('')
 const careerLevel = ref('')
 const jobType = ref<'' | 'white' | 'blue'>('')
 
-// Search — only applied on Find click / Enter (PRD Feature 5 AC).
-const searchDraft = ref('')
-const appliedSearch = ref('')
-function find() {
-  appliedSearch.value = searchDraft.value.trim()
-}
+// Search — filters live as the user types, no separate submit step.
+const search = ref('')
 
 function locationMatches(jobLocation: string | null, locationId: string) {
   if (!locationId) return true
@@ -42,16 +38,16 @@ const filteredJobs = computed(() => props.jobs.filter((j) => {
   if (employmentType.value && j.employmentType !== employmentType.value) return false
   if (careerLevel.value && j.careerLevel !== careerLevel.value) return false
   if (jobType.value && j.collar !== jobType.value) return false
-  if (appliedSearch.value && !j.title.toLowerCase().includes(appliedSearch.value.toLowerCase())) return false
+  if (search.value.trim() && !j.title.toLowerCase().includes(search.value.trim().toLowerCase())) return false
   return true
 }))
 
-const activeFilterCount = computed(() => [location.value, category.value, employmentType.value, careerLevel.value, jobType.value, appliedSearch.value].filter(Boolean).length)
+const activeFilterCount = computed(() => [location.value, category.value, employmentType.value, careerLevel.value, jobType.value, search.value.trim()].filter(Boolean).length)
 
 const mobileFiltersOpen = ref(false)
 function clearFilters() {
   location.value = ''; category.value = ''; employmentType.value = ''; careerLevel.value = ''; jobType.value = ''
-  searchDraft.value = ''; appliedSearch.value = ''
+  search.value = ''
 }
 
 // List is the default — cards are the alternate view for browsing visually.
@@ -121,13 +117,10 @@ function daysAgo(iso: string) {
     </button>
 
     <div class="min-w-0 flex-1">
-      <!-- Search + Find -->
-      <div class="mb-4 flex flex-col gap-2 sm:flex-row">
-        <div class="flex flex-1 items-center gap-2 rounded-[9px] border border-[var(--brand-preview-border)] px-3 py-2">
-          <Search :size="14" class="shrink-0 text-[var(--brand-preview-text-muted)]" />
-          <input v-model="searchDraft" type="text" :placeholder="t('filter_search_placeholder')" class="min-w-0 flex-1 border-none text-[13.5px] outline-none" @keydown.enter="find">
-        </div>
-        <button type="button" class="shrink-0 rounded-[9px] px-5 py-2 text-[13.5px] font-bold text-white" :style="{ background: site.primaryColor }" @click="find">{{ t('filter_find') }}</button>
+      <!-- Search — filters live as you type -->
+      <div class="mb-4 flex items-center gap-2 rounded-[9px] border border-[var(--brand-preview-border)] px-3 py-2">
+        <Search :size="14" class="shrink-0 text-[var(--brand-preview-text-muted)]" />
+        <input v-model="search" type="text" :placeholder="t('filter_search_placeholder')" class="min-w-0 flex-1 border-none text-[13.5px] outline-none">
       </div>
 
       <div class="mb-3.5 flex items-center justify-between">
@@ -165,7 +158,7 @@ function daysAgo(iso: string) {
                 <span class="inline-flex items-center gap-1"><Clock :size="11" />{{ daysAgo(j.createdAt) }}</span>
               </div>
             </div>
-            <span class="shrink-0 self-start rounded-lg px-4 py-2 text-[12.5px] font-bold text-white sm:self-center" :style="{ background: site.ctaColor }">{{ t('job_apply') }} →</span>
+            <span class="shrink-0 self-start rounded-lg px-4 py-2 text-[12.5px] font-bold text-white sm:self-center" :style="{ background: site.ctaColor }">{{ t('job_view_details') }} →</span>
           </NuxtLink>
         </div>
       </template>
