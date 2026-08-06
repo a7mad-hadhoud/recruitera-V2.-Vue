@@ -15,7 +15,8 @@ const DICT = {
 
   hero_hiring_badge: { en: 'open roles', ar: 'وظيفة شاغرة' },
   hero_view_roles: { en: 'View open roles', ar: 'اطّلع على الوظائف' },
-  section_opportunities: { en: 'Opportunities', ar: 'الوظائف المتاحة' },
+  section_opportunities: { en: 'Featured Jobs', ar: 'أبرز الوظائف' },
+  section_found_positions: { en: 'Found {n} open positions', ar: 'تم العثور على {n} وظيفة شاغرة' },
   section_view_all: { en: 'View all', ar: 'عرض الكل' },
   section_values: { en: 'What we stand for', ar: 'قيمنا' },
   section_life_at: { en: 'Life at', ar: 'الحياة في' },
@@ -56,6 +57,8 @@ const DICT = {
   job_requirements: { en: 'Requirements', ar: 'المتطلبات' },
 
   general_app_cta: { en: "Can't find your desired job? Apply through General Application.", ar: 'لم تجد الوظيفة المناسبة؟ قدّم من خلال التقديم العام.' },
+  general_app_cta_sub: { en: "Leave your CV with us — when a role that's right for you opens up, our team will reach out directly, even if it takes some time.", ar: 'اترك سيرتك الذاتية لدينا — وعندما تتوفر وظيفة مناسبة لك، سيتواصل فريقنا معك مباشرة، حتى لو استغرق الأمر بعض الوقت.' },
+  general_app_apply_now: { en: 'Apply now', ar: 'قدّم الآن' },
   general_app_title: { en: 'General Application', ar: 'التقديم العام' },
   general_app_full_name: { en: 'Full Name', ar: 'الاسم الكامل' },
   general_app_email: { en: 'Email', ar: 'البريد الإلكتروني' },

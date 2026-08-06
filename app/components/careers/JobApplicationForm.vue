@@ -24,6 +24,17 @@ const profilePicName = ref('')
 const errors = reactive<{ fullName?: string, email?: string }>({})
 const submitted = ref(false)
 
+// Illustrative — recruiters can attach custom screening questions to a job
+// (Jobs → Application tab in the wizard), but that step isn't wired to any
+// per-job data yet (see the audit in this session), so these demo the
+// candidate-facing rendering rather than reading a specific job's real set.
+const SCREENING_QUESTIONS = [
+  { id: 'sq1', text: 'Are you legally authorized to work in this location?', type: 'yesno' as const },
+  { id: 'sq2', text: 'Which of these best describes your strongest area?', type: 'single-choice' as const, options: ['Execution', 'Strategy', 'People management', 'Technical depth'] },
+  { id: 'sq3', text: 'What is your earliest available start date?', type: 'text' as const },
+]
+const screeningAnswers = reactive<Record<string, string>>({})
+
 function onResume(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   resumeName.value = file?.name ?? ''
@@ -107,6 +118,30 @@ function submit() {
           <input type="file" accept="image/*" class="hidden" @change="onProfilePic">
         </label>
       </label>
+
+      <h2 class="mb-1 text-[15px] font-bold text-[var(--brand-preview-text-heading)]">Screening Questions</h2>
+      <p class="mb-3.5 text-[12px] italic text-[var(--brand-preview-text-muted)]">Set by the hiring team for this role — shown here as a demo.</p>
+      <div class="mb-6 flex flex-col gap-4">
+        <label v-for="q in SCREENING_QUESTIONS" :key="q.id" class="block">
+          <span class="mb-1.5 block text-[13px] font-semibold text-[var(--brand-preview-text-label)]">{{ q.text }}</span>
+          <div v-if="q.type === 'yesno'" class="flex gap-2">
+            <button
+              v-for="opt in ['Yes', 'No']"
+              :key="opt"
+              type="button"
+              class="rounded-lg border-[1.5px] px-4 py-2 text-[13px] font-semibold"
+              :class="screeningAnswers[q.id] === opt ? 'text-white' : 'text-[var(--brand-preview-text-label)]'"
+              :style="screeningAnswers[q.id] === opt ? { background: site.primaryColor, borderColor: site.primaryColor } : { borderColor: 'var(--brand-preview-border)' }"
+              @click="screeningAnswers[q.id] = opt"
+            >{{ opt }}</button>
+          </div>
+          <select v-else-if="q.type === 'single-choice'" v-model="screeningAnswers[q.id]" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-3 py-2.5 text-[14px] outline-none">
+            <option value="">Choose an option…</option>
+            <option v-for="opt in q.options" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+          <input v-else v-model="screeningAnswers[q.id]" type="text" class="w-full rounded-[9px] border border-[var(--brand-preview-border)] px-3 py-2.5 text-[14px] outline-none">
+        </label>
+      </div>
 
       <button type="button" class="w-full rounded-xl px-4 py-3 text-[14px] font-bold text-white sm:w-auto" :style="{ background: site.ctaColor }" @click="submit">
         {{ t('job_apply') }}

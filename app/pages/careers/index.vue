@@ -18,7 +18,12 @@ const portal = useEmployeePortalStore()
 onMounted(() => portal.restore())
 
 const { jobs: allJobs } = useJobs()
-const featuredJobs = computed(() => allJobs.value.filter(j => j.status === 'published').slice(0, 6))
+const publishedJobs = computed(() => allJobs.value.filter(j => j.status === 'published'))
+const jobFilter = ref<'' | 'white' | 'blue'>('')
+const featuredJobs = computed(() => {
+  const list = jobFilter.value ? publishedJobs.value.filter(j => j.collar === jobFilter.value) : publishedJobs.value
+  return list.slice(0, 6)
+})
 
 const heroBackground = computed(() => `linear-gradient(135deg, ${site.primaryColor} 0%, ${site.headerColor} 130%)`)
 const videoBackground = computed(() => `linear-gradient(135deg, ${site.headerColor}, ${site.primaryColor})`)
@@ -38,7 +43,7 @@ function initials(name: string) {
         <img v-if="site.coverUrl" :src="site.coverUrl" alt="" class="absolute inset-0 h-full w-full object-cover">
         <div class="absolute inset-0" :style="{ background: heroBackground, opacity: site.coverUrl ? 0.82 : 1 }" />
         <div class="relative mx-auto flex w-full max-w-[1200px] flex-col items-start gap-4">
-          <span class="rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold text-white backdrop-blur">{{ featuredJobs.length }} {{ t('hero_hiring_badge') }}</span>
+          <span class="rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold text-white backdrop-blur">{{ publishedJobs.length }} {{ t('hero_hiring_badge') }}</span>
           <h1 class="max-w-[620px] text-[32px] font-extrabold leading-[1.15] text-white sm:text-[42px]">{{ site.headline }}</h1>
           <p class="max-w-[520px] text-[15px] leading-[1.7] text-white/85">{{ site.intro }}</p>
           <NuxtLink to="/careers/opportunities" class="rounded-xl px-5 py-3 text-[14px] font-bold text-white no-underline shadow-lg" :style="{ background: site.ctaColor }">{{ t('hero_view_roles') }} →</NuxtLink>
@@ -51,9 +56,24 @@ function initials(name: string) {
           <h2 class="text-[24px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ t('section_opportunities') }}</h2>
           <NuxtLink to="/careers/opportunities" class="text-[13px] font-semibold no-underline" :style="{ color: site.primaryColor }">{{ t('section_view_all') }} →</NuxtLink>
         </div>
-        <div v-if="featuredJobs.length" class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <p class="mb-4 text-[13px] text-[var(--brand-preview-text-muted)]">{{ t('section_found_positions', { n: featuredJobs.length }) }}</p>
+
+        <div class="mb-5 flex flex-wrap gap-1.5">
+          <button
+            v-for="opt in [{ v: '', l: t('filter_job_type_all') }, { v: 'white', l: t('filter_job_type_white') }, { v: 'blue', l: t('filter_job_type_blue') }]"
+            :key="opt.v"
+            type="button"
+            class="rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-colors"
+            :class="jobFilter === opt.v ? 'text-white' : 'border border-[var(--brand-preview-border)] text-[var(--brand-preview-text-label)]'"
+            :style="jobFilter === opt.v ? { background: site.primaryColor } : {}"
+            @click="jobFilter = opt.v as typeof jobFilter"
+          >{{ opt.l }}</button>
+        </div>
+
+        <div v-if="featuredJobs.length" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CareerSiteJobCard v-for="j in featuredJobs" :key="j.id" :job="j" />
         </div>
+        <p v-else class="rounded-2xl border border-dashed border-[var(--brand-preview-border-card)] px-6 py-10 text-center text-[13.5px] text-[var(--brand-preview-text-muted)]">{{ t('filter_no_results') }}</p>
       </section>
 
       <GeneralApplicationCta />

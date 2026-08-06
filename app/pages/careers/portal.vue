@@ -2,7 +2,6 @@
 import CareerSiteGate from '~/components/careers/CareerSiteGate.vue'
 import CareerSiteHeader from '~/components/careers/CareerSiteHeader.vue'
 import CareerSiteFooter from '~/components/careers/CareerSiteFooter.vue'
-import CareerSiteJobCard from '~/components/careers/CareerSiteJobCard.vue'
 
 definePageMeta({ layout: false })
 
@@ -10,9 +9,6 @@ const site = useCareerSite()
 const { t } = useCareerSiteI18n()
 const portal = useEmployeePortalStore()
 onMounted(() => portal.restore())
-
-const { jobs: allJobs } = useJobs()
-const internalJobs = computed(() => allJobs.value.filter(j => j.status === 'internal'))
 
 const { forEmployee } = useReferrals()
 const myReferrals = computed(() => forEmployee(portal.email ?? '').value)
@@ -40,18 +36,10 @@ const STATUS_TONE: Record<string, string> = {
       <template v-else>
         <div class="mx-auto max-w-[1200px] px-6 py-10">
           <p class="mb-1 text-[12.5px] font-semibold uppercase tracking-wide text-[var(--brand-preview-text-muted)]">Signed in as</p>
-          <h1 class="mb-8 text-[22px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ portal.email }}</h1>
-
-          <section class="mb-12">
-            <h2 class="mb-4 text-[18px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('nav_internal_opportunities') }}</h2>
-            <div v-if="internalJobs.length" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <CareerSiteJobCard v-for="j in internalJobs" :key="j.id" :job="j" />
-            </div>
-            <p v-else class="text-[13.5px] text-[var(--brand-preview-text-muted)]">No internal openings right now — check back soon.</p>
-          </section>
+          <p class="mb-8 text-[14px] font-semibold text-[var(--brand-preview-text-secondary)]">{{ portal.email }}</p>
 
           <section id="referrals">
-            <h2 class="mb-4 text-[18px] font-bold text-[var(--brand-preview-text-heading)]">{{ t('nav_my_referrals') }}</h2>
+            <h1 class="mb-4 text-[22px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ t('nav_my_referrals') }}</h1>
             <p v-if="myReferrals.some(r => r.isDemo)" class="mb-2.5 text-[12px] italic text-[var(--brand-preview-text-muted)]">Rows marked "(Demo)" are illustrative — they show what this list looks like once referrals exist.</p>
             <div v-if="myReferrals.length" class="overflow-hidden rounded-2xl border border-[var(--brand-preview-border-card)]">
               <table class="w-full text-left text-[13px]">

@@ -6,7 +6,7 @@ import CareerSiteFooter from '~/components/careers/CareerSiteFooter.vue'
 import CareerSiteJobCard from '~/components/careers/CareerSiteJobCard.vue'
 import GeneralApplicationCta from '~/components/careers/GeneralApplicationCta.vue'
 import JobApplicationForm from '~/components/careers/JobApplicationForm.vue'
-import ReferSomeoneModal from '~/components/careers/ReferSomeoneModal.vue'
+import ReferSomeoneForm from '~/components/careers/ReferSomeoneForm.vue'
 
 definePageMeta({ layout: false })
 
@@ -36,8 +36,7 @@ function daysAgo(iso: string) {
   return d === 0 ? 'Today' : d === 1 ? '1d ago' : `${d}d ago`
 }
 
-const activeTab = ref<'overview' | 'application'>('overview')
-const referOpen = ref(false)
+const activeTab = ref<'overview' | 'application' | 'refer'>('overview')
 const { referralLink } = useReferrals()
 const linkCopied = ref(false)
 async function copyReferralLink() {
@@ -92,11 +91,11 @@ async function copyReferralLink() {
               </div>
             </div>
 
-            <div class="flex shrink-0 flex-col gap-2 sm:items-end">
-              <button type="button" class="w-full rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white sm:w-auto" :style="{ background: site.ctaColor }" @click="activeTab = 'application'">{{ t('job_apply') }}</button>
-              <div v-if="portal.isVerified" class="flex items-center gap-2">
-                <button type="button" class="rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="referOpen = true">{{ t('job_refer_someone') }}</button>
-                <div class="group relative">
+            <div class="flex shrink-0 flex-col gap-2 sm:w-[260px]">
+              <button type="button" class="w-full rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white" :style="{ background: site.ctaColor }" @click="activeTab = 'application'">{{ t('job_apply') }}</button>
+              <div v-if="portal.isVerified" class="flex w-full items-center gap-2">
+                <button type="button" class="flex-1 rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="activeTab = 'refer'">{{ t('job_refer_someone') }}</button>
+                <div class="group relative shrink-0">
                   <button type="button" class="grid size-9 place-items-center rounded-xl border-[1.5px]" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" :aria-label="t('job_copy_referral_link')" @click="copyReferralLink">
                     <Check v-if="linkCopied" :size="14" /><Copy v-else :size="14" />
                   </button>
@@ -123,7 +122,15 @@ async function copyReferralLink() {
               :class="activeTab === 'application' ? '' : 'border-transparent text-[var(--brand-preview-text-muted)]'"
               :style="activeTab === 'application' ? { borderColor: site.primaryColor, color: site.primaryColor } : {}"
               @click="activeTab = 'application'"
-            >Application</button>
+            >Application Form</button>
+            <button
+              v-if="portal.isVerified"
+              type="button"
+              class="-mb-px border-b-2 px-1 pb-3 text-[13.5px] font-semibold transition-colors"
+              :class="activeTab === 'refer' ? '' : 'border-transparent text-[var(--brand-preview-text-muted)]'"
+              :style="activeTab === 'refer' ? { borderColor: site.primaryColor, color: site.primaryColor } : {}"
+              @click="activeTab = 'refer'"
+            >{{ t('job_refer_someone') }}</button>
           </div>
 
           <template v-if="activeTab === 'overview'">
@@ -145,7 +152,8 @@ async function copyReferralLink() {
             </section>
           </template>
 
-          <JobApplicationForm v-else :job="job" :internal="portal.isVerified" />
+          <JobApplicationForm v-else-if="activeTab === 'application'" :job="job" :internal="portal.isVerified" />
+          <ReferSomeoneForm v-else :job="job" />
         </div>
       </template>
 
@@ -153,7 +161,5 @@ async function copyReferralLink() {
 
       <CareerSiteFooter />
     </div>
-
-    <ReferSomeoneModal v-if="job" v-model:open="referOpen" :job="job" />
   </CareerSiteGate>
 </template>
