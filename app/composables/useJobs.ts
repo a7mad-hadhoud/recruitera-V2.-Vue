@@ -21,7 +21,7 @@ import type { Job, JobStatus } from '~/types'
  *     to router.query so bookmarked/shared links reproduce the view.
  */
 // Assignee avatar tokens (initials + brand palette) reused across rows.
-const MS = { name: 'Mohamed Salem', initials: 'MS', bg: 'var(--brand-teal)',            color: 'var(--brand-lime)'  }
+const MS = { name: 'Mohamed Salem', initials: 'MS', bg: 'var(--brand-teal)',            color: 'var(--brand-avatar-text)' }
 const SR = { name: 'Sara Rashed',   initials: 'SR', bg: '#2f6f8f',                       color: '#ffffff'            }
 const AK = { name: 'Ahmed Kamal',   initials: 'AK', bg: '#6d4ac8',                       color: '#ffffff'            }
 const LW = { name: 'Lina Waheed',   initials: 'LW', bg: '#b2453a',                       color: '#ffffff'            }
