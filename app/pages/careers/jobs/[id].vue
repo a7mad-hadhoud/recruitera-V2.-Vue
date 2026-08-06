@@ -77,26 +77,30 @@ async function copyReferralLink() {
         <div class="mx-auto max-w-[820px] px-6 py-10">
           <NuxtLink to="/careers/opportunities" class="mb-4 inline-block text-[12.5px] font-semibold no-underline" :style="{ color: site.primaryColor }">← {{ t('job_back') }}</NuxtLink>
 
-          <div class="mb-2 flex flex-wrap gap-1.5">
-            <span class="rounded-md px-2 py-0.5 text-[11px] font-bold" :style="{ background: `${site.primaryColor}18`, color: site.primaryColor }">{{ job.employmentType }}</span>
-            <span class="rounded-md bg-[var(--brand-preview-surface-alt)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-preview-text-label)]">{{ job.collar === 'white' ? t('filter_job_type_white') : t('filter_job_type_blue') }}</span>
-            <span v-if="job.status === 'internal'" class="rounded-md px-2 py-0.5 text-[11px] font-bold text-white" :style="{ background: site.headerColor }">{{ t('nav_internal_opportunities') }}</span>
-          </div>
-          <h1 class="mb-2 text-[26px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ job.title }}</h1>
-          <div class="mb-6 flex flex-wrap items-center gap-4 text-[13px] text-[var(--brand-preview-text-muted)]">
-            <span class="inline-flex items-center gap-1.5"><MapPin :size="13" />{{ job.location || 'Remote' }}</span>
-            <span class="inline-flex items-center gap-1.5"><Clock :size="13" />{{ daysAgo(job.createdAt) }}</span>
-            <span class="inline-flex items-center gap-1.5"><Briefcase :size="13" />{{ job.department }}</span>
-          </div>
+          <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <div class="mb-2 flex flex-wrap gap-1.5">
+                <span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold" :style="{ background: `${site.primaryColor}18`, color: site.primaryColor }">{{ job.employmentType }}</span>
+                <span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold" :style="{ background: `${site.headerColor}14`, color: site.headerColor }">{{ job.collar === 'white' ? t('filter_job_type_white') : t('filter_job_type_blue') }}</span>
+                <span v-if="job.status === 'internal'" class="rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" :style="{ background: site.headerColor }">{{ t('nav_internal_opportunities') }}</span>
+              </div>
+              <h1 class="mb-2 text-[26px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ job.title }}</h1>
+              <div class="flex flex-wrap items-center gap-4 text-[13px] text-[var(--brand-preview-text-muted)]">
+                <span class="inline-flex items-center gap-1.5"><MapPin :size="13" />{{ job.location || 'Remote' }}</span>
+                <span class="inline-flex items-center gap-1.5"><Clock :size="13" />{{ daysAgo(job.createdAt) }}</span>
+                <span class="inline-flex items-center gap-1.5"><Briefcase :size="13" />{{ job.department }}</span>
+              </div>
+            </div>
 
-          <div class="mb-6 flex flex-wrap gap-2">
-            <button type="button" class="rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white" :style="{ background: site.ctaColor }" @click="applyOpen = true">{{ t('job_apply') }}</button>
-            <template v-if="portal.isVerified">
-              <button type="button" class="rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="referOpen = true">{{ t('job_refer_someone') }}</button>
-              <button type="button" class="inline-flex items-center gap-1.5 rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="copyReferralLink">
-                <Check v-if="linkCopied" :size="14" /><Copy v-else :size="14" />{{ linkCopied ? 'Copied!' : t('job_copy_referral_link') }}
-              </button>
-            </template>
+            <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+              <button type="button" class="rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white" :style="{ background: site.ctaColor }" @click="applyOpen = true">{{ t('job_apply') }}</button>
+              <template v-if="portal.isVerified">
+                <button type="button" class="rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="referOpen = true">{{ t('job_refer_someone') }}</button>
+                <button type="button" class="inline-flex items-center gap-1.5 rounded-xl border-[1.5px] px-5 py-2.5 text-[13.5px] font-bold" :style="{ borderColor: site.primaryColor, color: site.primaryColor }" @click="copyReferralLink">
+                  <Check v-if="linkCopied" :size="14" /><Copy v-else :size="14" />{{ linkCopied ? 'Copied!' : t('job_copy_referral_link') }}
+                </button>
+              </template>
+            </div>
           </div>
 
           <section class="mb-6">

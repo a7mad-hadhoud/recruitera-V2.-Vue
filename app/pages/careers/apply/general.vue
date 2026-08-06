@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Upload } from 'lucide-vue-next'
+import { Check, Upload } from 'lucide-vue-next'
 import CareerSiteGate from '~/components/careers/CareerSiteGate.vue'
 import CareerSiteHeader from '~/components/careers/CareerSiteHeader.vue'
 import CareerSiteFooter from '~/components/careers/CareerSiteFooter.vue'
@@ -18,6 +18,8 @@ const errors = reactive<{ fullName?: string, email?: string, jobTitle?: string, 
 const submitting = ref(false)
 const submitted = ref(false)
 const submitError = ref('')
+
+const heroBackground = computed(() => `linear-gradient(135deg, ${site.primaryColor} 0%, ${site.headerColor} 130%)`)
 
 function onResume(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -49,14 +51,17 @@ async function submit() {
 
 <template>
   <CareerSiteGate>
-    <div class="min-h-screen bg-white" :style="{ fontFamily: `${site.font}, system-ui, sans-serif` }">
+    <div class="min-h-screen" :style="{ background: 'var(--brand-preview-surface-section)', fontFamily: `${site.font}, system-ui, sans-serif` }">
       <CareerSiteHeader />
 
       <div class="mx-auto max-w-[560px] px-6 py-12">
         <template v-if="!submitted">
-          <h1 class="mb-1.5 text-[24px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ t('general_app_title') }}</h1>
-          <p class="mb-6 text-[13.5px] text-[var(--brand-preview-text-muted)]">{{ t('general_app_cta') }}</p>
+          <div class="mb-6 rounded-2xl p-7 text-white" :style="{ background: heroBackground }">
+            <h1 class="mb-2 text-[24px] font-extrabold leading-tight">{{ t('general_app_title') }}</h1>
+            <p class="text-[13.5px] leading-relaxed text-white/85">{{ t('general_app_cta') }}</p>
+          </div>
 
+          <div class="rounded-2xl border border-[var(--brand-preview-border-card)] bg-white p-7 shadow-sm">
           <label class="mb-4 block">
             <span class="mb-1.5 block text-[13px] font-semibold text-[var(--brand-preview-text-label)]">{{ t('general_app_full_name') }} *</span>
             <input v-model="fullName" type="text" class="w-full rounded-[9px] border px-3 py-2.5 text-[14px] outline-none" :style="{ borderColor: errors.fullName ? 'var(--brand-danger)' : 'var(--brand-preview-border)' }">
@@ -85,9 +90,13 @@ async function submit() {
           <button type="button" class="w-full rounded-xl px-4 py-3 text-[14px] font-bold text-white disabled:opacity-60" :style="{ background: site.ctaColor }" :disabled="submitting" @click="submit">
             {{ t('general_app_submit') }}
           </button>
+          </div>
         </template>
 
-        <div v-else class="py-10 text-center">
+        <div v-else class="rounded-2xl border border-[var(--brand-preview-border-card)] bg-white px-6 py-14 text-center shadow-sm">
+          <div class="mx-auto mb-4 grid size-14 place-items-center rounded-full" style="background:var(--brand-status-approved-bg)">
+            <Check :size="26" style="color:var(--brand-status-approved-text)" />
+          </div>
           <div class="mb-2 text-[18px] font-bold" :style="{ color: site.headerColor }">{{ t('general_app_success') }}</div>
           <p class="mb-6 text-[13.5px] text-[var(--brand-preview-text-muted)]">Thanks, {{ fullName }} — we'll reach out if a matching role opens up.</p>
           <NuxtLink to="/careers" class="inline-block rounded-xl border-[1.5px] px-5 py-2.5 text-[13px] font-bold no-underline" :style="{ borderColor: site.primaryColor, color: site.primaryColor }">{{ t('nav_home') }}</NuxtLink>

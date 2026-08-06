@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Mail, X } from 'lucide-vue-next'
 
-const props = defineProps<{ fullWidth?: boolean }>()
+const props = defineProps<{ fullWidth?: boolean, solid?: boolean, label?: string }>()
 const emit = defineEmits<{ click: [] }>()
 
 const site = useCareerSite()
@@ -43,12 +43,14 @@ function demoLogin() {
 <template>
   <button
     type="button"
-    class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13.5px] font-medium"
-    :class="props.fullWidth ? 'w-full justify-start px-2' : ''"
-    :style="{ color: site.primaryColor, borderColor: props.fullWidth ? 'transparent' : site.primaryColor }"
+    class="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] font-semibold"
+    :class="[props.fullWidth ? 'w-full justify-start px-2' : '', props.solid ? 'shadow-sm' : 'border']"
+    :style="props.solid
+      ? { background: site.ctaColor, color: 'white' }
+      : { color: site.primaryColor, borderColor: props.fullWidth ? 'transparent' : site.primaryColor }"
     @click="openModal"
   >
-    {{ t('nav_for_employees') }}
+    {{ props.label ?? t('nav_for_employees') }}
   </button>
 
   <Teleport to="body">

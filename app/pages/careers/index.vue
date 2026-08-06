@@ -73,12 +73,14 @@ function initials(name: string) {
         <div class="mx-auto max-w-[1200px]">
           <h2 class="mb-7 text-center text-[24px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ t('section_values') }}</h2>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div v-for="(v, i) in site.values" :key="i" class="rounded-2xl border border-[var(--brand-preview-border-card)] bg-white p-5">
-              <div class="mb-3 grid size-11 place-items-center rounded-xl" :style="{ background: `${site.primaryColor}18` }">
-                <CareerSiteValueIcon :index="v.icon" :color="site.primaryColor" />
+            <div v-for="(v, i) in site.values" :key="i" class="flex h-full flex-col gap-3 rounded-2xl border border-[var(--brand-preview-border-card)] bg-white p-5">
+              <div class="flex items-center gap-3">
+                <div class="grid size-11 shrink-0 place-items-center rounded-xl" :style="{ background: `${site.primaryColor}18` }">
+                  <CareerSiteValueIcon :index="v.icon" :color="site.primaryColor" />
+                </div>
+                <div class="text-[17px] font-bold leading-tight text-[var(--brand-preview-text-heading)]">{{ v.name }}</div>
               </div>
-              <div class="mb-1.5 text-[15.5px] font-semibold text-[var(--brand-preview-text-heading)]">{{ v.name }}</div>
-              <div class="text-[13px] leading-[1.55] text-[var(--brand-preview-text-secondary)]">{{ v.desc }}</div>
+              <div class="flex-1 text-[14px] leading-[1.6] text-[var(--brand-preview-text-secondary)]">{{ v.desc }}</div>
             </div>
           </div>
         </div>
@@ -88,19 +90,21 @@ function initials(name: string) {
       <section v-if="site.testimonials.length" class="mx-auto max-w-[1200px] px-6 py-14">
         <h2 class="mb-7 text-[24px] font-extrabold text-[var(--brand-preview-text-heading)]">{{ t('section_from_team') }}</h2>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <figure v-for="(tst, i) in site.testimonials" :key="i" class="rounded-2xl border border-[var(--brand-preview-border-card)] bg-white p-5">
-            <Quote :size="18" class="mb-2" :style="{ color: site.primaryColor }" />
-            <blockquote class="mb-3.5 text-[14px] leading-[1.6] text-[var(--brand-preview-text-body)]">"{{ tst.quote }}"</blockquote>
-            <figcaption class="flex items-center gap-3">
-              <div class="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full text-[13px] font-semibold text-white" :style="!tst.photo ? { background: site.primaryColor } : {}">
-                <img v-if="tst.photo" :src="tst.photo" alt="" class="absolute inset-0 h-full w-full object-cover">
-                <span v-else>{{ initials(tst.name) }}</span>
+          <figure v-for="(tst, i) in site.testimonials" :key="i" class="flex h-full flex-col gap-3 rounded-2xl border border-[var(--brand-preview-border-card)] bg-white p-5">
+            <figcaption class="flex items-center justify-between gap-3">
+              <div class="flex min-w-0 items-center gap-2.5">
+                <div class="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full text-[13px] font-semibold text-white" :style="!tst.photo ? { background: site.primaryColor } : {}">
+                  <img v-if="tst.photo" :src="tst.photo" alt="" class="absolute inset-0 h-full w-full object-cover">
+                  <span v-else>{{ initials(tst.name) }}</span>
+                </div>
+                <div class="min-w-0">
+                  <div class="truncate text-[13.5px] font-semibold text-[var(--brand-preview-text-heading)]">{{ tst.name }}</div>
+                  <div class="truncate text-[12px] text-[var(--brand-preview-text-muted)]">{{ tst.role }}</div>
+                </div>
               </div>
-              <div>
-                <div class="text-[13.5px] font-semibold text-[var(--brand-preview-text-heading)]">{{ tst.name }}</div>
-                <div class="text-[12px] text-[var(--brand-preview-text-muted)]">{{ tst.role }}</div>
-              </div>
+              <Quote :size="20" class="shrink-0" :style="{ color: site.primaryColor }" />
             </figcaption>
+            <blockquote class="flex-1 text-[14px] leading-[1.6] text-[var(--brand-preview-text-body)]">"{{ tst.quote }}"</blockquote>
           </figure>
         </div>
       </section>
@@ -112,7 +116,7 @@ function initials(name: string) {
             <div class="text-[16px] font-semibold text-white">Already part of the team?</div>
             <div class="text-[13px] text-white/70">Access internal-only roles with your company email.</div>
           </div>
-          <ForEmployeesTrigger />
+          <ForEmployeesTrigger solid :label="t('for_employees_sign_in')" />
         </div>
       </section>
 
