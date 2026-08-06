@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import type { Candidate, CandidateProfile } from '~/types'
+import { candidateHaystack, matchesSearchQuery } from '~/utils/candidateSearch'
 
 // Simulates realistic API latency in dev so skeletons + loading states are
 // visible to design/QA. Real API responses (150-500ms) replace this in prod.
@@ -40,17 +41,16 @@ export const candidatesHandlers = [
     await delay(DEV_LATENCY_MS)
     const url = new URL(request.url)
     const status  = url.searchParams.get('status')
-    const search  = url.searchParams.get('search')?.toLowerCase()
+    const search  = url.searchParams.get('search') ?? ''
     const job     = url.searchParams.get('job')?.toLowerCase()
     const page    = Math.max(1, Number(url.searchParams.get('page') ?? 1))
     const perPage = Math.max(1, Number(url.searchParams.get('perPage') ?? 30))
 
     let result = [...ALL_CANDIDATES]
     if (status) result = result.filter(c => c.status === status)
-    if (search) result = result.filter(c =>
-      c.name.toLowerCase().includes(search)
-      || c.jobs.some(j => j.title.toLowerCase().includes(search)),
-    )
+    // Semantic + boolean search: AND/OR keywords, synonym expansion
+    // (e.g. "recruiter" also matches "Talent Acquisition"). See candidateSearch.ts.
+    if (search.trim()) result = result.filter(c => matchesSearchQuery(candidateHaystack(c), search))
     if (job) result = result.filter(c => c.jobs.some(j => j.title.toLowerCase().includes(job)))
 
     const total = result.length
