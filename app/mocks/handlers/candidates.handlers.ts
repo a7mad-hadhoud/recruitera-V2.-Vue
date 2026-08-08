@@ -56,7 +56,8 @@ export const candidatesHandlers = [
     const status     = url.searchParams.get('status')
     const search     = url.searchParams.get('search') ?? ''
     const job        = url.searchParams.get('job')?.toLowerCase()
-    const assignedTo = url.searchParams.get('assignedTo')
+    const assignedTo   = url.searchParams.get('assignedTo')
+    const assignedToOp = url.searchParams.get('assignedToOp') ?? 'is'
     const page    = Math.max(1, Number(url.searchParams.get('page') ?? 1))
     const perPage = Math.max(1, Number(url.searchParams.get('perPage') ?? 30))
 
@@ -67,8 +68,13 @@ export const candidatesHandlers = [
     if (search.trim()) result = result.filter(c => matchesSearchQuery(candidateHaystack(c), search))
     if (job) result = result.filter(c => c.jobs.some(j => j.title.toLowerCase().includes(job)))
     // Smart Distribute ownership filter (E2 "Filter by Assigned Recruiter").
-    if (assignedTo === 'unassigned') result = result.filter(c => !c.assignedRecruiterId)
-    else if (assignedTo) result = result.filter(c => c.assignedRecruiterId === assignedTo)
+    // checkbox-multi — assignedTo is a comma-separated list of team member
+    // ids and/or the literal 'unassigned'; assignedToOp flips is/is-not.
+    if (assignedTo) {
+      const tokens = assignedTo.split(',').filter(Boolean)
+      const matches = (c: Candidate) => tokens.some(t => t === 'unassigned' ? !c.assignedRecruiterId : c.assignedRecruiterId === t)
+      result = result.filter(c => assignedToOp === 'is-not' ? !matches(c) : matches(c))
+    }
 
     const total = result.length
     const start = (page - 1) * perPage

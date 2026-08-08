@@ -5,15 +5,35 @@ import {
   User, UserCog, Mail, Building2, BriefcaseBusiness, ClipboardList,
   Copy, CalendarDays,
 } from 'lucide-vue-next'
+import type { Ref } from 'vue'
 import type { FilterCatalogEntry } from '~/types/candidate-filter.types'
 
 /**
  * Every filter the user can add. Keep alphabetised inside each group so search
  * finds them predictably. Adding a new filter = one entry here + type dispatch
  * in CandidatesFilters.vue.
+ *
+ * `assignedRecruiterOptions` is the one job-scoped exception — Smart
+ * Distribute's "Assigned Recruiter" filter (E2) only exists inside a job
+ * whose Auto-Distribute pool it can list, so the entry is only included
+ * when a non-empty options list is passed in. Omit it (as
+ * AddFilterPicker/CandidatesFilters both do on the global /candidates
+ * page) and the catalog is exactly what it always was.
  */
-export function useFilterRegistry() {
+export function useFilterRegistry(assignedRecruiterOptions?: Ref<{ value: string; label: string }[] | undefined>) {
   const catalog = computed<FilterCatalogEntry[]>(() => [
+    // ── Assigned Recruiter (E2) — job-scoped, only present when supplied ──
+    ...(assignedRecruiterOptions?.value?.length
+      ? [{
+          id: 'assigned-recruiter',
+          name: 'Assigned recruiter',
+          type: 'checkbox-multi' as const,
+          icon: UserCog,
+          operators: [{ value: 'is' as const, label: 'Is' }, { value: 'is-not' as const, label: 'Is not' }],
+          options: [{ value: 'unassigned', label: 'Unassigned' }, ...assignedRecruiterOptions.value],
+        }]
+      : []),
+
     // ── Candidate status (with Overdue per spec) ──
     {
       id: 'candidate-status',

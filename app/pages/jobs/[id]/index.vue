@@ -47,6 +47,7 @@ import { useJobReferrals, REFERRAL_SOURCE_TAGS } from '~/composables/useJobRefer
 import { useCandidates } from '~/composables/useCandidates'
 import { useTeamMembers } from '~/composables/useTeam'
 import { useSmartDistributeConfig } from '~/composables/useSmartDistribute'
+import { useActiveFilters } from '~/composables/useActiveFilters'
 import CandidatesBulkAssignModal from '~/components/candidates/CandidatesBulkAssignModal.vue'
 import { usePreviewRoleStore } from '~/stores/previewRole.store'
 import { refDebounced, useLocalStorage } from '@vueuse/core'
@@ -240,12 +241,9 @@ const searchInput = ref('')
 const debouncedSearch = refDebounced(searchInput, 250)
 const filtersPage = ref(1)
 const filtersPerPage = ref(30)
-// Assigned Recruiter filter (E2) — '' = any, 'unassigned', or a team member id.
-const assignedToFilter = ref('')
-watch(assignedToFilter, () => { filtersPage.value = 1 })
 
-// Shared Smart Distribute context — the assigned-recruiter dropdown
-// (Filters tab) and the bulk-assign button + badges (Pipeline tab) all
+// Shared Smart Distribute context — the Assigned Recruiter filter catalog
+// entry (Filters tab), the bulk-assign button + badges (Pipeline tab) all
 // need "who's in this job's pool" and "is Auto-Distribute even on".
 const { data: teamData } = useTeamMembers()
 const { data: distConfig } = useSmartDistributeConfig(jobId)
@@ -257,6 +255,15 @@ const poolRecruiters = computed(() => {
     .filter((m): m is NonNullable<typeof m> => !!m)
 })
 const smartDistributeOn = computed(() => !!distConfig.value?.enabled)
+const assignedRecruiterOptions = computed(() => poolRecruiters.value.map(r => ({ value: r.id, label: r.name })))
+
+// Assigned Recruiter filter (E2) now lives in the normal filter-catalog
+// panel (CandidatesFilters.vue seeds it into the active set once the pool
+// is known) instead of a bespoke control — read its live value here to
+// build the actual query.
+const activeFilters = useActiveFilters()
+const assignedRecruiterActiveFilter = computed(() => activeFilters.get('assigned-recruiter'))
+watch(() => assignedRecruiterActiveFilter.value?.values, () => { filtersPage.value = 1 })
 
 // Lightweight, unpaginated fetch of this job's candidates purely to read
 // assignedRecruiterId — the Pipeline board's own PipelineCandidate fixture
@@ -292,11 +299,12 @@ function onPipelineBulkAssigned() {
 }
 
 const candidatesFilters = computed<Record<string, string | number | undefined>>(() => ({
-  job:        job.value?.title,
-  search:     debouncedSearch.value || undefined,
-  assignedTo: assignedToFilter.value || undefined,
-  page:       filtersPage.value,
-  perPage:    filtersPerPage.value,
+  job:          job.value?.title,
+  search:       debouncedSearch.value || undefined,
+  assignedTo:   assignedRecruiterActiveFilter.value?.values?.length ? assignedRecruiterActiveFilter.value.values.join(',') : undefined,
+  assignedToOp: assignedRecruiterActiveFilter.value?.op,
+  page:         filtersPage.value,
+  perPage:      filtersPerPage.value,
 }))
 
 const { data: candidatesData, isFetching: candidatesFetching } = useCandidates(candidatesFilters)
@@ -810,7 +818,7 @@ function clearSelection() { selectedIds.value = new Set() }
              propagate automatically. -->
         <div v-else-if="activeTab === 'Filters'" class="flex-1 min-h-0 flex overflow-hidden -mx-7 -mb-6">
           <ErrorBoundary>
-            <CandidatesFilters />
+            <CandidatesFilters :assigned-recruiter-options="smartDistributeOn ? assignedRecruiterOptions : undefined" />
           </ErrorBoundary>
 
           <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--brand-surface-white)] border-t border-[var(--brand-border)]">
@@ -824,21 +832,6 @@ function clearSelection() { selectedIds.value = new Set() }
                 size="lg"
                 placeholder="Search by name or role — try 'recruiter OR marketer' or 'John AND manager'"
               />
-            </div>
-
-            <!-- Assigned Recruiter filter (E2) — real query param, not the
-                 decorative catalog filters above; only meaningful once
-                 Auto-Distribute is on for this job. -->
-            <div v-if="smartDistributeOn" class="px-6 pb-3 flex items-center gap-2">
-              <span class="text-[12.5px] font-semibold text-[var(--brand-text-quiet)]">Assigned to</span>
-              <select
-                v-model="assignedToFilter"
-                class="h-8 pl-2.5 pr-7 text-[12.5px] font-bold rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text)] focus:border-[var(--brand-teal)] focus:outline-none"
-              >
-                <option value="">Anyone</option>
-                <option value="unassigned">Unassigned</option>
-                <option v-for="r in poolRecruiters" :key="r.id" :value="r.id">{{ r.name }}</option>
-              </select>
             </div>
 
             <div class="px-6 pb-2">

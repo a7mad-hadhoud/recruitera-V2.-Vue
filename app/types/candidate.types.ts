@@ -153,8 +153,6 @@ export interface CandidateFilters {
   status: string
   search: string
   job: string
-  /** Smart Distribute ownership filter (E2) — a team member id, 'unassigned', or '' (any). */
-  assignedTo: string
   page: number
   perPage: number
 }

@@ -25,13 +25,32 @@ import DateRangeFilter from './filters/DateRangeFilter.vue'
 import RadioFilter from './filters/RadioFilter.vue'
 import EventScheduledFilter from './filters/EventScheduledFilter.vue'
 
+const props = defineProps<{
+  /** Job-scoped Smart Distribute pool — see useFilterRegistry.ts. Omitted
+   * on the global /candidates page (no single job context there). */
+  assignedRecruiterOptions?: { value: string; label: string }[]
+}>()
+
 const { data: counts } = useCandidateFilterCounts()
 const emptyFilters = ref<Record<string, string | number>>({ perPage: 500 })
 useCandidates(emptyFilters)   // preload for count derivation
 
-const { get: getRegistryEntry } = useFilterRegistry()
+const assignedRecruiterOptionsRef = computed(() => props.assignedRecruiterOptions)
+const { get: getRegistryEntry } = useFilterRegistry(assignedRecruiterOptionsRef)
 const activeFilters = useActiveFilters()
 const { clearFilters: clearBuiltInFilters } = useCandidateFilters()
+
+// "Assigned Recruiter" defaults to visible the moment the job's pool is
+// known — same "on out of the box, removable, not force-re-added" contract
+// as DEFAULT_FILTER_IDS below, just seeded independently since the pool
+// resolves async (arriving after this component's own onMounted already ran).
+const assignedRecruiterSeeded = ref(false)
+watch(assignedRecruiterOptionsRef, (opts) => {
+  if (opts?.length && !assignedRecruiterSeeded.value) {
+    assignedRecruiterSeeded.value = true
+    if (!activeFilters.isActive('assigned-recruiter')) activeFilters.add('assigned-recruiter', 'is')
+  }
+}, { immediate: true })
 
 // ─────────── Collapse state ───────────
 // Below this breakpoint there isn't room for a 288px panel to live in normal
@@ -251,7 +270,7 @@ onMounted(() => {
 
       <!-- Add filter footer -->
       <div class="flex-none border-t border-[var(--brand-border-fade)] p-3 flex gap-2.5 bg-white">
-        <AddFilterPicker @add="(id, op) => activeFilters.add(id, op)" />
+        <AddFilterPicker :assigned-recruiter-options="assignedRecruiterOptions" @add="(id, op) => activeFilters.add(id, op)" />
         <Button
           variant="ghost"
           class="text-[13.5px] font-semibold text-[var(--brand-text-quiet)] hover:bg-[var(--brand-lime-tint-hover)] h-10 px-3.5"
