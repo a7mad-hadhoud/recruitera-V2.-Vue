@@ -11,7 +11,10 @@ const DEV_LATENCY_MS = 350
  * a future API response — jobs/sources/tags/talentPools are arrays because
  * the design shows them stacked.
  */
-const ALL_CANDIDATES: Candidate[] = [
+// Exported so other domains (Smart Distribute's per-recruiter candidate
+// view, Talent Pools, etc.) build on this one roster instead of inventing
+// a parallel cast — see CLAUDE.md "Data layer".
+export const ALL_CANDIDATES: Candidate[] = [
   { id: '1',  name: 'dasdasdasdasd',            initials: 'D',  avatarColor: 'var(--brand-avatar-1)', isNew: true,  status: 'new',          jobs: [],                                                                                                    sources: [],              tags: [],                            talentPools: [],                            disqualifiedBy: null,               dateCreated: 'an hour ago' },
   { id: '2',  name: 'asdsd',                    initials: 'A',  avatarColor: 'var(--brand-avatar-2)', isNew: true,  status: 'new',          jobs: [],                                                                                                    sources: [],              tags: [],                            talentPools: [],                            disqualifiedBy: null,               dateCreated: 'an hour ago' },
   { id: '3',  name: 'dasda',                    initials: 'D',  avatarColor: 'var(--brand-avatar-3)', isNew: true,  status: 'new',          jobs: [],                                                                                                    sources: [],              tags: [],                            talentPools: [],                            disqualifiedBy: null,               dateCreated: 'an hour ago' },
