@@ -14,6 +14,7 @@
 import { X, Users } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BrandButton, BrandAvatarInitials } from '~/components/brand'
+import { autoAllocate } from '~/utils/autoAllocate'
 import type { TeamMember } from '~/types'
 
 interface Target extends TeamMember {
@@ -49,27 +50,10 @@ function setAll() {
 }
 
 // Automatic preview — headroom-weighted so it's not just an even split
-// into recruiters who are already full.
-const autoPreview = computed(() => {
-  const headrooms = props.targets.map(t => ({
-    id: t.id,
-    name: t.name,
-    headroom: t.unlimited ? Infinity : Math.max(0, (t.capacity ?? 0) - t.assigned),
-  }))
-  const finiteTotal = headrooms.filter(h => Number.isFinite(h.headroom)).reduce((s, h) => s + h.headroom, 0)
-  const hasUnlimited = headrooms.some(h => !Number.isFinite(h.headroom))
-  const remaining = count.value
-  return headrooms.map((h) => {
-    if (!Number.isFinite(h.headroom) && hasUnlimited) {
-      // Unlimited recruiters absorb whatever finite capacity can't take.
-      const finiteShare = finiteTotal > 0 ? Math.min(remaining, finiteTotal) : 0
-      const unlimitedCount = headrooms.filter(x => !Number.isFinite(x.headroom)).length
-      return { ...h, share: Math.ceil((remaining - finiteShare) / Math.max(unlimitedCount, 1)) }
-    }
-    if (finiteTotal <= 0) return { ...h, share: 0 }
-    return { ...h, share: Math.round((h.headroom / finiteTotal) * Math.min(remaining, finiteTotal)) }
-  })
-})
+// into recruiters who are already full. Always sums to `count` exactly
+// (see autoAllocate.ts — naive proportional rounding can zero everyone
+// out for a small count against a large headroom pool).
+const autoPreview = computed(() => autoAllocate(count.value, props.targets))
 
 const manualTotal = computed(() => Object.values(manualAllocations.value).reduce((s, n) => s + (Number(n) || 0), 0))
 const manualValid = computed(() => manualTotal.value === count.value && count.value > 0)
@@ -83,7 +67,7 @@ const canConfirm = computed(() =>
 function confirm() {
   if (!canConfirm.value) return
   const allocations = strategy.value === 'auto'
-    ? Object.fromEntries(autoPreview.value.map(p => [p.id, p.share]))
+    ? autoPreview.value
     : { ...manualAllocations.value }
   emit('confirm', { count: count.value, strategy: strategy.value, allocations })
 }
@@ -188,7 +172,7 @@ function confirm() {
               <span class="flex-1 min-w-0 text-[12.5px] font-bold text-[var(--brand-text)] truncate">{{ t.name }}</span>
               <span class="text-[11px] text-[var(--brand-text-quiet)] shrink-0">{{ t.unlimited ? 'Unlimited' : `${t.assigned}/${t.capacity}` }}</span>
               <span v-if="strategy === 'auto'" class="w-10 text-right text-[13px] font-bold text-[var(--brand-teal-secondary)] tabular-nums shrink-0">
-                +{{ autoPreview.find(p => p.id === t.id)?.share ?? 0 }}
+                +{{ autoPreview[t.id] ?? 0 }}
               </span>
               <input
                 v-else

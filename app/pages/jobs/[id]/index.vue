@@ -769,6 +769,7 @@ function clearSelection() { selectedIds.value = new Set() }
                 :current-page="filtersPage"
                 :total-pages="totalPages"
                 :per-page="filtersPerPage"
+                :job-id="jobId"
                 @page-change="onFiltersPageChange"
               />
             </div>

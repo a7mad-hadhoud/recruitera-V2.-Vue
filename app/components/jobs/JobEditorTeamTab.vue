@@ -26,6 +26,7 @@ import SmartDistributeCandidatesModal from '~/components/jobs/SmartDistributeCan
 import SmartDistributeRedistributeModal from '~/components/jobs/SmartDistributeRedistributeModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
+import { usePreviewRoleStore, PREVIEW_ROLE_LABELS } from '~/stores/previewRole.store'
 import type { Component } from 'vue'
 import type { DistributionMode, TeamMember } from '~/types'
 
@@ -124,6 +125,24 @@ type DistMode = DistributionMode
 const distMode = ref<DistMode>('random')
 const unclaimedAlertHours = ref(48)
 
+// Open Pool (claim mode) — which actions actually claim a candidate (E7).
+// Viewing/sharing/downloading a profile is deliberately never a claim.
+const QUALIFYING_ACTIONS: Array<{ key: string; label: string }> = [
+  { key: 'stage',      label: 'Move pipeline stage' },
+  { key: 'email',      label: 'Send email' },
+  { key: 'whatsapp',   label: 'Send WhatsApp message' },
+  { key: 'comment',    label: 'Add comment' },
+  { key: 'evaluation', label: 'Request evaluation' },
+  { key: 'task',       label: 'Add task' },
+]
+const NON_QUALIFYING_ACTIONS = ['View profile', 'Share profile', 'Download CV']
+const claimActions = ref<Record<string, boolean>>(
+  Object.fromEntries(QUALIFYING_ACTIONS.map(a => [a.key, true])),
+)
+function toggleClaimAction(key: string) {
+  claimActions.value = { ...claimActions.value, [key]: !claimActions.value[key] }
+}
+
 interface DistState { capacity: number | null; unlimited: boolean; assigned: number }
 const distState = ref<Record<string, DistState>>({})
 function distOf(id: string): DistState { return distState.value[id] ?? { capacity: null, unlimited: true, assigned: 0 } }
@@ -182,13 +201,25 @@ function copyRef(m: TeamMember) {
   setTimeout(() => { if (copiedRef.value === m.id) copiedRef.value = null }, 1500)
 }
 
+// ─── Permission gate (E4) — driven by the demo role-preview switcher
+// since there's no real role-aware auth yet ───────────────────────────
+const previewRoleStore = usePreviewRoleStore()
+const canManage = computed(() => previewRoleStore.canManageSmartDistribute)
+
 // ─── Validation (E1) — blocks Save the same way the spec's acceptance
 // criteria describe, not just a visual pass ──────────────────────────
-const enableBlockedMsg = ref(false)
+const toggleWarning = ref<string | null>(null)
+function flashWarning(msg: string) {
+  toggleWarning.value = msg
+  setTimeout(() => { if (toggleWarning.value === msg) toggleWarning.value = null }, 3400)
+}
 function onToggleAuto() {
+  if (!canManage.value) {
+    flashWarning("You don't have permission to manage Smart Distribute. Please contact your admin.")
+    return
+  }
   if (!autoDistribute.value && poolMembers.value.length < 2) {
-    enableBlockedMsg.value = true
-    setTimeout(() => (enableBlockedMsg.value = false), 3400)
+    flashWarning('At least 2 recruiters must be added to this job to enable Auto Distribute.')
     return
   }
   autoDistribute.value = !autoDistribute.value
@@ -411,20 +442,37 @@ async function save() {
 
     <!-- Auto-Distribute + Candidate Distribution card -->
     <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
+    <!-- Preview-as role switcher — demo only, see previewRole.store.ts -->
+    <div class="flex items-center gap-2 mb-5 pb-5 border-b border-dashed border-[var(--brand-border)]">
+      <span class="text-[10.5px] font-bold text-white bg-[var(--brand-teal-secondary)] px-1.5 py-0.5 rounded-[4px] tracking-wide">DEMO</span>
+      <span class="text-[12.5px] font-semibold text-[var(--brand-text-quiet)]">Previewing as</span>
+      <select
+        v-model="previewRoleStore.role"
+        class="h-7 pl-2 pr-6 text-[12.5px] font-bold rounded-[7px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text)] focus:border-[var(--brand-teal)] focus:outline-none"
+      >
+        <option v-for="(label, key) in PREVIEW_ROLE_LABELS" :key="key" :value="key">{{ label }}</option>
+      </select>
+      <span class="text-[11.5px] text-[var(--brand-text-faint)]">— controls the "Smart Distribute Initiation and Management" permission (E4)</span>
+    </div>
+
     <!-- Auto-Distribute Candidates -->
     <div class="flex items-center gap-4">
       <ArrowLeftRight class="w-5 h-5 text-[var(--brand-text-quiet)] shrink-0" stroke-width="1.7" />
       <div class="flex-1 min-w-0">
         <div class="text-[15px] font-bold text-[var(--brand-text)]">Auto-Distribute Candidates</div>
         <div class="text-[13px] text-[var(--brand-text-quiet)] mt-0.5">Assign candidates to recruiters based on distribution rules</div>
-        <div v-if="enableBlockedMsg" class="text-[12.5px] font-semibold text-[var(--brand-status-closed-text)] mt-1.5 flex items-center gap-1.5">
+        <div v-if="toggleWarning" class="text-[12.5px] font-semibold text-[var(--brand-status-closed-text)] mt-1.5 flex items-center gap-1.5">
           <AlertTriangle class="w-3.5 h-3.5 shrink-0" stroke-width="2" />
-          At least 2 recruiters must be added to this job to enable Auto-Distribute.
+          {{ toggleWarning }}
         </div>
       </div>
-      <label class="inline-flex items-center cursor-pointer shrink-0">
+      <label
+        class="inline-flex items-center shrink-0"
+        :class="canManage ? 'cursor-pointer' : 'cursor-not-allowed'"
+      >
         <span
           class="relative inline-flex w-[38px] h-[22px] rounded-full transition-colors"
+          :class="{ 'opacity-50': !canManage }"
           :style="{ background: autoDistribute ? 'var(--brand-teal)' : 'var(--brand-border)' }"
         >
           <span
@@ -436,8 +484,13 @@ async function save() {
       </label>
     </div>
 
+    <!-- Non-permitted role: state only, no management controls (E3 "Smart Distribute Management Access") -->
+    <div v-if="autoDistribute && !canManage" class="mt-6 pt-6 border-t border-[var(--brand-border-fade)] text-[13px] text-[var(--brand-text-quiet)]">
+      Auto-Distribute is currently <span class="font-bold text-[var(--brand-text)]">ON</span> for this job. Configuration is hidden — {{ PREVIEW_ROLE_LABELS[previewRoleStore.role] }} doesn't have the Smart Distribute permission.
+    </div>
+
     <!-- Candidate Distribution -->
-    <div v-if="autoDistribute" class="mt-6 pt-6 border-t border-[var(--brand-border-fade)]">
+    <div v-if="autoDistribute && canManage" class="mt-6 pt-6 border-t border-[var(--brand-border-fade)]">
       <div class="flex items-center gap-2.5 mb-3">
         <Users class="w-5 h-5 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
         <h2 class="text-[16px] font-bold text-[var(--brand-text)]">Candidate Distribution</h2>
@@ -492,6 +545,43 @@ async function save() {
         <template v-else>
           When using capacity limits, at least one recruiter must be set as unlimited to handle overflow.
         </template>
+      </div>
+
+      <!-- Open Pool — which actions actually claim a candidate, + unclaimed nudge -->
+      <div v-if="distMode === 'claim'" class="rounded-[10px] border border-[var(--brand-border-fade)] bg-[var(--brand-canvas)] p-4 mb-3.5">
+        <div class="text-[12.5px] font-bold text-[var(--brand-text-secondary)] mb-2.5">Claims ownership when a recruiter…</div>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <button
+            v-for="a in QUALIFYING_ACTIONS"
+            :key="a.key"
+            type="button"
+            class="inline-flex items-center gap-1.5 text-[12px] font-bold rounded-full px-3 py-1.5 border-[1.5px] transition"
+            :class="claimActions[a.key]
+              ? 'border-[var(--brand-teal)] bg-[var(--brand-lime-tint)] text-[var(--brand-text)]'
+              : 'border-[var(--brand-border)] bg-white text-[var(--brand-text-quiet)]'"
+            @click="toggleClaimAction(a.key)"
+          >
+            <Check v-if="claimActions[a.key]" class="w-3 h-3 text-[var(--brand-teal-secondary)]" stroke-width="2.5" />
+            {{ a.label }}
+          </button>
+          <span
+            v-for="label in NON_QUALIFYING_ACTIONS"
+            :key="label"
+            class="inline-flex items-center text-[12px] font-semibold rounded-full px-3 py-1.5 border-[1.5px] border-dashed border-[var(--brand-border)] text-[var(--brand-text-faint)]"
+            :title="`${label} never claims a candidate — viewing isn't a commitment.`"
+          >{{ label }}</span>
+        </div>
+        <div class="flex items-center gap-3 pt-3 border-t border-[var(--brand-border-fade)]">
+          <span class="text-[12.5px] font-semibold text-[var(--brand-text-secondary)]">Nudge recruiters if a candidate stays unclaimed for</span>
+          <select
+            v-model.number="unclaimedAlertHours"
+            class="h-8 pl-3 pr-7 text-[12.5px] font-bold rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text)] focus:border-[var(--brand-teal)] focus:outline-none"
+          >
+            <option :value="24">24 hours</option>
+            <option :value="48">48 hours</option>
+            <option :value="72">72 hours</option>
+          </select>
+        </div>
       </div>
 
       <!-- Recruiter list — every mode shows Assigned; Capacity/Unlimited only apply to Random & Sequential -->
@@ -599,17 +689,7 @@ async function save() {
             <span class="text-[13px] font-bold text-[var(--brand-text-secondary)]">Unlimited</span>
           </label>
 
-          <!-- Remove from pool (guarded — redistributes first if they still have assigned candidates) -->
-          <button
-            type="button"
-            class="w-9 h-9 rounded-[9px] inline-flex items-center justify-center border-[1.5px] border-[var(--brand-border-fade)] bg-white text-[var(--brand-text-quiet)] hover:text-[var(--brand-status-closed-text)] hover:border-[var(--brand-status-closed-text)] transition shrink-0"
-            :aria-label="`Remove ${m.name} from Auto-Distribute`"
-            @click="requestRemove(m)"
-          >
-            <Trash2 class="w-3.5 h-3.5" stroke-width="1.8" />
-          </button>
-
-          <!-- View assigned / Redistribute -->
+          <!-- View assigned / Redistribute / Remove — one menu -->
           <SettingsRowMenu>
             <SettingsRowMenuItem @click="openView(m)">
               <Eye class="w-3.5 h-3.5" stroke-width="1.8" />
@@ -618,6 +698,10 @@ async function save() {
             <SettingsRowMenuItem :disabled="distAssigned(m.id) === 0" @click="openRedistribute(m)">
               <Repeat2 class="w-3.5 h-3.5" stroke-width="1.8" />
               Redistribute candidates
+            </SettingsRowMenuItem>
+            <SettingsRowMenuItem danger :aria-label="`Remove ${m.name} from Auto-Distribute`" @click="requestRemove(m)">
+              <Trash2 class="w-3.5 h-3.5" stroke-width="1.8" />
+              Remove from Auto-Distribute
             </SettingsRowMenuItem>
           </SettingsRowMenu>
         </div>
