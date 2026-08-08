@@ -20,7 +20,8 @@
 import { Search, UserPlus, ClipboardPlus, X, GripVertical, ArrowLeftRight, Users, Copy, Check, Shuffle, ListOrdered, Link2, Hand, Trash2, Eye, Repeat2, AlertTriangle } from 'lucide-vue-next'
 import { BrandButton, BrandAvatarInitials } from '~/components/brand'
 import { useTeamMembers } from '~/composables/useTeam'
-import { useSmartDistributeConfig } from '~/composables/useSmartDistribute'
+import { useAssignCandidates, useSmartDistributeConfig } from '~/composables/useSmartDistribute'
+import { useApi } from '~/composables/useApi'
 import JobTeamMemberModal from '~/components/jobs/JobTeamMemberModal.vue'
 import SmartDistributeCandidatesModal from '~/components/jobs/SmartDistributeCandidatesModal.vue'
 import SmartDistributeRedistributeModal from '~/components/jobs/SmartDistributeRedistributeModal.vue'
@@ -28,7 +29,7 @@ import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
 import { usePreviewRoleStore, PREVIEW_ROLE_LABELS } from '~/stores/previewRole.store'
 import type { Component } from 'vue'
-import type { DistributionMode, TeamMember } from '~/types'
+import type { DistributionMode, SmartDistributeCandidatesResponse, TeamMember } from '~/types'
 
 const { data: teamData } = useTeamMembers()
 const roster = computed<TeamMember[]>(() => teamData.value?.data ?? [])
@@ -143,10 +144,18 @@ function toggleClaimAction(key: string) {
   claimActions.value = { ...claimActions.value, [key]: !claimActions.value[key] }
 }
 
-interface DistState { capacity: number | null; unlimited: boolean; assigned: number }
+// "Assigned" is never stored client-side — it's always read live off the
+// job's Smart Distribute config, which itself derives it from real
+// candidate ownership (ALL_CANDIDATES.assignedRecruiterId) server-side.
+// Only capacity/unlimited (job-level rules, not ownership) get a local
+// mutable copy, same pattern as settings/locations.vue.
+const { data: distConfigData } = useSmartDistributeConfig(DEMO_JOB_ID)
+const assignMutation = useAssignCandidates()
+
+interface DistState { capacity: number | null; unlimited: boolean }
 const distState = ref<Record<string, DistState>>({})
-function distOf(id: string): DistState { return distState.value[id] ?? { capacity: null, unlimited: true, assigned: 0 } }
-function distAssigned(id: string) { return distOf(id).assigned }
+function distOf(id: string): DistState { return distState.value[id] ?? { capacity: null, unlimited: true } }
+function distAssigned(id: string) { return distConfigData.value?.recruiters.find(r => r.teamMemberId === id)?.assigned ?? 0 }
 function distCapacity(id: string) { return distOf(id).capacity }
 
 const lastMemberId = computed(() =>
@@ -167,14 +176,11 @@ function toggleUnlimited(id: string) {
   distState.value = { ...distState.value, [id]: { ...cur, unlimited: !cur.unlimited } }
 }
 
-// Seed once from the job's Smart Distribute config, then it's a local
-// mutable copy from here on (same pattern as settings/locations.vue).
-const { data: distConfigData } = useSmartDistributeConfig(DEMO_JOB_ID)
 const distSeeded = ref(false)
 watch(distConfigData, (cfg) => {
   if (cfg && !distSeeded.value) {
     distState.value = Object.fromEntries(
-      cfg.recruiters.map(r => [r.teamMemberId, { capacity: r.capacity, unlimited: r.unlimited, assigned: r.assigned }]),
+      cfg.recruiters.map(r => [r.teamMemberId, { capacity: r.capacity, unlimited: r.unlimited }]),
     )
     autoDistribute.value = cfg.enabled
     distMode.value = cfg.mode
@@ -253,13 +259,10 @@ function openView(m: TeamMember) {
 const viewOtherRecruiters = computed(() => poolMembers.value.filter(m => m.id !== viewRecruiter.value?.id))
 function onReassignFromView(payload: { candidateId: string; toTeamMemberId: string }) {
   if (!viewRecruiter.value) return
-  const fromId = viewRecruiter.value.id
-  distState.value = {
-    ...distState.value,
-    [fromId]: { ...distOf(fromId), assigned: Math.max(0, distOf(fromId).assigned - 1) },
-    [payload.toTeamMemberId]: { ...distOf(payload.toTeamMemberId), assigned: distOf(payload.toTeamMemberId).assigned + 1 },
-  }
-  viewRecruiter.value = { ...viewRecruiter.value, assigned: distAssigned(fromId) }
+  assignMutation.mutate({ candidateIds: [payload.candidateId], recruiterId: payload.toTeamMemberId })
+  // Optimistic — the query invalidation the mutation triggers will confirm
+  // (or correct) this shortly; no need to block the UI on it.
+  viewRecruiter.value = { ...viewRecruiter.value, assigned: Math.max(0, viewRecruiter.value.assigned - 1) }
   showToast('Candidate reassigned')
 }
 
@@ -271,7 +274,7 @@ const redistTargets = computed(() => {
   if (!redistSource.value) return []
   return poolMembers.value
     .filter(m => m.id !== redistSource.value!.id)
-    .map(m => ({ ...m, ...distOf(m.id) }))
+    .map(m => ({ ...m, ...distOf(m.id), assigned: distAssigned(m.id) }))
 })
 function openRedistribute(m: TeamMember, removeAfter = false) {
   redistSource.value = { ...m, assigned: distAssigned(m.id) }
@@ -291,23 +294,30 @@ function readdToPool(id: string) {
   next.delete(id)
   distExcluded.value = next
 }
-function onRedistributeConfirm(payload: { count: number; strategy: 'auto' | 'manual'; allocations: Record<string, number> }) {
+async function onRedistributeConfirm(payload: { count: number; strategy: 'auto' | 'manual'; allocations: Record<string, number> }) {
   const src = redistSource.value
   if (!src) return
-  const next = { ...distState.value }
-  next[src.id] = { ...distOf(src.id), assigned: Math.max(0, distOf(src.id).assigned - payload.count) }
-  for (const [id, n] of Object.entries(payload.allocations)) {
+  const api = useApi()
+  // Fetch the source recruiter's real assigned candidates so there's an
+  // actual id to move — the modal only deals in counts.
+  const res = await api.get<SmartDistributeCandidatesResponse>(
+    `/api/jobs/${DEMO_JOB_ID}/smart-distribute/candidates?recruiterId=${src.id}`,
+  )
+  const ids = res.data.slice(0, payload.count).map(c => c.id)
+  let cursor = 0
+  for (const [teamMemberId, n] of Object.entries(payload.allocations)) {
     if (!n) continue
-    next[id] = { ...distOf(id), assigned: distOf(id).assigned + n }
+    const slice = ids.slice(cursor, cursor + n)
+    cursor += n
+    if (slice.length) await assignMutation.mutateAsync({ candidateIds: slice, recruiterId: teamMemberId })
   }
-  distState.value = next
 
   if (redistRemoveAfter.value) {
-    if ((next[src.id]?.assigned ?? 0) === 0) {
+    if (payload.count >= src.assigned) {
       distExcluded.value = new Set([...distExcluded.value, src.id])
       showToast(`${src.name} removed from Auto-Distribute`)
     } else {
-      showToast(`${next[src.id]?.assigned} candidate(s) left — redistribute the rest to remove ${src.name}`)
+      showToast(`${src.assigned - payload.count} candidate(s) left — redistribute the rest to remove ${src.name}`)
     }
   } else {
     showToast('Candidates redistributed')

@@ -45,6 +45,10 @@ import { useJobActivity, type JobActivityKind } from '~/composables/useJobActivi
 import { useJobNotes, type NoteVisibility } from '~/composables/useJobNotes'
 import { useJobReferrals, REFERRAL_SOURCE_TAGS } from '~/composables/useJobReferrals'
 import { useCandidates } from '~/composables/useCandidates'
+import { useTeamMembers } from '~/composables/useTeam'
+import { useSmartDistributeConfig } from '~/composables/useSmartDistribute'
+import CandidatesBulkAssignModal from '~/components/candidates/CandidatesBulkAssignModal.vue'
+import { usePreviewRoleStore } from '~/stores/previewRole.store'
 import { refDebounced, useLocalStorage } from '@vueuse/core'
 import type { Job, PipelineStage } from '~/types'
 
@@ -236,12 +240,63 @@ const searchInput = ref('')
 const debouncedSearch = refDebounced(searchInput, 250)
 const filtersPage = ref(1)
 const filtersPerPage = ref(30)
+// Assigned Recruiter filter (E2) — '' = any, 'unassigned', or a team member id.
+const assignedToFilter = ref('')
+watch(assignedToFilter, () => { filtersPage.value = 1 })
+
+// Shared Smart Distribute context — the assigned-recruiter dropdown
+// (Filters tab) and the bulk-assign button + badges (Pipeline tab) all
+// need "who's in this job's pool" and "is Auto-Distribute even on".
+const { data: teamData } = useTeamMembers()
+const { data: distConfig } = useSmartDistributeConfig(jobId)
+const previewRoleStore = usePreviewRoleStore()
+const poolRecruiters = computed(() => {
+  const roster = teamData.value?.data ?? []
+  return (distConfig.value?.recruiters ?? [])
+    .map(r => roster.find(m => m.id === r.teamMemberId))
+    .filter((m): m is NonNullable<typeof m> => !!m)
+})
+const smartDistributeOn = computed(() => !!distConfig.value?.enabled)
+
+// Lightweight, unpaginated fetch of this job's candidates purely to read
+// assignedRecruiterId — the Pipeline board's own PipelineCandidate fixture
+// doesn't carry ownership, but ids match real candidate rows (see
+// useJobPipeline.ts), so a cheap cross-reference is enough for badges.
+const { data: allJobCandidatesData } = useCandidates(computed(() => ({ job: job.value?.title, perPage: 999 })))
+const assignedRecruiterIdByCandidateId = computed(() => {
+  const map: Record<string, string | null | undefined> = {}
+  for (const c of allJobCandidatesData.value?.data ?? []) map[c.id] = c.assignedRecruiterId
+  return map
+})
+function assignedRecruiterFor(candidateId: string) {
+  if (!smartDistributeOn.value) return undefined
+  const recruiterId = assignedRecruiterIdByCandidateId.value[candidateId]
+  if (!recruiterId) return null
+  const m = poolRecruiters.value.find(r => r.id === recruiterId)
+    ?? (teamData.value?.data ?? []).find(r => r.id === recruiterId)
+  if (!m) return null
+  const parts = m.name.trim().split(/\s+/)
+  const initials = ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1]![0] : '')).toUpperCase()
+  return { name: m.name, initials, bg: m.avatarBg, color: m.avatarText }
+}
+
+// Bulk "Assign to recruiters" from the Pipeline board's own selection.
+const pipelineBulkAssignOpen = ref(false)
+const pipelineAssignToast = ref<string | null>(null)
+function onPipelineBulkAssigned() {
+  const n = selectedCount.value
+  pipelineBulkAssignOpen.value = false
+  clearSelection()
+  pipelineAssignToast.value = `${n} candidate${n === 1 ? '' : 's'} assigned`
+  setTimeout(() => { pipelineAssignToast.value = null }, 2600)
+}
 
 const candidatesFilters = computed<Record<string, string | number | undefined>>(() => ({
-  job:     job.value?.title,
-  search:  debouncedSearch.value || undefined,
-  page:    filtersPage.value,
-  perPage: filtersPerPage.value,
+  job:        job.value?.title,
+  search:     debouncedSearch.value || undefined,
+  assignedTo: assignedToFilter.value || undefined,
+  page:       filtersPage.value,
+  perPage:    filtersPerPage.value,
 }))
 
 const { data: candidatesData, isFetching: candidatesFetching } = useCandidates(candidatesFilters)
@@ -441,6 +496,14 @@ function clearSelection() { selectedIds.value = new Set() }
             <button class="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[9px] bg-white border border-[var(--brand-border)] text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)] transition whitespace-nowrap">
               <ArrowLeftRight class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
               Change Stage
+            </button>
+            <button
+              v-if="smartDistributeOn && previewRoleStore.canManageSmartDistribute"
+              class="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[9px] bg-white border border-[var(--brand-border)] text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)] transition whitespace-nowrap"
+              @click="pipelineBulkAssignOpen = true"
+            >
+              <UserPlus class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
+              Assign to recruiters
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
@@ -711,6 +774,7 @@ function clearSelection() { selectedIds.value = new Set() }
                   :move-targets="moveTargetsFor(stage.key)"
                   :selected="isSelected(cand.id)"
                   :dragging="drag?.id === cand.id"
+                  :assigned-recruiter="assignedRecruiterFor(cand.id)"
                   @toggle-select="toggleCandidate"
                   @move="(id, fromKey, toKey) => onMove(id, fromKey, toKey)"
                   @drag-start="(id, fromKey, e) => onDragStart(id, fromKey, e)"
@@ -760,6 +824,21 @@ function clearSelection() { selectedIds.value = new Set() }
                 size="lg"
                 placeholder="Search by name or role — try 'recruiter OR marketer' or 'John AND manager'"
               />
+            </div>
+
+            <!-- Assigned Recruiter filter (E2) — real query param, not the
+                 decorative catalog filters above; only meaningful once
+                 Auto-Distribute is on for this job. -->
+            <div v-if="smartDistributeOn" class="px-6 pb-3 flex items-center gap-2">
+              <span class="text-[12.5px] font-semibold text-[var(--brand-text-quiet)]">Assigned to</span>
+              <select
+                v-model="assignedToFilter"
+                class="h-8 pl-2.5 pr-7 text-[12.5px] font-bold rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text)] focus:border-[var(--brand-teal)] focus:outline-none"
+              >
+                <option value="">Anyone</option>
+                <option value="unassigned">Unassigned</option>
+                <option v-for="r in poolRecruiters" :key="r.id" :value="r.id">{{ r.name }}</option>
+              </select>
             </div>
 
             <div class="px-6 pb-2">
@@ -1150,5 +1229,27 @@ function clearSelection() { selectedIds.value = new Set() }
         </div>
       </template>
     </div>
+
+    <!-- Bulk "Assign to recruiters" from the Pipeline board (E5) -->
+    <CandidatesBulkAssignModal
+      v-model:open="pipelineBulkAssignOpen"
+      :job-id="jobId"
+      :candidate-ids="Array.from(selectedIds)"
+      @assigned="onPipelineBulkAssigned"
+    />
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      leave-active-class="transition duration-150 ease-in"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div
+        v-if="pipelineAssignToast"
+        class="fixed bottom-7 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2.5 rounded-[12px] px-5 py-3.5 text-[13.5px] font-semibold shadow-[0_8px_32px_rgba(0,0,0,0.22)]"
+        style="background: var(--brand-toast-success-bg); color: var(--brand-toast-success-text)"
+      >
+        {{ pipelineAssignToast }}
+      </div>
+    </Transition>
   </div>
 </template>

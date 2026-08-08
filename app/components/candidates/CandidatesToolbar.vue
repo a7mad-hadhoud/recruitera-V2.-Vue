@@ -27,6 +27,7 @@ import CandidateBulkEmailModal from './CandidateBulkEmailModal.vue'
 import CandidatesBulkAssignModal from './CandidatesBulkAssignModal.vue'
 import { useCandidatesStore } from '~/stores/candidates.store'
 import { useSmartDistributeConfig } from '~/composables/useSmartDistribute'
+import { usePreviewRoleStore } from '~/stores/previewRole.store'
 
 const props = defineProps<{
   pageIds: string[]      // ids of rows currently on the page
@@ -48,7 +49,16 @@ const store = useCandidatesStore()
 // fall back to a harmless placeholder when there isn't one; the computed
 // below is what actually gates visibility.
 const { data: smartDistributeConfig } = useSmartDistributeConfig(computed(() => props.jobId ?? '__none__'))
-const canBulkAssign = computed(() => !!props.jobId && !!smartDistributeConfig.value?.enabled)
+const previewRoleStore = usePreviewRoleStore()
+const canBulkAssign = computed(() =>
+  !!props.jobId && !!smartDistributeConfig.value?.enabled && previewRoleStore.canManageSmartDistribute,
+)
+const bulkAssignDisabledReason = computed(() => {
+  if (!props.jobId) return 'Only available on a job with Auto-Distribute on'
+  if (!smartDistributeConfig.value?.enabled) return 'Auto-Distribute is off for this job'
+  if (!previewRoleStore.canManageSmartDistribute) return "You don't have permission to manage Smart Distribute"
+  return ''
+})
 const bulkAssignOpen = ref(false)
 const assignToast = ref<string | null>(null)
 function onBulkAssigned() {
@@ -133,7 +143,7 @@ const bulkEmailOpen = ref(false)
           <DropdownMenuItem><MessageCircle class="w-3.5 h-3.5 mr-2" />Send WhatsApp</DropdownMenuItem>
           <DropdownMenuItem
             :disabled="!canBulkAssign"
-            :title="canBulkAssign ? '' : 'Only available on a job with Auto-Distribute on'"
+            :title="bulkAssignDisabledReason"
             @click="canBulkAssign && (bulkAssignOpen = true)"
           ><UserPlus class="w-3.5 h-3.5 mr-2" />Assign to recruiters</DropdownMenuItem>
           <DropdownMenuItem><Minus class="w-3.5 h-3.5 mr-2" />Remove</DropdownMenuItem>
@@ -206,7 +216,7 @@ const bulkEmailOpen = ref(false)
       v-if="jobId"
       v-model:open="bulkAssignOpen"
       :job-id="jobId"
-      :count="store.selectedCount"
+      :candidate-ids="store.selectedIds"
       @assigned="onBulkAssigned"
     />
 

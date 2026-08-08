@@ -11,22 +11,24 @@
 import { X, Users } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BrandButton, BrandAvatarInitials } from '~/components/brand'
-import { useSmartDistributeConfig } from '~/composables/useSmartDistribute'
+import { useAssignCandidates, useSmartDistributeConfig } from '~/composables/useSmartDistribute'
 import { useTeamMembers } from '~/composables/useTeam'
 import { autoAllocate } from '~/utils/autoAllocate'
 import type { TeamMember } from '~/types'
 
 const props = defineProps<{
   jobId: string
-  count: number
+  candidateIds: string[]
 }>()
+const count = computed(() => props.candidateIds.length)
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{
-  assigned: [payload: { allocations: Record<string, number> }]
+  assigned: []
 }>()
 
 const { data: teamData } = useTeamMembers()
 const { data: distConfig } = useSmartDistributeConfig(props.jobId)
+const assignMutation = useAssignCandidates()
 
 const recruiters = computed(() => {
   const roster = teamData.value?.data ?? []
@@ -50,24 +52,31 @@ watch(open, (isOpen) => {
 // same (and share the same sums-to-exactly-`count` guarantee — see
 // autoAllocate.ts).
 const autoPreview = computed(() => autoAllocate(
-  props.count,
+  count.value,
   recruiters.value.map(r => ({ id: r.teamMemberId, unlimited: r.unlimited, capacity: r.capacity, assigned: r.assigned })),
 ))
 
 const manualTotal = computed(() => Object.values(manualAllocations.value).reduce((s, n) => s + (Number(n) || 0), 0))
-const manualValid = computed(() => manualTotal.value === props.count && props.count > 0)
+const manualValid = computed(() => manualTotal.value === count.value && count.value > 0)
 const canConfirm = computed(() =>
   recruiters.value.length > 0
-  && props.count > 0
+  && count.value > 0
   && (strategy.value === 'auto' || manualValid.value),
 )
 
-function confirm() {
+async function confirm() {
   if (!canConfirm.value) return
   const allocations = strategy.value === 'auto'
     ? autoPreview.value
     : { ...manualAllocations.value }
-  emit('assigned', { allocations })
+  let cursor = 0
+  for (const [recruiterId, n] of Object.entries(allocations)) {
+    if (!n) continue
+    const slice = props.candidateIds.slice(cursor, cursor + n)
+    cursor += n
+    if (slice.length) await assignMutation.mutateAsync({ candidateIds: slice, recruiterId })
+  }
+  emit('assigned')
 }
 </script>
 

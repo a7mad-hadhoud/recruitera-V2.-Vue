@@ -13,11 +13,12 @@ export function useCandidateFilters() {
   const router = useRouter()
 
   const filters = computed<CandidateFilters>(() => ({
-    status:  (route.query.status  as string) ?? '',
-    search:  (route.query.search  as string) ?? '',
-    job:     (route.query.job     as string) ?? '',
-    page:    Math.max(1, Number(route.query.page    ?? 1)),
-    perPage: Math.max(1, Number(route.query.perPage ?? 30)),
+    status:     (route.query.status     as string) ?? '',
+    search:     (route.query.search     as string) ?? '',
+    job:        (route.query.job        as string) ?? '',
+    assignedTo: (route.query.assignedTo as string) ?? '',
+    page:       Math.max(1, Number(route.query.page    ?? 1)),
+    perPage:    Math.max(1, Number(route.query.perPage ?? 30)),
   }))
 
   /**
@@ -42,7 +43,7 @@ export function useCandidateFilters() {
   }
 
   const hasActiveFilters = computed(() =>
-    !!(filters.value.status || filters.value.search || filters.value.job),
+    !!(filters.value.status || filters.value.search || filters.value.job || filters.value.assignedTo),
   )
 
   return { filters, setFilter, clearFilters, hasActiveFilters }
