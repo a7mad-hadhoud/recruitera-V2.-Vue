@@ -31,6 +31,7 @@ const emit = defineEmits<{
   restore: []
   remove: []
   openForm: []
+  formLink: []
   addCandidate: [mode: AddCandidateMode]
   openCandidate: [c: PoolCandidate]
   moveToPool: [ids: string[]]
@@ -184,6 +185,9 @@ const FILTER_FIELD = 'w-full rounded-[9px] border-[1.5px] border-[var(--brand-bo
             </BrandButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem v-if="pool.id === 'p1'" @click="emit('formLink')">
+              Form Link
+            </DropdownMenuItem>
             <DropdownMenuItem v-if="!pool.archived" :disabled="isSystem" @click="emit('archive')">
               Archive
             </DropdownMenuItem>

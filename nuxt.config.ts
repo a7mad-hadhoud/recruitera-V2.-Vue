@@ -84,6 +84,7 @@ export default defineNuxtConfig({
     '/analytics':      { ssr: false },
     '/whatsapp':       { ssr: false },
     '/career-site':    { ssr: false },
+    '/careers/**':     { ssr: false },
   },
 
   experimental: {
@@ -92,12 +93,13 @@ export default defineNuxtConfig({
   },
 
   app: {
-    // pageTransition was { name: 'page', mode: 'out-in' }, which silently broke every
-    // in-app route change: the URL updated but the page component never swapped, so
-    // clicking a candidate, a job or a pool left you looking at the previous screen.
-    // Reproduced on a clean dev server, and disabling it is what fixes it — supplying
-    // the missing .page-enter/.page-leave styles does not. Re-enable only with a
-    // verified working transition.
+    // Must stay false — see "Known landmines" in the root CLAUDE.md. A named
+    // transition here ({ name: 'page', mode: 'out-in' }) silently breaks every
+    // client-side route change app-wide: the URL updates but the page
+    // component never swaps (clicking a candidate, job, or pool leaves you
+    // looking at the previous screen). Reproduced on a clean dev server;
+    // disabling it is what fixes it — missing .page-enter/.page-leave CSS is
+    // not the cause. Re-enable only as its own task with its own verification.
     pageTransition: false,
   },
 })
