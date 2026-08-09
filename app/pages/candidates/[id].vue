@@ -3,7 +3,7 @@ import {
   X, Plus, ChevronDown, ChevronUp, Copy, Linkedin, Github, Check,
   Users, Tag, MoreVertical, MessageCircle, FolderCheck, Link2, Printer,
   ExternalLink, GraduationCap, GripVertical, Upload, RefreshCw, Trash2, FolderMinus,
-  ListOrdered, RotateCcw, Lock,
+  ListOrdered, RotateCcw, Lock, UserCog,
 } from 'lucide-vue-next'
 import { BrandAvatarInitials, BrandButton, BrandEmptyState, BrandStatusBadge, BrandLimeCheckbox } from '~/components/brand'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -64,12 +64,6 @@ const readOnly = computed(() =>
 // candidate's owner regardless of who currently owns it, separate from the
 // self-claim path below (which only ever assigns to the previewed viewer).
 const canManageAssignment = computed(() => previewRoleStore.canManageSmartDistribute)
-function initialsFor(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  const first = parts[0]?.[0] ?? ''
-  const last = parts.length > 1 ? parts[parts.length - 1]![0] : ''
-  return (first + last).toUpperCase() || '?'
-}
 
 // E5 ownership writes — self-claim ("Assign to me") and Admin manual
 // (re)assign both funnel through the same mutation, just with a different
@@ -469,6 +463,50 @@ function sendReply(note: LocalNote) {
           >
             <!-- LEFT column -->
             <div class="flex-1 min-w-0 flex flex-col lg:min-h-0">
+              <!-- Smart Distribute ownership banner (E2/E5) — single, consistent
+                   status box at the top of the profile instead of a scattered
+                   header chip + separate strip. Admin/permitted users always get
+                   full (re)assign capability here regardless of current owner;
+                   everyone else sees status + self-claim when unassigned. -->
+              <div
+                class="shrink-0 flex items-center gap-2.5 px-4 lg:px-7 py-3 border-b"
+                :class="!canManageAssignment && readOnly
+                  ? 'bg-[var(--brand-status-closed-bg)] border-[var(--brand-status-closed-bg)]'
+                  : 'bg-[var(--brand-canvas)] border-[var(--brand-border-hairline)]'"
+              >
+                <component
+                  :is="!canManageAssignment && readOnly ? Lock : UserCog"
+                  class="w-4 h-4 shrink-0"
+                  :class="!canManageAssignment && readOnly ? 'text-[var(--brand-status-closed-text)]' : 'text-[var(--brand-text-quiet)]'"
+                  stroke-width="2"
+                />
+                <div class="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap">
+                  <span
+                    class="text-[13px] font-semibold"
+                    :class="!canManageAssignment && readOnly ? 'text-[var(--brand-status-closed-text)]' : 'text-[var(--brand-text)]'"
+                  >
+                    <template v-if="assignedRecruiter">This candidate is assigned to <strong>{{ assignedRecruiter.name }}</strong><template v-if="isOwner"> (you)</template>.</template>
+                    <template v-else>This candidate is unassigned.</template>
+                  </span>
+                  <span v-if="!canManageAssignment && readOnly" class="text-[12px] text-[var(--brand-status-closed-text)]">
+                    You can view the profile, add notes, and share it, but can't edit, move stages, or delete.
+                  </span>
+                  <button
+                    v-if="!canManageAssignment && !profile.assignedRecruiterId"
+                    type="button"
+                    class="text-[12.5px] font-bold text-[var(--brand-teal-secondary)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                    :disabled="assigningCandidate"
+                    @click="claimForMe"
+                  >{{ assigningCandidate ? 'Assigning…' : 'Assign to me' }}</button>
+                </div>
+                <CandidateAssignRecruiterMenu
+                  v-if="canManageAssignment"
+                  :team-members="roster"
+                  :current="profile.assignedRecruiterId ?? null"
+                  @select="assignToRecruiter"
+                />
+              </div>
+
               <!-- Header + tabs -->
               <div class="shrink-0 border-b border-[var(--brand-border-hairline)]">
                 <div class="flex items-center justify-between gap-4 px-4 lg:px-7 pt-5 pb-4">
@@ -477,32 +515,6 @@ function sendReply(note: LocalNote) {
                     <div class="flex items-center gap-2.5 flex-wrap min-w-0">
                       <h1 class="m-0 text-[18px] font-bold tracking-[-0.02em] text-[var(--brand-text)] truncate">{{ profile.name }}</h1>
                       <BrandStatusBadge v-if="profile.isNew" tone="new" label="NEW" />
-                      <span
-                        v-if="assignedRecruiter"
-                        class="inline-flex items-center gap-1.5 shrink-0 rounded-full pl-[3px] pr-2.5 py-[3px]"
-                        :style="{ background: 'var(--brand-lime-tint)' }"
-                        :title="`Assigned to ${assignedRecruiter.name}`"
-                      >
-                        <BrandAvatarInitials
-                          :initials="initialsFor(assignedRecruiter.name)"
-                          :bg="assignedRecruiter.avatarBg"
-                          :color="assignedRecruiter.avatarText"
-                          size="xs"
-                        />
-                        <span class="text-[11.5px] font-bold text-[var(--brand-teal-secondary)]">{{ assignedRecruiter.name }}</span>
-                      </span>
-                      <span
-                        v-if="readOnly"
-                        class="inline-flex items-center gap-1 shrink-0 text-[11px] font-bold text-[var(--brand-status-closed-text)] bg-[var(--brand-status-closed-bg)] rounded-full px-2.5 py-1"
-                      >
-                        <Lock class="w-3 h-3" stroke-width="2.2" />Read-only
-                      </span>
-                      <CandidateAssignRecruiterMenu
-                        v-if="canManageAssignment"
-                        :team-members="roster"
-                        :current="profile.assignedRecruiterId ?? null"
-                        @select="assignToRecruiter"
-                      />
                     </div>
                   </div>
                   <div class="flex items-center gap-1 shrink-0">
@@ -550,31 +562,6 @@ function sendReply(note: LocalNote) {
                       class="absolute left-0 right-0 bottom-0 h-[3px] rounded-t-[3px] bg-[var(--brand-teal)]"
                     />
                   </button>
-                </div>
-
-                <!-- E2 read-only banner — only shown once there's an owner
-                     who isn't the previewed viewer (and the viewer isn't Admin). -->
-                <div
-                  v-if="readOnly"
-                  class="flex items-center gap-2 px-4 lg:px-7 py-2 text-[12.5px] font-semibold text-[var(--brand-status-closed-text)] bg-[var(--brand-status-closed-bg)]"
-                >
-                  <Lock class="w-3.5 h-3.5 shrink-0" stroke-width="2.2" />
-                  Read-only — assigned to {{ assignedRecruiter?.name }}. You can view the profile, add notes, and share it, but can't edit, move stages, or delete.
-                </div>
-
-                <!-- E5 self-claim — unassigned candidate, any previewed
-                     viewer can claim ownership without waiting on an Admin. -->
-                <div
-                  v-else-if="!profile.assignedRecruiterId"
-                  class="flex items-center gap-2.5 px-4 lg:px-7 py-2 text-[12.5px] font-semibold text-[var(--brand-text-quiet)] bg-[var(--brand-canvas)]"
-                >
-                  This candidate is unassigned.
-                  <button
-                    type="button"
-                    class="text-[12.5px] font-bold text-[var(--brand-teal-secondary)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
-                    :disabled="assigningCandidate"
-                    @click="claimForMe"
-                  >{{ assigningCandidate ? 'Assigning…' : 'Assign to me' }}</button>
                 </div>
               </div>
 
