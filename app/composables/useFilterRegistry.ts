@@ -34,6 +34,7 @@ export function useFilterRegistry(assignedRecruiterOptions?: Ref<{ value: string
             { value: 'is-not' as const, label: 'Not assigned to' },
           ],
           options: [{ value: 'unassigned', label: 'Unassigned' }, ...assignedRecruiterOptions.value],
+          chips: true,
         }]
       : []),
 

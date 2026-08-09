@@ -318,9 +318,18 @@ const visibleStages = computed(() => {
   }))
 })
 
-// Bulk "Assign to recruiters" from the Pipeline board's own selection.
+// Bulk "Assign to recruiters" from the Pipeline board's own selection —
+// lives in the "More…" menu (matching CandidatesToolbar.vue's placement)
+// rather than a standalone button, so it stays visible-but-disabled with
+// an explanation instead of silently vanishing when gated off.
 const pipelineBulkAssignOpen = ref(false)
 const pipelineAssignToast = ref<string | null>(null)
+const pipelineCanBulkAssign = computed(() => smartDistributeOn.value && previewRoleStore.canManageSmartDistribute)
+const pipelineBulkAssignDisabledReason = computed(() => {
+  if (!smartDistributeOn.value) return 'Auto-Distribute is off for this job'
+  if (!previewRoleStore.canManageSmartDistribute) return "You don't have permission to manage Smart Distribute"
+  return ''
+})
 function onPipelineBulkAssigned() {
   const n = selectedCount.value
   pipelineBulkAssignOpen.value = false
@@ -536,14 +545,6 @@ function clearSelection() { selectedIds.value = new Set() }
               <ArrowLeftRight class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
               Change Stage
             </button>
-            <button
-              v-if="smartDistributeOn && previewRoleStore.canManageSmartDistribute"
-              class="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[9px] bg-white border border-[var(--brand-border)] text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)] transition whitespace-nowrap"
-              @click="pipelineBulkAssignOpen = true"
-            >
-              <UserPlus class="w-4 h-4 text-[var(--brand-text-quiet)]" stroke-width="1.7" />
-              Assign to recruiters
-            </button>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <button class="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[9px] bg-white border border-[var(--brand-border)] text-[13px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-lime-tint-hover)] transition whitespace-nowrap">
@@ -555,6 +556,15 @@ function clearSelection() { selectedIds.value = new Set() }
                 <DropdownMenuItem class="flex items-center gap-3 px-3 py-2 text-[14px] cursor-pointer">
                   <Download class="w-4 h-4 text-[var(--brand-teal)]" stroke-width="1.7" />
                   Export As CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="flex items-center gap-3 px-3 py-2 text-[14px] cursor-pointer"
+                  :disabled="!pipelineCanBulkAssign"
+                  :title="pipelineBulkAssignDisabledReason"
+                  @click="pipelineCanBulkAssign && (pipelineBulkAssignOpen = true)"
+                >
+                  <UserPlus class="w-4 h-4 text-[var(--brand-teal)]" stroke-width="1.7" />
+                  Assign to recruiters
                 </DropdownMenuItem>
                 <DropdownMenuItem class="flex items-center gap-3 px-3 py-2 text-[14px] cursor-pointer">
                   <Ban class="w-4 h-4 text-[var(--brand-teal)]" stroke-width="1.7" />

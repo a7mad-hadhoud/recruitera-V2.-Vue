@@ -20,6 +20,7 @@ import CandidateTagMenu from '~/components/candidates/CandidateTagMenu.vue'
 import CandidateSourceMenu from '~/components/candidates/CandidateSourceMenu.vue'
 import CandidateQuickEvalPopover from '~/components/candidates/CandidateQuickEvalPopover.vue'
 import CandidateAssignModal from '~/components/candidates/CandidateAssignModal.vue'
+import CandidateAssignRecruiterMenu from '~/components/candidates/CandidateAssignRecruiterMenu.vue'
 import CandidateShareMenu from '~/components/candidates/CandidateShareMenu.vue'
 import CandidateConfirmDialog from '~/components/candidates/CandidateConfirmDialog.vue'
 import CandidateTaskComposer from '~/components/candidates/CandidateTaskComposer.vue'
@@ -59,6 +60,10 @@ const isOwner = computed(() =>
 const readOnly = computed(() =>
   !!profile.value?.assignedRecruiterId && !isOwner.value && previewRoleStore.role !== 'admin',
 )
+// E5 UC-03/UC-04 — Admins/permitted users can manually (re)assign this
+// candidate's owner regardless of who currently owns it, separate from the
+// self-claim path below (which only ever assigns to the previewed viewer).
+const canManageAssignment = computed(() => previewRoleStore.canManageSmartDistribute)
 function initialsFor(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   const first = parts[0]?.[0] ?? ''
@@ -66,14 +71,17 @@ function initialsFor(name: string) {
   return (first + last).toUpperCase() || '?'
 }
 
-// E5 self-claim — "Assign to me" for an unassigned candidate. Available to
-// whoever's currently previewed (demo-only); a real build would also check
-// the job's Smart Distribute pool membership and the "Allow recruiters to
-// claim unassigned candidates" company toggle, neither of which exist yet.
-const { mutateAsync: assignToMe, isPending: claimingCandidate } = useAssignCandidates()
+// E5 ownership writes — self-claim ("Assign to me") and Admin manual
+// (re)assign both funnel through the same mutation, just with a different
+// target recruiterId.
+const { mutateAsync: assignCandidateMutation, isPending: assigningCandidate } = useAssignCandidates()
 async function claimForMe() {
   if (!profile.value || !previewRoleStore.viewerTeamMemberId) return
-  await assignToMe({ candidateIds: [profile.value.id], recruiterId: previewRoleStore.viewerTeamMemberId })
+  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId: previewRoleStore.viewerTeamMemberId })
+}
+async function assignToRecruiter(recruiterId: string | null) {
+  if (!profile.value) return
+  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId })
 }
 
 /**
@@ -489,6 +497,12 @@ function sendReply(note: LocalNote) {
                       >
                         <Lock class="w-3 h-3" stroke-width="2.2" />Read-only
                       </span>
+                      <CandidateAssignRecruiterMenu
+                        v-if="canManageAssignment"
+                        :team-members="roster"
+                        :current="profile.assignedRecruiterId ?? null"
+                        @select="assignToRecruiter"
+                      />
                     </div>
                   </div>
                   <div class="flex items-center gap-1 shrink-0">
@@ -558,9 +572,9 @@ function sendReply(note: LocalNote) {
                   <button
                     type="button"
                     class="text-[12.5px] font-bold text-[var(--brand-teal-secondary)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
-                    :disabled="claimingCandidate"
+                    :disabled="assigningCandidate"
                     @click="claimForMe"
-                  >{{ claimingCandidate ? 'Assigning…' : 'Assign to me' }}</button>
+                  >{{ assigningCandidate ? 'Assigning…' : 'Assign to me' }}</button>
                 </div>
               </div>
 
