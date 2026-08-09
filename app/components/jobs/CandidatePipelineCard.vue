@@ -41,6 +41,7 @@ const emit = defineEmits<{
   'move':          [id: string, fromKey: string, toKey: string]
   'drag-start':    [id: string, fromKey: string, event: DragEvent]
   'drag-end':      []
+  'open-profile':  [id: string]
 }>()
 
 function onDragStart(e: DragEvent) {
@@ -60,6 +61,7 @@ function onDragStart(e: DragEvent) {
     ]"
     @dragstart="onDragStart"
     @dragend="emit('drag-end')"
+    @click="emit('open-profile', props.candidate.id)"
   >
     <div class="flex items-start gap-[11px] pt-[13px] pb-[11px] px-3.5">
       <!-- Avatar ↔ checkbox swap. Idle: avatar. Hover: checkbox replaces

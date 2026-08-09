@@ -3,7 +3,7 @@ import {
   X, Plus, ChevronDown, ChevronUp, Copy, Linkedin, Github, Check,
   Users, Tag, MoreVertical, MessageCircle, FolderCheck, Link2, Printer,
   ExternalLink, GraduationCap, GripVertical, Upload, RefreshCw, Trash2, FolderMinus,
-  ListOrdered, RotateCcw,
+  ListOrdered, RotateCcw, Lock,
 } from 'lucide-vue-next'
 import { BrandAvatarInitials, BrandButton, BrandEmptyState, BrandStatusBadge, BrandLimeCheckbox } from '~/components/brand'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -26,6 +26,9 @@ import CandidateTaskComposer from '~/components/candidates/CandidateTaskComposer
 import CandidateNotesComposer from '~/components/candidates/CandidateNotesComposer.vue'
 import ErrorBoundary from '~/components/ErrorBoundary.vue'
 import { useCandidates, useCandidateProfile } from '~/composables/useCandidates'
+import { useTeamMembers } from '~/composables/useTeam'
+import { useAssignCandidates } from '~/composables/useSmartDistribute'
+import { usePreviewRoleStore } from '~/stores/previewRole.store'
 import type { CandidateJob, CandidateProfile } from '~/types'
 
 definePageMeta({ layout: 'default' })
@@ -35,6 +38,43 @@ const router = useRouter()
 const id = computed(() => String(route.params.id))
 
 const { data: profile, isLoading } = useCandidateProfile(id)
+
+// Smart Distribute ownership (E2) — who this candidate is assigned to, and
+// whether the currently-previewed viewer (demo-only, see previewRole.store.ts)
+// is that owner or an Admin. Drives the header chip + read-only gating below.
+const { data: teamData } = useTeamMembers()
+const roster = computed(() => teamData.value?.data ?? [])
+const previewRoleStore = usePreviewRoleStore()
+const assignedRecruiter = computed(() => {
+  const rid = profile.value?.assignedRecruiterId
+  return rid ? roster.value.find(m => m.id === rid) ?? null : null
+})
+const isOwner = computed(() =>
+  !!profile.value?.assignedRecruiterId && profile.value.assignedRecruiterId === previewRoleStore.viewerTeamMemberId,
+)
+// Non-owner recruiters can view the profile, add notes, and share — but not
+// move stages, disqualify/hire/delete, edit candidate data, or add/edit
+// tasks/tags/evaluations. Admin always has full access. Unassigned
+// candidates aren't gated — there's no owner to defer to yet.
+const readOnly = computed(() =>
+  !!profile.value?.assignedRecruiterId && !isOwner.value && previewRoleStore.role !== 'admin',
+)
+function initialsFor(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  const first = parts[0]?.[0] ?? ''
+  const last = parts.length > 1 ? parts[parts.length - 1]![0] : ''
+  return (first + last).toUpperCase() || '?'
+}
+
+// E5 self-claim — "Assign to me" for an unassigned candidate. Available to
+// whoever's currently previewed (demo-only); a real build would also check
+// the job's Smart Distribute pool membership and the "Allow recruiters to
+// claim unassigned candidates" company toggle, neither of which exist yet.
+const { mutateAsync: assignToMe, isPending: claimingCandidate } = useAssignCandidates()
+async function claimForMe() {
+  if (!profile.value || !previewRoleStore.viewerTeamMemberId) return
+  await assignToMe({ candidateIds: [profile.value.id], recruiterId: previewRoleStore.viewerTeamMemberId })
+}
 
 /**
  * Where closing the overlay lands. Callers outside the Candidates module pass
@@ -429,13 +469,38 @@ function sendReply(note: LocalNote) {
                     <div class="flex items-center gap-2.5 flex-wrap min-w-0">
                       <h1 class="m-0 text-[18px] font-bold tracking-[-0.02em] text-[var(--brand-text)] truncate">{{ profile.name }}</h1>
                       <BrandStatusBadge v-if="profile.isNew" tone="new" label="NEW" />
+                      <span
+                        v-if="assignedRecruiter"
+                        class="inline-flex items-center gap-1.5 shrink-0 rounded-full pl-[3px] pr-2.5 py-[3px]"
+                        :style="{ background: 'var(--brand-lime-tint)' }"
+                        :title="`Assigned to ${assignedRecruiter.name}`"
+                      >
+                        <BrandAvatarInitials
+                          :initials="initialsFor(assignedRecruiter.name)"
+                          :bg="assignedRecruiter.avatarBg"
+                          :color="assignedRecruiter.avatarText"
+                          size="xs"
+                        />
+                        <span class="text-[11.5px] font-bold text-[var(--brand-teal-secondary)]">{{ assignedRecruiter.name }}</span>
+                      </span>
+                      <span
+                        v-if="readOnly"
+                        class="inline-flex items-center gap-1 shrink-0 text-[11px] font-bold text-[var(--brand-status-closed-text)] bg-[var(--brand-status-closed-bg)] rounded-full px-2.5 py-1"
+                      >
+                        <Lock class="w-3 h-3" stroke-width="2.2" />Read-only
+                      </span>
                     </div>
                   </div>
                   <div class="flex items-center gap-1 shrink-0">
-                    <BrandButton variant="ghost" size="md" class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="scheduleOpen = true">
+                    <BrandButton
+                      variant="ghost" size="md" :disabled="readOnly"
+                      :title="readOnly ? 'Read-only — assigned to another recruiter' : undefined"
+                      class="hidden lg:inline-flex !text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                      @click="scheduleOpen = true"
+                    >
                       <Users class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
                     </BrandButton>
-                    <span class="hidden lg:inline-flex"><CandidateQuickEvalPopover :candidate-name="profile.name" /></span>
+                    <span class="hidden lg:inline-flex"><CandidateQuickEvalPopover :candidate-name="profile.name" :disabled="readOnly" /></span>
                     <button
                       class="lg:hidden w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--brand-icon-default)] hover:bg-[var(--brand-surface-hover)]"
                       aria-label="Close"
@@ -446,10 +511,14 @@ function sendReply(note: LocalNote) {
                   </div>
                 </div>
                 <div class="flex lg:hidden items-center gap-1 px-4 pb-3">
-                  <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9" @click="scheduleOpen = true">
+                  <BrandButton
+                    variant="ghost" size="md" :disabled="readOnly"
+                    class="!text-[var(--brand-text)] !text-[14px] !font-medium !px-3 !h-9 disabled:opacity-60 disabled:cursor-not-allowed"
+                    @click="scheduleOpen = true"
+                  >
                     <Users class="!w-[16px] !h-[16px] text-[var(--brand-text)]" stroke-width="1.6" />Set Interview
                   </BrandButton>
-                  <CandidateQuickEvalPopover :candidate-name="profile.name" />
+                  <CandidateQuickEvalPopover :candidate-name="profile.name" :disabled="readOnly" />
                 </div>
 
                 <!-- Tabs -->
@@ -468,6 +537,31 @@ function sendReply(note: LocalNote) {
                     />
                   </button>
                 </div>
+
+                <!-- E2 read-only banner — only shown once there's an owner
+                     who isn't the previewed viewer (and the viewer isn't Admin). -->
+                <div
+                  v-if="readOnly"
+                  class="flex items-center gap-2 px-4 lg:px-7 py-2 text-[12.5px] font-semibold text-[var(--brand-status-closed-text)] bg-[var(--brand-status-closed-bg)]"
+                >
+                  <Lock class="w-3.5 h-3.5 shrink-0" stroke-width="2.2" />
+                  Read-only — assigned to {{ assignedRecruiter?.name }}. You can view the profile, add notes, and share it, but can't edit, move stages, or delete.
+                </div>
+
+                <!-- E5 self-claim — unassigned candidate, any previewed
+                     viewer can claim ownership without waiting on an Admin. -->
+                <div
+                  v-else-if="!profile.assignedRecruiterId"
+                  class="flex items-center gap-2.5 px-4 lg:px-7 py-2 text-[12.5px] font-semibold text-[var(--brand-text-quiet)] bg-[var(--brand-canvas)]"
+                >
+                  This candidate is unassigned.
+                  <button
+                    type="button"
+                    class="text-[12.5px] font-bold text-[var(--brand-teal-secondary)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                    :disabled="claimingCandidate"
+                    @click="claimForMe"
+                  >{{ claimingCandidate ? 'Assigning…' : 'Assign to me' }}</button>
+                </div>
               </div>
 
               <!-- Scrollable tab body -->
@@ -484,9 +578,14 @@ function sendReply(note: LocalNote) {
                     class="inline-flex items-center gap-2 h-[30px] text-[13px] font-medium text-[var(--brand-text)] bg-[var(--brand-surface-white)] border border-[var(--brand-border)] rounded-[9px] pl-3 pr-2.5"
                   >
                     {{ t }}
-                    <X class="w-3.5 h-3.5 text-[var(--brand-text-quiet)] hover:text-[var(--brand-danger)] cursor-pointer" stroke-width="1.7" @click="removeTag(t)" />
+                    <X
+                      v-if="!readOnly"
+                      class="w-3.5 h-3.5 text-[var(--brand-text-quiet)] hover:text-[var(--brand-danger)] cursor-pointer"
+                      stroke-width="1.7"
+                      @click="removeTag(t)"
+                    />
                   </span>
-                  <CandidateTagMenu :applied="localTags" @select="onSelectTag" />
+                  <CandidateTagMenu v-if="!readOnly" :applied="localTags" @select="onSelectTag" />
                 </div>
 
                 <!-- Reorder toolbar (Overview sections) -->
@@ -940,7 +1039,12 @@ function sendReply(note: LocalNote) {
             >
               <!-- Actions row — sits above the job pipeline card -->
               <div class="shrink-0 flex items-center justify-between gap-2 px-6 pt-5 pb-4">
-                <BrandButton variant="ghost" size="md" class="!text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10" @click="assignOpen = true">
+                <BrandButton
+                  variant="ghost" size="md" :disabled="readOnly"
+                  :title="readOnly ? 'Read-only — assigned to another recruiter' : undefined"
+                  class="!text-[var(--brand-text)] !text-[15px] !font-medium !px-3 !h-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                  @click="assignOpen = true"
+                >
                   <Plus class="!w-[18px] !h-[18px] text-[var(--brand-text)]" stroke-width="1.8" />Assign
                 </BrandButton>
                 <div class="flex items-center gap-1">
@@ -967,7 +1071,12 @@ function sendReply(note: LocalNote) {
                       <DropdownMenuItem class="flex items-center gap-2 text-[13.5px]" @click="printProfile">
                         <Printer class="w-3.5 h-3.5" stroke-width="1.8" />Print profile
                       </DropdownMenuItem>
-                      <DropdownMenuItem class="flex items-center gap-2 text-[13.5px] !text-[var(--brand-danger)]" @click="deleteOpen = true">
+                      <DropdownMenuItem
+                        class="flex items-center gap-2 text-[13.5px] !text-[var(--brand-danger)]"
+                        :disabled="readOnly"
+                        :title="readOnly ? 'Read-only — assigned to another recruiter' : undefined"
+                        @click="deleteOpen = true"
+                      >
                         <Trash2 class="w-3.5 h-3.5" stroke-width="1.8" />Delete candidate
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -984,6 +1093,7 @@ function sendReply(note: LocalNote) {
                     :job="j"
                     :location="j.location || profile.location"
                     :assigned-date="j.assignedDate || profile.createdDate"
+                    :read-only="readOnly"
                     @disqualify="reason => disqualifyJob(i, reason)"
                     @requalify="askRequalify(i)"
                     @proceed="proceedJob(i)"
@@ -1053,7 +1163,7 @@ function sendReply(note: LocalNote) {
 
                 <!-- Tasks -->
                 <CandidateCollapsibleCard title="Tasks">
-                  <CandidateTaskComposer :owner-initials="profile.ownerInitials" @add="addTask" />
+                  <CandidateTaskComposer v-if="!readOnly" :owner-initials="profile.ownerInitials" @add="addTask" />
                   <div v-if="localTasks.length" class="flex flex-col gap-1">
                     <label
                       v-for="t in localTasks"

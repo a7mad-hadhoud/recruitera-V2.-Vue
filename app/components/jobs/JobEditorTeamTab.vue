@@ -27,7 +27,7 @@ import SmartDistributeCandidatesModal from '~/components/jobs/SmartDistributeCan
 import SmartDistributeRedistributeModal from '~/components/jobs/SmartDistributeRedistributeModal.vue'
 import SettingsRowMenu from '~/components/settings/SettingsRowMenu.vue'
 import SettingsRowMenuItem from '~/components/settings/SettingsRowMenuItem.vue'
-import { usePreviewRoleStore, PREVIEW_ROLE_LABELS } from '~/stores/previewRole.store'
+import { usePreviewRoleStore, PREVIEW_ROLE_LABELS, previewRoleForTeamRole } from '~/stores/previewRole.store'
 import type { Component } from 'vue'
 import type { DistributionMode, SmartDistributeCandidatesResponse, TeamMember } from '~/types'
 
@@ -211,6 +211,17 @@ function copyRef(m: TeamMember) {
 // since there's no real role-aware auth yet ───────────────────────────
 const previewRoleStore = usePreviewRoleStore()
 const canManage = computed(() => previewRoleStore.canManageSmartDistribute)
+
+// Preview-as is now a real person picker (roster, above) so E2's
+// ownership-based read-only rules on the candidate profile can compare a
+// specific viewer against Candidate.assignedRecruiterId — `role` alone
+// can't answer "is this viewer the owner?". Keep `role` in sync from the
+// selected member's real TeamMemberRole so the existing E4 gates above
+// keep working unchanged.
+watchEffect(() => {
+  const member = roster.value.find(m => m.id === previewRoleStore.viewerTeamMemberId)
+  if (member) previewRoleStore.role = previewRoleForTeamRole(member.role)
+})
 
 // ─── Validation (E1) — blocks Save the same way the spec's acceptance
 // criteria describe, not just a visual pass ──────────────────────────
@@ -452,17 +463,19 @@ async function save() {
 
     <!-- Auto-Distribute + Candidate Distribution card -->
     <section class="rounded-[12px] bg-white border border-[var(--brand-border-fade)] p-8">
-    <!-- Preview-as role switcher — demo only, see previewRole.store.ts -->
+    <!-- Preview-as person switcher — demo only, see previewRole.store.ts.
+         A real team member (not just an abstract role) so ownership-based
+         read-only rules on the candidate profile (E2) can be previewed too. -->
     <div class="flex items-center gap-2 mb-5 pb-5 border-b border-dashed border-[var(--brand-border)]">
       <span class="text-[10.5px] font-bold text-white bg-[var(--brand-teal-secondary)] px-1.5 py-0.5 rounded-[4px] tracking-wide">DEMO</span>
       <span class="text-[12.5px] font-semibold text-[var(--brand-text-quiet)]">Previewing as</span>
       <select
-        v-model="previewRoleStore.role"
+        v-model="previewRoleStore.viewerTeamMemberId"
         class="h-7 pl-2 pr-6 text-[12.5px] font-bold rounded-[7px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text)] focus:border-[var(--brand-teal)] focus:outline-none"
       >
-        <option v-for="(label, key) in PREVIEW_ROLE_LABELS" :key="key" :value="key">{{ label }}</option>
+        <option v-for="m in roster" :key="m.id" :value="m.id">{{ m.name }} — {{ m.role }}</option>
       </select>
-      <span class="text-[11.5px] text-[var(--brand-text-faint)]">— controls the "Smart Distribute Initiation and Management" permission (E4)</span>
+      <span class="text-[11.5px] text-[var(--brand-text-faint)]">— controls the "Smart Distribute Initiation and Management" (E4) and candidate ownership (E2) permissions</span>
     </div>
 
     <!-- Auto-Distribute Candidates -->

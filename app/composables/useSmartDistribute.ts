@@ -39,6 +39,7 @@ export function useAssignCandidates() {
       api.post<{ updated: number }>('/api/candidates/assign', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] })
+      queryClient.invalidateQueries({ queryKey: ['candidate'] })
       queryClient.invalidateQueries({ queryKey: ['smart-distribute'] })
     },
   })

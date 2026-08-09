@@ -292,6 +292,28 @@ function assignedRecruiterFor(candidateId: string) {
   return { name: m.name, initials, bg: m.avatarBg, color: m.avatarText }
 }
 
+// Recruiter Focus Mode (E2) — "My candidates" / "Shared with me" toggles
+// existed as decorative UI before; wire them to the same ownership data the
+// filters/badges above already use. Only meaningful once Smart Distribute is
+// on for the job — otherwise there's no ownership to focus on, so every
+// candidate stays visible regardless of toggle state. The Pipeline board's
+// PipelineCandidate fixture only cross-references ALL_CANDIDATES by id for
+// jobs where the two happen to overlap (see assignedRecruiterFor above) — a
+// candidate id absent from that map is "unresolvable," not "not mine," so it
+// always stays visible rather than silently emptying the whole board.
+const visibleStages = computed(() => {
+  if (!smartDistributeOn.value) return stages.value
+  return stages.value.map(s => ({
+    ...s,
+    candidates: s.candidates.filter((c) => {
+      const recruiterId = assignedRecruiterIdByCandidateId.value[c.id]
+      if (recruiterId === undefined) return true
+      const isMine = recruiterId === previewRoleStore.viewerTeamMemberId
+      return (myOn.value && isMine) || (sharedOn.value && !isMine)
+    }),
+  }))
+})
+
 // Bulk "Assign to recruiters" from the Pipeline board's own selection.
 const pipelineBulkAssignOpen = ref(false)
 const pipelineAssignToast = ref<string | null>(null)
@@ -669,7 +691,7 @@ function clearSelection() { selectedIds.value = new Set() }
         <div v-if="activeTab === 'Pipeline' && pipelineViewMode === 'kanban'" class="flex-1 min-h-0 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 items-stretch">
 
           <!-- Collapsed rail — 40px, rotated label + dot + count -->
-          <template v-for="stage in stages" :key="stage.key">
+          <template v-for="stage in visibleStages" :key="stage.key">
             <section
               v-if="collapsedStages.has(stage.key)"
               class="flex-none w-10 flex flex-col items-center gap-2 rounded-[14px] py-3 min-h-[420px] bg-[var(--brand-surface-listview)]"
@@ -792,6 +814,7 @@ function clearSelection() { selectedIds.value = new Set() }
                   @move="(id, fromKey, toKey) => onMove(id, fromKey, toKey)"
                   @drag-start="(id, fromKey, e) => onDragStart(id, fromKey, e)"
                   @drag-end="onDragEnd"
+                  @open-profile="(id) => navigateTo(`/candidates/${id}`)"
                 />
 
                 <div v-if="!stage.candidates.length" class="text-center text-[12.5px] text-[var(--brand-text-faint)] py-8">

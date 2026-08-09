@@ -46,6 +46,11 @@ function onReassign(candidateId: string, e: Event) {
   localCandidates.value = localCandidates.value.filter(c => c.id !== candidateId)
   emit('reassign', { candidateId, toTeamMemberId })
 }
+
+function openProfile(candidateId: string) {
+  open.value = false
+  navigateTo(`/candidates/${candidateId}`)
+}
 </script>
 
 <template>
@@ -91,7 +96,10 @@ function onReassign(candidateId: string, e: Event) {
           <div
             v-for="c in candidates"
             :key="c.id"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] hover:bg-[var(--brand-canvas)] transition"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] hover:bg-[var(--brand-canvas)] transition cursor-pointer"
+            role="link"
+            :aria-label="`Open ${c.name}'s profile`"
+            @click="openProfile(c.id)"
           >
             <BrandAvatarInitials :initials="c.initials" :bg="c.avatarColor" color="var(--brand-avatar-text)" size="md" />
             <div class="flex-1 min-w-0">
@@ -105,7 +113,7 @@ function onReassign(candidateId: string, e: Event) {
             <span v-if="c.evaluationScore" class="shrink-0 text-[12px] font-bold text-[var(--brand-text-secondary)] w-9 text-right tabular-nums">
               {{ c.evaluationScore }}%
             </span>
-            <div class="relative shrink-0">
+            <div class="relative shrink-0" @click.stop>
               <select
                 class="h-8 pl-7 pr-2 text-[11.5px] font-semibold rounded-[8px] border-[1.5px] border-[var(--brand-border)] bg-white text-[var(--brand-text-secondary)] focus:border-[var(--brand-teal)] focus:outline-none appearance-none cursor-pointer"
                 :aria-label="`Reassign ${c.name}`"
