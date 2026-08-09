@@ -217,7 +217,11 @@ async function copyReferralLink(id: string, url: string) {
 function sourceTagLabel(v: string) {
   return REFERRAL_SOURCE_TAGS.find(t => t.value === v)?.label ?? v
 }
-const sharedOn = ref(false)
+// Both default ON — matches how the board always looked before this toggle
+// had a real effect (everyone visible). A recruiter narrows to just their
+// own by turning "Shared with me" off, rather than opening a job and
+// finding an empty board because ownership doesn't happen to include them.
+const sharedOn = ref(true)
 
 // Share popover state — computed job URL and copy-to-clipboard flag.
 const jobUrl = computed(() =>

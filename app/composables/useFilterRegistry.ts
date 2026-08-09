@@ -27,9 +27,12 @@ export function useFilterRegistry(assignedRecruiterOptions?: Ref<{ value: string
       ? [{
           id: 'assigned-recruiter',
           name: 'Assigned recruiter',
-          type: 'checkbox-multi' as const,
+          type: 'has-tag' as const,
           icon: UserCog,
-          operators: [{ value: 'is' as const, label: 'Is' }, { value: 'is-not' as const, label: 'Is not' }],
+          operators: [
+            { value: 'is' as const, label: 'Assigned to' },
+            { value: 'is-not' as const, label: 'Not assigned to' },
+          ],
           options: [{ value: 'unassigned', label: 'Unassigned' }, ...assignedRecruiterOptions.value],
         }]
       : []),

@@ -1,4 +1,4 @@
-export type DistributionMode = 'random' | 'sequential' | 'referral' | 'claim'
+export type DistributionMode = 'parallel' | 'sequential' | 'referral' | 'claim'
 
 export interface DistributionRecruiter {
   teamMemberId: string

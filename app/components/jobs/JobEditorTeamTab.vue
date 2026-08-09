@@ -1,7 +1,7 @@
 <!--
   Team tab body for the /jobs/new editor. Ports the reference layout:
   two-column card (member picker + added zone) + Auto-Distribute
-  toggle + Candidate Distribution (Random / Sequential / Referral Link /
+  toggle + Candidate Distribution (Parallel / Sequential / Referral Link /
   Open Pool picker + recruiter capacity list + Save).
 
   Reuses:
@@ -123,7 +123,7 @@ const poolMembers = computed(() => addedMembers.value.filter(m => !distExcluded.
 
 const autoDistribute = ref(true)
 type DistMode = DistributionMode
-const distMode = ref<DistMode>('random')
+const distMode = ref<DistMode>('parallel')
 const unclaimedAlertHours = ref(48)
 
 // Open Pool (claim mode) — which actions actually claim a candidate (E7).
@@ -190,7 +190,7 @@ watch(distConfigData, (cfg) => {
 }, { immediate: true })
 
 const DIST_MODES: Array<{ key: DistMode; label: string; desc: string; icon: Component }> = [
-  { key: 'random',     label: 'Random Distribution',     desc: 'Assign candidates evenly across the team.', icon: Shuffle },
+  { key: 'parallel',   label: 'Parallel Distribution',    desc: 'Assign candidates evenly across the team.', icon: Shuffle },
   { key: 'sequential', label: 'Sequential Distribution',  desc: 'Assigned in order by recruiter list.', icon: ListOrdered },
   { key: 'referral',   label: 'Referral Link',           desc: 'Assigned by the recruiter link used.', icon: Link2 },
   { key: 'claim',      label: 'Open Pool (Claim on Open)', desc: 'Unassigned until a recruiter opens it.', icon: Hand },
@@ -245,7 +245,7 @@ function onToggleAuto() {
 const validationError = computed(() => {
   if (!autoDistribute.value) return null
   if (poolMembers.value.length < 2) return 'At least 2 recruiters must be in the Auto-Distribute pool.'
-  if (distMode.value === 'random') {
+  if (distMode.value === 'parallel') {
     const anyLimited = poolMembers.value.some(m => !isUnlimited(m.id))
     const anyUnlimited = poolMembers.value.some(m => isUnlimited(m.id))
     if (anyLimited && !anyUnlimited) return 'At least one recruiter must be Unlimited to absorb overflow.'
@@ -607,7 +607,7 @@ async function save() {
         </div>
       </div>
 
-      <!-- Recruiter list — every mode shows Assigned; Capacity/Unlimited only apply to Random & Sequential -->
+      <!-- Recruiter list — every mode shows Assigned; Capacity/Unlimited only apply to Parallel & Sequential -->
       <div class="flex flex-col gap-2">
         <div
           v-for="m in poolMembers"
@@ -623,7 +623,7 @@ async function save() {
 
           <!-- Assigned — progress bar when a real capacity applies, plain count otherwise -->
           <div class="shrink-0 w-[84px]">
-            <template v-if="(distMode === 'random' || distMode === 'sequential') && !isUnlimited(m.id) && (distCapacity(m.id) ?? 0) > 0">
+            <template v-if="(distMode === 'parallel' || distMode === 'sequential') && !isUnlimited(m.id) && (distCapacity(m.id) ?? 0) > 0">
               <div class="flex items-baseline justify-between text-[11px] font-bold text-[var(--brand-text-secondary)] mb-1 tabular-nums">
                 <span>{{ distAssigned(m.id) }}</span>
                 <span class="text-[var(--brand-text-quiet)] font-semibold">/ {{ distCapacity(m.id) }}</span>
@@ -679,8 +679,8 @@ async function save() {
             </button>
           </div>
 
-          <!-- Random: unlimited on/off toggle -->
-          <label v-else-if="distMode === 'random'" class="inline-flex items-center cursor-pointer shrink-0 gap-2">
+          <!-- Parallel: unlimited on/off toggle -->
+          <label v-else-if="distMode === 'parallel'" class="inline-flex items-center cursor-pointer shrink-0 gap-2">
             <div v-if="!isUnlimited(m.id)" class="shrink-0 flex flex-col items-center gap-1">
               <input
                 :value="distCapacity(m.id) ?? ''"

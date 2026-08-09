@@ -15,7 +15,7 @@ const configsByJob = new Map<string, { enabled: boolean; mode: SmartDistributeCo
 function defaultConfig(): { enabled: boolean; mode: SmartDistributeConfig['mode']; unclaimedAlertHours: number; recruiters: RecruiterRules[] } {
   return {
     enabled: true,
-    mode: 'random',
+    mode: 'parallel',
     unclaimedAlertHours: 48,
     recruiters: [
       { teamMemberId: '1', capacity: 12, unlimited: false, priority: 1 },
