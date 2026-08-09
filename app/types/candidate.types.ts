@@ -31,6 +31,11 @@ export interface Candidate {
   talentPools: string[]                // e.g. ['Rising stars (Sample)']
   disqualifiedBy: string | null
 
+  /** Smart Distribute ownership (E2) — team member id, or null/undefined
+   * when unassigned. Job-scoped in a real API; this fixture treats it as
+   * a single global assignment since candidates only carry one demo job. */
+  assignedRecruiterId?: string | null
+
   // relative time strings — a real API would return ISO dates
   dateCreated: string
 

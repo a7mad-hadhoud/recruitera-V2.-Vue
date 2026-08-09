@@ -16,6 +16,9 @@ const DEV_LATENCY_MS = 350
  * here and the memberships there are two views of one relationship — change one
  * and change the other.
  */
+// Exported so other domains (Talent Pools, Smart Distribute's per-recruiter
+// candidate view, etc.) build on this one roster instead of inventing a
+// parallel cast — see CLAUDE.md "Data layer".
 export const ALL_CANDIDATES: Candidate[] = [
   { id: '1',  name: 'dasdasdasdasd',            initials: 'D',  avatarColor: 'var(--brand-avatar-1)', isNew: true,  status: 'new',          jobs: [],                                                                                                    sources: [],              tags: [],                            talentPools: [],                            disqualifiedBy: null,               dateCreated: 'an hour ago' },
   { id: '2',  name: 'asdsd',                    initials: 'A',  avatarColor: 'var(--brand-avatar-2)', isNew: true,  status: 'new',          jobs: [],                                                                                                    sources: [],              tags: [],                            talentPools: [],                            disqualifiedBy: null,               dateCreated: 'an hour ago' },
@@ -69,13 +72,30 @@ export function findOrCreateCandidate(input: { name: string, source: string, tag
   return candidate
 }
 
+// Smart Distribute demo seed (E1/E2) — ties a handful of candidates to
+// team members so "Assigned Recruiter" has real, non-empty data on first
+// load. Everyone else (including the disqualified candidate) stays
+// unassigned. teamMemberId values match team.handlers.ts's fixture roster.
+;(function seedAssignments() {
+  const seed: Record<string, number> = { 1: 4, 2: 3, 3: 2, 4: 2 }
+  let cursor = 0
+  const pool = ALL_CANDIDATES.filter(c => c.status !== 'disqualified')
+  for (const [teamMemberId, count] of Object.entries(seed)) {
+    for (let i = 0; i < count && cursor < pool.length; i++, cursor++) {
+      pool[cursor]!.assignedRecruiterId = teamMemberId
+    }
+  }
+})()
+
 export const candidatesHandlers = [
   http.get('/api/candidates', async ({ request }) => {
     await delay(DEV_LATENCY_MS)
     const url = new URL(request.url)
-    const status  = url.searchParams.get('status')
-    const search  = url.searchParams.get('search') ?? ''
-    const job     = url.searchParams.get('job')?.toLowerCase()
+    const status     = url.searchParams.get('status')
+    const search     = url.searchParams.get('search') ?? ''
+    const job        = url.searchParams.get('job')?.toLowerCase()
+    const assignedTo   = url.searchParams.get('assignedTo')
+    const assignedToOp = url.searchParams.get('assignedToOp') ?? 'is'
     const page    = Math.max(1, Number(url.searchParams.get('page') ?? 1))
     const perPage = Math.max(1, Number(url.searchParams.get('perPage') ?? 30))
 
@@ -85,6 +105,14 @@ export const candidatesHandlers = [
     // (e.g. "recruiter" also matches "Talent Acquisition"). See candidateSearch.ts.
     if (search.trim()) result = result.filter(c => matchesSearchQuery(candidateHaystack(c), search))
     if (job) result = result.filter(c => c.jobs.some(j => j.title.toLowerCase().includes(job)))
+    // Smart Distribute ownership filter (E2 "Filter by Assigned Recruiter").
+    // checkbox-multi — assignedTo is a comma-separated list of team member
+    // ids and/or the literal 'unassigned'; assignedToOp flips is/is-not.
+    if (assignedTo) {
+      const tokens = assignedTo.split(',').filter(Boolean)
+      const matches = (c: Candidate) => tokens.some(t => t === 'unassigned' ? !c.assignedRecruiterId : c.assignedRecruiterId === t)
+      result = result.filter(c => assignedToOp === 'is-not' ? !matches(c) : matches(c))
+    }
 
     const total = result.length
     const start = (page - 1) * perPage
@@ -120,6 +148,24 @@ export const candidatesHandlers = [
     const candidate = ALL_CANDIDATES.find(c => c.id === params.id)
     if (!candidate) return new HttpResponse(null, { status: 404 })
     return HttpResponse.json(buildProfile(candidate))
+  }),
+
+  // Smart Distribute ownership write (E1/E2/E3/E5 all funnel through this
+  // one action — auto-assign, redistribute, manual/bulk assign, self-claim).
+  // A deliberate exception to "mocks are read-only, mutate a local copy" —
+  // filtering by Assigned Recruiter has to reflect a prior assignment even
+  // after a fresh query, which a component-local copy can't give it.
+  http.post('/api/candidates/assign', async ({ request }) => {
+    await delay(150)
+    const body = await request.json() as { candidateIds: string[]; recruiterId: string | null }
+    let updated = 0
+    for (const c of ALL_CANDIDATES) {
+      if (body.candidateIds.includes(c.id)) {
+        c.assignedRecruiterId = body.recruiterId
+        updated++
+      }
+    }
+    return HttpResponse.json({ updated })
   }),
 ]
 
