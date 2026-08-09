@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import type { Candidate, CandidateProfile } from '~/types'
+import { candidateHaystack, matchesSearchQuery } from '~/utils/candidateSearch'
 
 // Simulates realistic API latency in dev so skeletons + loading states are
 // visible to design/QA. Real API responses (150-500ms) replace this in prod.
@@ -35,22 +36,54 @@ export const ALL_CANDIDATES: Candidate[] = [
   { id: '17', name: 'John Doe (Sample)',        initials: 'JD', avatarColor: 'var(--brand-avatar-2)', isNew: true,  status: 'new',           jobs: [{ title: 'Senior Marketer (Sample)', status: 'published' }],                                           sources: ['Indeed'],       tags: ['Sample', 'Senior'],           talentPools: ['Marketing Bench (Sample)'],                            disqualifiedBy: null,               dateCreated: '2 months ago' },
 ]
 
+const AVATAR_TOKENS = ['var(--brand-avatar-1)', 'var(--brand-avatar-2)', 'var(--brand-avatar-3)']
+let genSeq = 0
+
+/**
+ * Finds an existing candidate by name (case-insensitive) or creates a new
+ * one — the "create or match to avoid duplication" behavior the General
+ * Application and Referral flows on the career site need. Mutates
+ * ALL_CANDIDATES in place so every consumer (candidates list, talent pools)
+ * sees the same record.
+ */
+export function findOrCreateCandidate(input: { name: string, source: string, tags?: string[], jobTitle?: string, jobStatus?: Candidate['jobs'][number]['status'] }): Candidate {
+  const existing = ALL_CANDIDATES.find(c => c.name.trim().toLowerCase() === input.name.trim().toLowerCase())
+  if (existing) return existing
+
+  const initials = input.name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase() || '?'
+  const candidate: Candidate = {
+    id: `gen${++genSeq}`,
+    name: input.name.trim(),
+    initials,
+    avatarColor: AVATAR_TOKENS[genSeq % AVATAR_TOKENS.length]!,
+    isNew: true,
+    status: 'new',
+    jobs: input.jobTitle ? [{ title: input.jobTitle, status: input.jobStatus ?? 'published' }] : [],
+    sources: [input.source],
+    tags: input.tags ?? [],
+    talentPools: [],
+    disqualifiedBy: null,
+    dateCreated: 'just now',
+  }
+  ALL_CANDIDATES.push(candidate)
+  return candidate
+}
+
 export const candidatesHandlers = [
   http.get('/api/candidates', async ({ request }) => {
     await delay(DEV_LATENCY_MS)
     const url = new URL(request.url)
     const status  = url.searchParams.get('status')
-    const search  = url.searchParams.get('search')?.toLowerCase()
+    const search  = url.searchParams.get('search') ?? ''
     const job     = url.searchParams.get('job')?.toLowerCase()
     const page    = Math.max(1, Number(url.searchParams.get('page') ?? 1))
     const perPage = Math.max(1, Number(url.searchParams.get('perPage') ?? 30))
 
     let result = [...ALL_CANDIDATES]
     if (status) result = result.filter(c => c.status === status)
-    if (search) result = result.filter(c =>
-      c.name.toLowerCase().includes(search)
-      || c.jobs.some(j => j.title.toLowerCase().includes(search)),
-    )
+    // Semantic + boolean search: AND/OR keywords, synonym expansion
+    // (e.g. "recruiter" also matches "Talent Acquisition"). See candidateSearch.ts.
+    if (search.trim()) result = result.filter(c => matchesSearchQuery(candidateHaystack(c), search))
     if (job) result = result.filter(c => c.jobs.some(j => j.title.toLowerCase().includes(job)))
 
     const total = result.length

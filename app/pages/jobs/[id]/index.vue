@@ -758,7 +758,7 @@ function clearSelection() { selectedIds.value = new Set() }
               <BrandSearchBar
                 v-model="searchInput"
                 size="lg"
-                placeholder="Search candidates by anything or use keywords e.g. John AND manager"
+                placeholder="Search by name or role — try 'recruiter OR marketer' or 'John AND manager'"
               />
             </div>
 

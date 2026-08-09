@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { ALL_CANDIDATES } from './candidates.handlers'
+import { ALL_CANDIDATES, findOrCreateCandidate } from './candidates.handlers'
 import type { Candidate, PoolCandidate, PoolCandidateStage, TalentPool } from '~/types'
 
 /**
@@ -101,6 +101,8 @@ interface Membership {
   date: string
   aiScore: number | null
   evalScore: number | null
+  /** General Application only — the free-text job title the applicant entered. */
+  jobTitleOverride?: string
 }
 
 const memberships: Membership[] = [
@@ -134,16 +136,15 @@ const memberships: Membership[] = [
   { candidateId: '14', poolId: 'p6', stage: 'Applied', date: '2026-02-20', aiScore: 55, evalScore: null },
 ]
 
-const byId = new Map(ALL_CANDIDATES.map(c => [c.id, c]))
-
-/** Spontaneous applicants carry no job title; everyone else shows their first job. */
-function jobTitleFor(c: Candidate, poolId: string): string | null {
-  if (poolId === 'p1') return null
+/** Spontaneous applicants carry no job title unless the form captured one (General Application); everyone else shows their first job. */
+function jobTitleFor(c: Candidate, m: Membership): string | null {
+  if (m.jobTitleOverride) return m.jobTitleOverride
+  if (m.poolId === 'p1') return null
   return c.jobs[0]?.title ?? null
 }
 
 function buildRow(m: Membership): PoolCandidate | null {
-  const c = byId.get(m.candidateId)
+  const c = ALL_CANDIDATES.find(x => x.id === m.candidateId)
   if (!c) return null
   const slug = c.name.replace(/\s*\(Sample\)\s*/g, '').trim().toLowerCase().replace(/\s+/g, '.')
   return {
@@ -154,7 +155,7 @@ function buildRow(m: Membership): PoolCandidate | null {
     avatarColor: c.avatarColor,
     stage: m.stage,
     appliedVia: c.sources[0] ?? 'Careers site',
-    jobTitle: jobTitleFor(c, m.poolId),
+    jobTitle: jobTitleFor(c, m),
     email: `${slug}@example.com`,
     aiScore: m.aiScore,
     evalScore: m.evalScore,
@@ -163,17 +164,38 @@ function buildRow(m: Membership): PoolCandidate | null {
   }
 }
 
-const candidates: PoolCandidate[] = memberships
-  .map(buildRow)
-  .filter((r): r is PoolCandidate => r !== null)
+// Recomputed on every read — memberships/candidates can grow at runtime
+// (career-site General Application submissions), and totals must never drift.
+function buildState() {
+  const candidates: PoolCandidate[] = memberships
+    .map(buildRow)
+    .filter((r): r is PoolCandidate => r !== null)
+  for (const p of pools) {
+    p.total = candidates.filter(c => c.poolId === p.id).length
+  }
+  return { pools, candidates }
+}
 
-// Totals are derived, never hand-maintained — they cannot drift from membership.
-for (const p of pools) {
-  p.total = candidates.filter(c => c.poolId === p.id).length
+/**
+ * Career-site General Application submission → routes into the pinned
+ * "General Application" pool (p1), matching or creating the candidate.
+ */
+export function addGeneralApplication(input: { fullName: string, email: string, jobTitle: string }) {
+  const candidate = findOrCreateCandidate({ name: input.fullName, source: 'General Application' })
+  memberships.push({
+    candidateId: candidate.id,
+    poolId: 'p1',
+    stage: 'New',
+    date: new Date().toISOString().slice(0, 10),
+    aiScore: null,
+    evalScore: null,
+    jobTitleOverride: input.jobTitle.trim() || undefined,
+  })
+  return candidate
 }
 
 export const talentPoolsHandlers = [
   http.get('/api/talent-pools', () => {
-    return HttpResponse.json({ pools, candidates })
+    return HttpResponse.json(buildState())
   }),
 ]
