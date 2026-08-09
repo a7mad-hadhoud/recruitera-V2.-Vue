@@ -828,7 +828,7 @@ function clearSelection() { selectedIds.value = new Set() }
                   @move="(id, fromKey, toKey) => onMove(id, fromKey, toKey)"
                   @drag-start="(id, fromKey, e) => onDragStart(id, fromKey, e)"
                   @drag-end="onDragEnd"
-                  @open-profile="(id) => navigateTo(`/candidates/${id}`)"
+                  @open-profile="(id) => navigateTo({ path: `/candidates/${id}`, query: { from: route.fullPath } })"
                 />
 
                 <div v-if="!stage.candidates.length" class="text-center text-[12.5px] text-[var(--brand-text-faint)] py-8">
@@ -848,7 +848,7 @@ function clearSelection() { selectedIds.value = new Set() }
           :disqualified-count="disqualifiedCount"
           @toggle-select="toggleCandidate"
           @move="(id, from, to) => onMove(id, from, to)"
-          @open-full="(id) => navigateTo(`/candidates/${id}`)"
+          @open-full="(id) => navigateTo({ path: `/candidates/${id}`, query: { from: route.fullPath } })"
         />
 
         <!-- ─────────── FILTERS TAB — candidates scoped to this job ─────────── -->

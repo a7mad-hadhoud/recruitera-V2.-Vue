@@ -21,6 +21,7 @@ const emit = defineEmits<{
   reassign: [payload: { candidateId: string; toTeamMemberId: string }]
 }>()
 
+const route = useRoute()
 const recruiterId = computed(() => props.recruiter?.id ?? null)
 const { data, isLoading } = useSmartDistributeCandidates(props.jobId, recruiterId)
 
@@ -49,7 +50,7 @@ function onReassign(candidateId: string, e: Event) {
 
 function openProfile(candidateId: string) {
   open.value = false
-  navigateTo(`/candidates/${candidateId}`)
+  navigateTo({ path: `/candidates/${candidateId}`, query: { from: route.fullPath } })
 }
 </script>
 
