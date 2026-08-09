@@ -40,18 +40,6 @@ const { get: getRegistryEntry } = useFilterRegistry(assignedRecruiterOptionsRef)
 const activeFilters = useActiveFilters()
 const { clearFilters: clearBuiltInFilters } = useCandidateFilters()
 
-// "Assigned Recruiter" defaults to visible the moment the job's pool is
-// known — same "on out of the box, removable, not force-re-added" contract
-// as DEFAULT_FILTER_IDS below, just seeded independently since the pool
-// resolves async (arriving after this component's own onMounted already ran).
-const assignedRecruiterSeeded = ref(false)
-watch(assignedRecruiterOptionsRef, (opts) => {
-  if (opts?.length && !assignedRecruiterSeeded.value) {
-    assignedRecruiterSeeded.value = true
-    if (!activeFilters.isActive('assigned-recruiter')) activeFilters.add('assigned-recruiter', 'is')
-  }
-}, { immediate: true })
-
 // ─────────── Collapse state ───────────
 // Below this breakpoint there isn't room for a 288px panel to live in normal
 // flex flow alongside the nav rail without pushing the table off-screen — so
@@ -147,15 +135,33 @@ function clearAll() {
 
 /** Filter groups shown out of the box, matching the reference design.
  *  Re-seeded on every load with no filters in the URL — a fresh visit (or a
- *  fully cleared panel) always starts from this default set. */
+ *  fully cleared panel) always starts from this default set. Assigned
+ *  Recruiter joins the set whenever the parent has resolved a job pool for
+ *  it — same "out of the box, removable" contract as the rest.
+ *
+ *  This has to be exactly one `addMany` (one router.push): the parent
+ *  gates this component's mount behind Smart Distribute's query settling
+ *  (see jobs/[id]/index.vue's `filtersPanelReady`), so
+ *  assignedRecruiterOptions is already final by the time onMounted runs —
+ *  a second, later push here (e.g. from a reactive watcher firing after
+ *  this one lands) was observed to race the URL update and get silently
+ *  dropped. */
 const DEFAULT_FILTER_IDS = ['job-status', 'candidate-status', 'collar-type', 'job', 'pipeline-stage'] as const
 
 onMounted(() => {
+  const ids: string[] = [...DEFAULT_FILTER_IDS]
+  if (props.assignedRecruiterOptions?.length) ids.push('assigned-recruiter')
+
   if (!activeFilters.active.value.length) {
-    activeFilters.addMany(DEFAULT_FILTER_IDS.map((id) => {
+    activeFilters.addMany(ids.map((id) => {
       const entry = getRegistryEntry(id)
       return { id, op: entry?.operators[0]!.value ?? 'is' }
     }))
+  }
+  else if (props.assignedRecruiterOptions?.length && !activeFilters.isActive('assigned-recruiter')) {
+    // URL already carried filters (e.g. a shared link) — still default
+    // Assigned Recruiter on, without touching whatever else is there.
+    activeFilters.add('assigned-recruiter', 'is')
   }
 })
 </script>

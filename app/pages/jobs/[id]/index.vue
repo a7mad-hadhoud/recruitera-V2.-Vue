@@ -245,8 +245,8 @@ const filtersPerPage = ref(30)
 // Shared Smart Distribute context — the Assigned Recruiter filter catalog
 // entry (Filters tab), the bulk-assign button + badges (Pipeline tab) all
 // need "who's in this job's pool" and "is Auto-Distribute even on".
-const { data: teamData } = useTeamMembers()
-const { data: distConfig } = useSmartDistributeConfig(jobId)
+const { data: teamData, isLoading: teamPending } = useTeamMembers()
+const { data: distConfig, isLoading: distConfigPending } = useSmartDistributeConfig(jobId)
 const previewRoleStore = usePreviewRoleStore()
 const poolRecruiters = computed(() => {
   const roster = teamData.value?.data ?? []
@@ -256,6 +256,11 @@ const poolRecruiters = computed(() => {
 })
 const smartDistributeOn = computed(() => !!distConfig.value?.enabled)
 const assignedRecruiterOptions = computed(() => poolRecruiters.value.map(r => ({ value: r.id, label: r.name })))
+// CandidatesFilters seeds "Assigned Recruiter" into the active filter set
+// once, in its own onMounted — it needs the pool to already be final at
+// that point (a second push after an async prop update was observed to
+// race the URL and get silently dropped), so its mount waits here.
+const filtersPanelReady = computed(() => !teamPending.value && !distConfigPending.value)
 
 // Assigned Recruiter filter (E2) now lives in the normal filter-catalog
 // panel (CandidatesFilters.vue seeds it into the active set once the pool
@@ -818,7 +823,11 @@ function clearSelection() { selectedIds.value = new Set() }
              propagate automatically. -->
         <div v-else-if="activeTab === 'Filters'" class="flex-1 min-h-0 flex overflow-hidden -mx-7 -mb-6">
           <ErrorBoundary>
-            <CandidatesFilters :assigned-recruiter-options="smartDistributeOn ? assignedRecruiterOptions : undefined" />
+            <CandidatesFilters
+              v-if="filtersPanelReady"
+              :assigned-recruiter-options="smartDistributeOn ? assignedRecruiterOptions : undefined"
+            />
+            <div v-else class="w-[288px] shrink-0 h-full rounded-tl-[22px] bg-white border-t border-l border-r border-[var(--brand-border)]" />
           </ErrorBoundary>
 
           <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--brand-surface-white)] border-t border-[var(--brand-border)]">
