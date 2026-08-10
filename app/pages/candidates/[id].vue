@@ -3,7 +3,7 @@ import {
   X, Plus, ChevronDown, ChevronUp, Copy, Linkedin, Github, Check,
   Users, Tag, MoreVertical, MessageCircle, FolderCheck, Link2, Printer,
   ExternalLink, GraduationCap, GripVertical, Upload, RefreshCw, Trash2, FolderMinus,
-  ListOrdered, RotateCcw, Lock, UserCog,
+  ListOrdered, RotateCcw,
 } from 'lucide-vue-next'
 import { BrandAvatarInitials, BrandButton, BrandEmptyState, BrandStatusBadge, BrandLimeCheckbox } from '~/components/brand'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
@@ -60,23 +60,31 @@ const isOwner = computed(() =>
 const readOnly = computed(() =>
   !!profile.value?.assignedRecruiterId && !isOwner.value && previewRoleStore.role !== 'admin',
 )
-// E5 UC-03/UC-04 — Admins/permitted users can manually (re)assign this
-// candidate's owner regardless of who currently owns it, separate from the
-// self-claim path below (which only ever assigns to the previewed viewer).
-const canManageAssignment = computed(() => previewRoleStore.canManageSmartDistribute)
 
-// E5 ownership writes — self-claim ("Assign to me") and Admin manual
-// (re)assign both funnel through the same mutation, just with a different
-// target recruiterId.
+// E5 ownership writes — self-claim and Admin manual (re)assign both funnel
+// through the same mutation, just with a different target recruiterId.
 const { mutateAsync: assignCandidateMutation, isPending: assigningCandidate } = useAssignCandidates()
-async function claimForMe() {
-  if (!profile.value || !previewRoleStore.viewerTeamMemberId) return
-  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId: previewRoleStore.viewerTeamMemberId })
-}
 async function assignToRecruiter(recruiterId: string | null) {
   if (!profile.value) return
   await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId })
 }
+
+// Overview-tab ownership demo (E2/E5) — two always-visible boxes instead of
+// one banner driven by the global "Preview as" switcher, so both the Admin
+// and Recruiter perspectives are visible side by side without anyone having
+// to go flip the switcher first. Independent of previewRoleStore on purpose.
+const demoRecruiter = computed(() => roster.value.find(m => m.role === 'Recruiter') ?? null)
+const demoRecruiterIsOwner = computed(() =>
+  !!profile.value?.assignedRecruiterId && profile.value.assignedRecruiterId === demoRecruiter.value?.id,
+)
+const demoRecruiterReadOnly = computed(() => !!profile.value?.assignedRecruiterId && !demoRecruiterIsOwner.value)
+async function claimForDemoRecruiter() {
+  if (!profile.value || !demoRecruiter.value) return
+  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId: demoRecruiter.value.id })
+}
+// Either demo box can be dismissed independently — session-only, not persisted.
+const showAdminDemoBox = ref(true)
+const showRecruiterDemoBox = ref(true)
 
 /**
  * Where closing the overlay lands. Callers outside the Candidates module pass
@@ -463,50 +471,6 @@ function sendReply(note: LocalNote) {
           >
             <!-- LEFT column -->
             <div class="flex-1 min-w-0 flex flex-col lg:min-h-0">
-              <!-- Smart Distribute ownership banner (E2/E5) — single, consistent
-                   status box at the top of the profile instead of a scattered
-                   header chip + separate strip. Admin/permitted users always get
-                   full (re)assign capability here regardless of current owner;
-                   everyone else sees status + self-claim when unassigned. -->
-              <div
-                class="shrink-0 flex items-center gap-2.5 px-4 lg:px-7 py-3 border-b"
-                :class="!canManageAssignment && readOnly
-                  ? 'bg-[var(--brand-status-closed-bg)] border-[var(--brand-status-closed-bg)]'
-                  : 'bg-[var(--brand-canvas)] border-[var(--brand-border-hairline)]'"
-              >
-                <component
-                  :is="!canManageAssignment && readOnly ? Lock : UserCog"
-                  class="w-4 h-4 shrink-0"
-                  :class="!canManageAssignment && readOnly ? 'text-[var(--brand-status-closed-text)]' : 'text-[var(--brand-text-quiet)]'"
-                  stroke-width="2"
-                />
-                <div class="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap">
-                  <span
-                    class="text-[13px] font-semibold"
-                    :class="!canManageAssignment && readOnly ? 'text-[var(--brand-status-closed-text)]' : 'text-[var(--brand-text)]'"
-                  >
-                    <template v-if="assignedRecruiter">This candidate is assigned to <strong>{{ assignedRecruiter.name }}</strong><template v-if="isOwner"> (you)</template>.</template>
-                    <template v-else>This candidate is unassigned.</template>
-                  </span>
-                  <span v-if="!canManageAssignment && readOnly" class="text-[12px] text-[var(--brand-status-closed-text)]">
-                    You can view the profile, add notes, and share it, but can't edit, move stages, or delete.
-                  </span>
-                  <button
-                    v-if="!canManageAssignment && !profile.assignedRecruiterId"
-                    type="button"
-                    class="text-[12.5px] font-bold text-[var(--brand-teal-secondary)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
-                    :disabled="assigningCandidate"
-                    @click="claimForMe"
-                  >{{ assigningCandidate ? 'Assigning…' : 'Assign to me' }}</button>
-                </div>
-                <CandidateAssignRecruiterMenu
-                  v-if="canManageAssignment"
-                  :team-members="roster"
-                  :current="profile.assignedRecruiterId ?? null"
-                  @select="assignToRecruiter"
-                />
-              </div>
-
               <!-- Header + tabs -->
               <div class="shrink-0 border-b border-[var(--brand-border-hairline)]">
                 <div class="flex items-center justify-between gap-4 px-4 lg:px-7 pt-5 pb-4">
@@ -568,6 +532,72 @@ function sendReply(note: LocalNote) {
               <!-- Scrollable tab body -->
               <div class="lg:flex-1 lg:overflow-auto bg-[var(--brand-canvas)]">
                 <div v-if="activeTab === 'Overview'" class="flex flex-col gap-4 p-6">
+                <!-- Smart Distribute ownership (E2/E5) — two DEMO boxes,
+                     always shown, independent of previewRoleStore, so both
+                     the Admin and Recruiter perspectives are visible at once
+                     without switching the "Preview as" picker first. Each
+                     carries a short explanation of the state + what the
+                     action button does, and can be dismissed on its own. -->
+                <div class="flex flex-col gap-2">
+                  <div v-if="showAdminDemoBox" class="rounded-[12px] border border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] px-4 py-3 flex items-start gap-3">
+                    <div class="flex-1 min-w-0 flex flex-col gap-1">
+                      <span class="shrink-0 self-start text-[10px] font-bold uppercase tracking-wide text-white bg-[var(--brand-teal-secondary)] rounded-[5px] px-1.5 py-0.5">Demo — Admin</span>
+                      <span class="text-[13px] font-semibold text-[var(--brand-text)]">
+                        <template v-if="assignedRecruiter">This candidate is assigned to <strong>{{ assignedRecruiter.name }}</strong>.</template>
+                        <template v-else>This candidate is still unassigned.</template>
+                      </span>
+                      <span class="text-[11.5px] text-[var(--brand-text-quiet)]">
+                        <template v-if="assignedRecruiter">As Admin, you can reassign this candidate to anyone on the team at any time.</template>
+                        <template v-else>As Admin, assign this candidate to a recruiter to put someone in charge of it.</template>
+                      </span>
+                    </div>
+                    <CandidateAssignRecruiterMenu
+                      class="shrink-0"
+                      :team-members="roster"
+                      :current="profile.assignedRecruiterId ?? null"
+                      @select="assignToRecruiter"
+                    />
+                    <button
+                      type="button"
+                      class="shrink-0 w-6 h-6 rounded-md inline-flex items-center justify-center text-[var(--brand-icon-muted)] hover:bg-[var(--brand-surface-hover)] hover:text-[var(--brand-text)]"
+                      aria-label="Dismiss"
+                      @click="showAdminDemoBox = false"
+                    ><X class="w-3.5 h-3.5" stroke-width="1.8" /></button>
+                  </div>
+                  <div v-if="showRecruiterDemoBox" class="rounded-[12px] border border-[var(--brand-border-light)] bg-[var(--brand-surface-white)] px-4 py-3 flex items-start gap-3">
+                    <div class="flex-1 min-w-0 flex flex-col gap-1">
+                      <span class="shrink-0 self-start text-[10px] font-bold uppercase tracking-wide text-white bg-[var(--brand-avatar-4)] rounded-[5px] px-1.5 py-0.5">
+                        Demo — Recruiter{{ demoRecruiter ? ` (${demoRecruiter.name})` : '' }}
+                      </span>
+                      <template v-if="!profile.assignedRecruiterId">
+                        <span class="text-[13px] font-semibold text-[var(--brand-text)]">This candidate is still unassigned.</span>
+                        <span class="text-[11.5px] text-[var(--brand-text-quiet)]">Claim this candidate to take ownership and start working on it.</span>
+                      </template>
+                      <template v-else-if="demoRecruiterIsOwner">
+                        <span class="text-[13px] font-semibold text-[var(--brand-text)]">This candidate is assigned to you.</span>
+                        <span class="text-[11.5px] text-[var(--brand-text-quiet)]">You have full access — move stages, message, and more.</span>
+                      </template>
+                      <template v-else-if="demoRecruiterReadOnly">
+                        <span class="text-[13px] font-semibold text-[var(--brand-text)]">This candidate is assigned to <strong>{{ assignedRecruiter?.name }}</strong>.</span>
+                        <span class="text-[11.5px] text-[var(--brand-text-quiet)]">You can view the profile, add notes, and share it, but can't edit, move stages, or delete.</span>
+                      </template>
+                    </div>
+                    <button
+                      v-if="!profile.assignedRecruiterId"
+                      type="button"
+                      class="shrink-0 text-[12.5px] font-bold text-[var(--brand-teal-secondary)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                      :disabled="assigningCandidate"
+                      @click="claimForDemoRecruiter"
+                    >{{ assigningCandidate ? 'Assigning…' : 'Assign to me' }}</button>
+                    <button
+                      type="button"
+                      class="shrink-0 w-6 h-6 rounded-md inline-flex items-center justify-center text-[var(--brand-icon-muted)] hover:bg-[var(--brand-surface-hover)] hover:text-[var(--brand-text)]"
+                      aria-label="Dismiss"
+                      @click="showRecruiterDemoBox = false"
+                    ><X class="w-3.5 h-3.5" stroke-width="1.8" /></button>
+                  </div>
+                </div>
+
                 <!-- Tags -->
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="inline-flex items-center gap-2 text-[14px] font-bold text-[var(--brand-text)] mr-1">
