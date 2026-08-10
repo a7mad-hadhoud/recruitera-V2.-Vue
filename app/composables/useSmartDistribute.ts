@@ -35,7 +35,11 @@ export function useAssignCandidates() {
   const api = useApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: { candidateIds: string[]; recruiterId: string | null }) =>
+    mutationFn: (payload: {
+      candidateIds: string[]
+      recruiterId: string | null
+      assignmentSource?: 'manual' | 'self' | 'external'
+    }) =>
       api.post<{ updated: number }>('/api/candidates/assign', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] })

@@ -27,6 +27,12 @@ const props = defineProps<{
   source: (TeamMember & { assigned: number }) | null
   targets: Target[]
   removeAfter?: boolean
+  /** RC-1250 bulk-select mode: an explicit, already-chosen set of candidate
+   * ids (from the per-recruiter candidates table's row checkboxes) instead
+   * of an admin-typed count. Locks the count field to this exact size — no
+   * manual edit, no "All" shortcut — since the caller already knows exactly
+   * which candidates are being moved. */
+  candidateIds?: string[]
 }>()
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{
@@ -36,10 +42,11 @@ const emit = defineEmits<{
 const count = ref(0)
 const strategy = ref<'auto' | 'manual'>('auto')
 const manualAllocations = ref<Record<string, number>>({})
+const fixedCount = computed(() => props.candidateIds?.length ?? null)
 
 watch(open, (isOpen) => {
   if (isOpen && props.source) {
-    count.value = props.source.assigned
+    count.value = fixedCount.value ?? props.source.assigned
     strategy.value = 'auto'
     manualAllocations.value = Object.fromEntries(props.targets.map(t => [t.id, 0]))
   }
@@ -82,10 +89,15 @@ function confirm() {
       <div class="flex items-start gap-3 px-7 pt-6 pb-5">
         <div class="flex-1 min-w-0">
           <DialogTitle class="text-[18px] font-bold text-[var(--brand-text)] leading-tight">
-            {{ removeAfter ? `Remove ${source?.name}` : `Redistribute ${source?.name}'s candidates` }}
+            <template v-if="fixedCount !== null">Redistribute {{ fixedCount }} selected candidate{{ fixedCount === 1 ? '' : 's' }}</template>
+            <template v-else-if="removeAfter">Remove {{ source?.name }}</template>
+            <template v-else>Redistribute {{ source?.name }}'s candidates</template>
           </DialogTitle>
           <p class="text-[13px] text-[var(--brand-text-quiet)] mt-1.5 leading-relaxed">
-            <template v-if="removeAfter">
+            <template v-if="fixedCount !== null">
+              Move the selected candidates from {{ source?.name }} to the rest of the team. Each keeps its current pipeline stage.
+            </template>
+            <template v-else-if="removeAfter">
               {{ source?.assigned }} candidates are still assigned to them — reassign these first, then they'll be removed from Auto-Distribute.
             </template>
             <template v-else>
@@ -107,7 +119,7 @@ function confirm() {
 
       <div class="px-7 py-6 flex flex-col gap-6 max-h-[60vh] overflow-y-auto">
         <!-- Count -->
-        <div>
+        <div v-if="fixedCount === null">
           <label class="block text-[13px] font-bold text-[var(--brand-text)] mb-2">How many candidates?</label>
           <div class="flex items-center gap-2.5">
             <input
@@ -123,6 +135,9 @@ function confirm() {
               @click="setAll"
             >All ({{ source?.assigned ?? 0 }})</button>
           </div>
+        </div>
+        <div v-else class="text-[13px] text-[var(--brand-text-secondary)]">
+          <span class="font-bold text-[var(--brand-text)]">{{ fixedCount }}</span> candidate{{ fixedCount === 1 ? '' : 's' }} selected for redistribution.
         </div>
 
         <!-- Strategy -->

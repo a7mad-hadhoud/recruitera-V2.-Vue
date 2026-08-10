@@ -35,6 +35,12 @@ export interface Candidate {
    * when unassigned. Job-scoped in a real API; this fixture treats it as
    * a single global assignment since candidates only carry one demo job. */
   assignedRecruiterId?: string | null
+  /** E5 ownership type — how the current assignment came to be. Drives the
+   * "Source" filter/column in the per-recruiter candidates table (View &
+   * Redistribute modal), separate from `sources` (how the candidate itself
+   * was sourced/applied). 'external' covers LinkedIn/Company Website/
+   * Referral/Recruiter-sourced candidates who were auto-distributed. */
+  assignmentSource?: 'manual' | 'self' | 'external'
 
   // relative time strings — a real API would return ISO dates
   dateCreated: string

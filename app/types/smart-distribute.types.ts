@@ -26,6 +26,10 @@ export interface SmartDistributeCandidate {
   avatarColor: string
   stage: string
   source: string
+  /** E5 ownership type — Manually assigned / Self assigned / External. Drives
+   * the Source filter/column in the "View & Redistribute Candidates per
+   * Recruiter" modal (RC-1250). See Candidate.assignmentSource. */
+  assignmentSource: 'manual' | 'self' | 'external'
   evaluationScore: number | null
 }
 

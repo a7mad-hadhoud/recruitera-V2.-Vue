@@ -267,14 +267,16 @@ function openView(m: TeamMember) {
   viewRecruiter.value = { ...m, assigned: distAssigned(m.id) }
   viewOpen.value = true
 }
-const viewOtherRecruiters = computed(() => poolMembers.value.filter(m => m.id !== viewRecruiter.value?.id))
-function onReassignFromView(payload: { candidateId: string; toTeamMemberId: string }) {
-  if (!viewRecruiter.value) return
-  assignMutation.mutate({ candidateIds: [payload.candidateId], recruiterId: payload.toTeamMemberId })
-  // Optimistic — the query invalidation the mutation triggers will confirm
-  // (or correct) this shortly; no need to block the UI on it.
-  viewRecruiter.value = { ...viewRecruiter.value, assigned: Math.max(0, viewRecruiter.value.assigned - 1) }
-  showToast('Candidate reassigned')
+// Richer than a plain TeamMember[] — the View-and-redistribute modal's bulk
+// flow (SmartDistributeRedistributeModal) needs capacity/unlimited too, not
+// just who's eligible.
+const viewOtherRecruiters = computed(() =>
+  poolMembers.value
+    .filter(m => m.id !== viewRecruiter.value?.id)
+    .map(m => ({ ...m, ...distOf(m.id), assigned: distAssigned(m.id) })),
+)
+function onCandidatesReassigned(count: number) {
+  showToast(count === 1 ? 'Candidate reassigned' : `${count} candidates redistributed`)
 }
 
 // ─── Redistribute + guarded remove (E3) ──────────────────────────────
@@ -615,14 +617,31 @@ async function save() {
           class="flex items-center gap-3 px-4 py-3 border border-[var(--brand-border-fade)] rounded-[10px] bg-white"
         >
           <GripVertical v-if="distMode === 'sequential'" class="w-3.5 h-3.5 text-[var(--brand-border)] cursor-grab shrink-0" stroke-width="2" />
-          <BrandAvatarInitials :initials="initialsFor(m.name)" :bg="m.avatarBg" :color="m.avatarText" size="xl" />
-          <div class="flex-1 min-w-0">
-            <div class="text-[13.5px] font-bold text-[var(--brand-text)] truncate">{{ m.name }}</div>
-            <div class="text-[12px] text-[var(--brand-text-quiet)] truncate">{{ m.email }}</div>
-          </div>
+          <!-- Recruiter identity — also an entry point into "View assigned
+               candidates" (RC-1250), not just the kebab menu. -->
+          <button
+            type="button"
+            class="flex items-center gap-3 flex-1 min-w-0 text-left rounded-[8px] -mx-1 px-1 py-0.5 hover:bg-[var(--brand-canvas)] transition"
+            title="Click to view assigned candidates"
+            @click="openView(m)"
+          >
+            <BrandAvatarInitials :initials="initialsFor(m.name)" :bg="m.avatarBg" :color="m.avatarText" size="xl" />
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] font-bold text-[var(--brand-text)] truncate">{{ m.name }}</div>
+              <div class="text-[12px] text-[var(--brand-text-quiet)] truncate">{{ m.email }}</div>
+            </div>
+          </button>
 
-          <!-- Assigned — progress bar when a real capacity applies, plain count otherwise -->
-          <div class="shrink-0 w-[84px]">
+          <!-- Assigned — progress bar when a real capacity applies, plain count
+               otherwise. Also an entry point into "View assigned candidates"
+               (RC-1250): "Hovering over the Assigned Candidates number shows a
+               tooltip... Clicking the number opens the modal." -->
+          <button
+            type="button"
+            class="shrink-0 w-[84px] rounded-[8px] hover:bg-[var(--brand-canvas)] transition"
+            title="Click to view assigned candidates"
+            @click="openView(m)"
+          >
             <template v-if="(distMode === 'parallel' || distMode === 'sequential') && !isUnlimited(m.id) && (distCapacity(m.id) ?? 0) > 0">
               <div class="flex items-baseline justify-between text-[11px] font-bold text-[var(--brand-text-secondary)] mb-1 tabular-nums">
                 <span>{{ distAssigned(m.id) }}</span>
@@ -644,7 +663,7 @@ async function save() {
                 <div class="text-[9.5px] font-bold text-[var(--brand-text-quiet)] uppercase tracking-wide mt-1">Assigned</div>
               </div>
             </template>
-          </div>
+          </button>
 
           <!-- Sequential: capacity input per recruiter; the last one is Unlimited -->
           <template v-if="distMode === 'sequential'">
@@ -774,7 +793,7 @@ async function save() {
       :job-id="DEMO_JOB_ID"
       :recruiter="viewRecruiter"
       :other-recruiters="viewOtherRecruiters"
-      @reassign="onReassignFromView"
+      @reassigned="onCandidatesReassigned"
     />
 
     <!-- Smart Distribute — redistribute / guarded remove -->

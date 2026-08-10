@@ -68,6 +68,7 @@ export const smartDistributeHandlers = [
         avatarColor: c.avatarColor,
         stage: STAGES[i % STAGES.length]!,
         source: c.sources[0] ?? 'Careers site',
+        assignmentSource: c.assignmentSource ?? 'external',
         evaluationScore: c.evaluationScore ?? null,
       }))
     return HttpResponse.json({ data, total: data.length })

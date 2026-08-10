@@ -106,6 +106,24 @@ export function findOrCreateCandidate(input: { name: string, source: string, tag
   }
 })()
 
+// E5 assignment source (E3's "View & Redistribute Candidates per Recruiter"
+// Source column/filter: Manually assigned / Self assigned / External).
+// Derived from the candidate's own `sources` — an empty list means the
+// candidate was hand-entered with no channel (manual); anything else came
+// through a real sourcing channel (external). A couple of already-assigned
+// candidates are tagged 'self' so the filter's three buckets are all
+// non-empty out of the box; real self-claims (candidate profile "Assign to
+// me") set this for real going forward via POST /api/candidates/assign.
+;(function seedAssignmentSource() {
+  for (const c of ALL_CANDIDATES) {
+    c.assignmentSource = c.sources.length === 0 ? 'manual' : 'external'
+  }
+  for (const id of ['6', '9']) {
+    const c = ALL_CANDIDATES.find(c => c.id === id)
+    if (c) c.assignmentSource = 'self'
+  }
+})()
+
 export const candidatesHandlers = [
   http.get('/api/candidates', async ({ request }) => {
     await delay(DEV_LATENCY_MS)
@@ -176,11 +194,18 @@ export const candidatesHandlers = [
   // after a fresh query, which a component-local copy can't give it.
   http.post('/api/candidates/assign', async ({ request }) => {
     await delay(150)
-    const body = await request.json() as { candidateIds: string[]; recruiterId: string | null }
+    const body = await request.json() as {
+      candidateIds: string[]
+      recruiterId: string | null
+      /** Omit to leave the candidate's existing assignmentSource untouched
+       * (e.g. a redistribute that just moves ownership between recruiters). */
+      assignmentSource?: 'manual' | 'self' | 'external'
+    }
     let updated = 0
     for (const c of ALL_CANDIDATES) {
       if (body.candidateIds.includes(c.id)) {
         c.assignedRecruiterId = body.recruiterId
+        if (body.assignmentSource) c.assignmentSource = body.assignmentSource
         updated++
       }
     }

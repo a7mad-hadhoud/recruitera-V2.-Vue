@@ -66,7 +66,7 @@ const readOnly = computed(() =>
 const { mutateAsync: assignCandidateMutation, isPending: assigningCandidate } = useAssignCandidates()
 async function assignToRecruiter(recruiterId: string | null) {
   if (!profile.value) return
-  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId })
+  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId, assignmentSource: 'manual' })
 }
 
 // Overview-tab ownership demo (E2/E5) — two always-visible boxes instead of
@@ -80,7 +80,7 @@ const demoRecruiterIsOwner = computed(() =>
 const demoRecruiterReadOnly = computed(() => !!profile.value?.assignedRecruiterId && !demoRecruiterIsOwner.value)
 async function claimForDemoRecruiter() {
   if (!profile.value || !demoRecruiter.value) return
-  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId: demoRecruiter.value.id })
+  await assignCandidateMutation({ candidateIds: [profile.value.id], recruiterId: demoRecruiter.value.id, assignmentSource: 'self' })
 }
 // Either demo box can be dismissed independently — session-only, not persisted.
 const showAdminDemoBox = ref(true)
