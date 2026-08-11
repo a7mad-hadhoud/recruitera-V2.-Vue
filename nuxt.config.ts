@@ -82,6 +82,7 @@ export default defineNuxtConfig({
     '/offers':         { ssr: false },
     '/talent-pools':   { ssr: false },
     '/analytics':      { ssr: false },
+    '/reports/**':     { ssr: false },
     '/whatsapp':       { ssr: false },
     '/career-site':    { ssr: false },
     '/careers/**':     { ssr: false },

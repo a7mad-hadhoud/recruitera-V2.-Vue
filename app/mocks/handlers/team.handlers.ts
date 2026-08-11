@@ -1,7 +1,9 @@
 import { http, HttpResponse } from 'msw'
 import type { HiringRole, TeamMember } from '~/types'
 
-const teamMembers: TeamMember[] = [
+// Exported so other domains (Reports, Smart Distribute) build recruiter/hiring-
+// manager identity from this one roster instead of inventing a parallel cast.
+export const teamMembers: TeamMember[] = [
   { id: '1', name: 'Mohamed Salem', email: 'm.salem@icareer.ai', role: 'Administrator', status: 'Active', avatarBg: 'var(--brand-teal)', avatarText: 'var(--brand-avatar-text)' },
   { id: '2', name: 'Sara Rashed', email: 's.rashed@icareer.ai', role: 'Recruiter', status: 'Active', avatarBg: 'var(--brand-teal-secondary)', avatarText: 'var(--brand-avatar-text)' },
   { id: '3', name: 'Ahmed Kamal', email: 'a.kamal@icareer.ai', role: 'Hiring Manager', status: 'Pending', avatarBg: 'var(--brand-avatar-4)', avatarText: 'var(--brand-avatar-text)' },

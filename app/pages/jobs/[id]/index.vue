@@ -38,6 +38,7 @@ import CandidatesFilters from '~/components/candidates/CandidatesFilters.vue'
 import CandidatePipelineCard from '~/components/jobs/CandidatePipelineCard.vue'
 import PipelineScreeningView from '~/components/jobs/pipeline/PipelineScreeningView.vue'
 import ErrorBoundary from '~/components/ErrorBoundary.vue'
+import JobReportsTab from '~/components/reports/JobReportsTab.vue'
 import { BrandPageTitle, BrandSearchBar } from '~/components/brand'
 import { useJobs } from '~/composables/useJobs'
 import { useJobPipeline } from '~/composables/useJobPipeline'
@@ -1261,6 +1262,9 @@ function clearSelection() { selectedIds.value = new Set() }
             </DialogContent>
           </Dialog>
         </div>
+
+        <!-- ─────────── REPORTS TAB ─────────── -->
+        <JobReportsTab v-else-if="activeTab === 'Reports'" :job-id="jobId" />
 
         <!-- Other tabs — placeholder while we build them -->
         <div v-else class="flex-1 flex items-center justify-center text-[13.5px] text-[var(--brand-text-quiet)]">

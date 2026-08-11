@@ -20,6 +20,7 @@ import { teamHandlers } from './team.handlers'
 import { dashboardHandlers } from './dashboard.handlers'
 import { talentPoolsHandlers } from './talent-pools.handlers'
 import { smartDistributeHandlers } from './smart-distribute.handlers'
+import { reportsHandlers } from './reports.handlers'
 import { stubHandlers } from './stub.handlers'
 
 export const handlers = [
@@ -45,5 +46,6 @@ export const handlers = [
   ...dashboardHandlers,
   ...talentPoolsHandlers,
   ...smartDistributeHandlers,
+  ...reportsHandlers,
   ...stubHandlers,
 ]
