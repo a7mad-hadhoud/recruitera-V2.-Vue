@@ -1306,6 +1306,7 @@ function sendReply(note: LocalNote) {
       :candidate-initials="profile.initials"
       :candidate-color="profile.avatarColor"
       :job-name="localJobs[0]?.title"
+      :jobs="localJobs"
     />
 
     <!-- Assign candidate -->

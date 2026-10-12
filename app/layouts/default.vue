@@ -3,6 +3,7 @@ import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppHeader from '~/components/layout/AppHeader.vue'
 import TrialBanner from '~/components/layout/TrialBanner.vue'
 import { BrandToast } from '~/components/brand'
+import OnboardingChecklist from '~/components/onboarding/OnboardingChecklist.vue'
 </script>
 
 <template>
@@ -22,5 +23,6 @@ import { BrandToast } from '~/components/brand'
       </main>
     </div>
     <BrandToast />
+    <OnboardingChecklist />
   </div>
 </template>
