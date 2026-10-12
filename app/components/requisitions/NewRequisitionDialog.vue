@@ -3,7 +3,6 @@
 <script setup lang="ts">
 import { BrandButton } from '~/components/brand'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
-import { Input } from '~/components/ui/input'
 import type { NewRequisitionInput } from '~/types'
 
 const props = defineProps<{ open: boolean, projects: string[], submitting?: boolean }>()

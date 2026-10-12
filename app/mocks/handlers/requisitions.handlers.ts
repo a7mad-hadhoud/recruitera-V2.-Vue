@@ -208,7 +208,7 @@ export const requisitionsHandlers = [
     const b = await request.json() as UpdateRequisitionInput
     const r = requisitions.find(x => x.id === params.id)
     if (!r) return new HttpResponse(null, { status: 404 })
-    const assign = <K extends keyof UpdateRequisitionInput>(k: K) => { if (b[k] !== undefined) (r as any)[k] = b[k] }
+    const assign = <K extends keyof UpdateRequisitionInput>(k: K) => { if (b[k] !== undefined) (r as UpdateRequisitionInput)[k] = b[k] }
     ;(['title', 'department', 'manpowerProject', 'joiningMonth', 'workplace', 'employmentType', 'experience', 'salaryCurrency', 'salaryFrom', 'salaryTo', 'customQuestions', 'locations', 'approvalSteps'] as (keyof UpdateRequisitionInput)[]).forEach(assign)
     if (b.jobOpenings !== undefined) { r.jobOpenings = b.jobOpenings; r.openingsTotal = b.jobOpenings.length }
     r.updatedAt = new Date().toISOString()

@@ -202,7 +202,7 @@ const agree = ref(false)
         </div>
         <label class="flex items-center gap-2 mt-4 mb-5 text-[13.5px] text-[var(--brand-text)] cursor-pointer"><input v-model="agree" type="checkbox" class="accent-[var(--brand-danger)]"> I understand my data will be deleted</label>
         <div class="border-t border-[var(--brand-border-light)] -mx-6 px-6 pt-5 flex items-center gap-4">
-          <button type="button" class="h-11 px-5 rounded-lg text-[13.5px] font-bold text-white transition" :class="agree ? 'hover:brightness-110 cursor-pointer' : 'cursor-not-allowed'" :style="{ backgroundColor: agree ? 'var(--brand-danger)' : '#eda69c' }" :disabled="!agree">Permanently close my account</button>
+          <button type="button" class="h-11 px-5 rounded-lg text-[13.5px] font-bold text-white transition bg-[var(--brand-danger)]" :class="agree ? 'hover:brightness-110 cursor-pointer' : 'cursor-not-allowed opacity-45'" :disabled="!agree">Permanently close my account</button>
           <button type="button" class="text-[13.5px] font-semibold text-[var(--brand-text-secondary)] hover:text-[var(--brand-text)] transition" @click="closeOpen = false; agree = false">Cancel</button>
         </div>
       </div>

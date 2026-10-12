@@ -17,6 +17,7 @@
   useTeamMembers(). Emits `scheduled` with the built event on Schedule.
 -->
 <script setup lang="ts">
+import type { Component } from 'vue'
 import {
   X, ChevronDown, ChevronLeft, ChevronRight, Calendar, HelpCircle, Building2, Phone, Users,
   Video, Plus, ArrowRight, AlignLeft, MapPin, MoreHorizontal, AlertTriangle,
@@ -67,7 +68,7 @@ function jobDotMode(title: string | null): 'full' | 'half' | 'gray' | 'none' {
 
 // ── Event types ──
 type EventKind = 'onsite' | 'phone' | 'meeting' | 'video'
-interface EventType { key: string; label: string; sub?: string; icon: any; kind: EventKind }
+interface EventType { key: string; label: string; sub?: string; icon: Component; kind: EventKind }
 const EVENT_TYPES: EventType[] = [
   { key: 'onsite',  label: 'On-site interview', icon: Building2, kind: 'onsite' },
   { key: 'phone',   label: 'Phone interview',   icon: Phone,     kind: 'phone' },

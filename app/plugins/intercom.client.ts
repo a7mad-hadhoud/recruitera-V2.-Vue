@@ -5,7 +5,8 @@ export default defineNuxtPlugin(() => {
   const appId = useRuntimeConfig().public.intercomAppId as string
   if (!appId || typeof window === 'undefined') return
 
-  const w = window as unknown as { Intercom?: any, intercomSettings?: Record<string, unknown> }
+  type IntercomFn = ((...args: unknown[]) => void) & { q?: unknown[], c?: (args: unknown) => void }
+  const w = window as unknown as { Intercom?: IntercomFn, intercomSettings?: Record<string, unknown> }
 
   w.intercomSettings = { api_base: 'https://api-iam.intercom.io', app_id: appId }
 
@@ -18,9 +19,9 @@ export default defineNuxtPlugin(() => {
     }
     else {
       const d = document
-      const i: any = function () { i.c(arguments) }
+      const i: IntercomFn = function (...args: unknown[]) { i.c?.(args) }
       i.q = []
-      i.c = function (args: unknown) { i.q.push(args) }
+      i.c = function (args: unknown) { i.q?.push(args) }
       w.Intercom = i
       const l = function () {
         const s = d.createElement('script')

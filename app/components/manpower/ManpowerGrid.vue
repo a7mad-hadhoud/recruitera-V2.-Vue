@@ -6,7 +6,7 @@
 import { ChevronRight, MapPin } from 'lucide-vue-next'
 import type { ManpowerProject } from '~/types'
 
-const props = defineProps<{ project: ManpowerProject }>()
+defineProps<{ project: ManpowerProject }>()
 const expanded = reactive<Record<string, boolean>>({})
 function toggle(id: string) { expanded[id] = !expanded[id] }
 
